@@ -15,8 +15,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
     // Apple({
     //   clientId: process.env.APPLE_CLIENT_ID!,
@@ -28,8 +28,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     //   }),
     // }),
     Line({
-      clientId: process.env.LINE_CLIENT_ID!,
-      clientSecret: process.env.LINE_CLIENT_SECRET!,
+      clientId: process.env.LINE_CLIENT_ID ?? "",
+      clientSecret: process.env.LINE_CLIENT_SECRET ?? "",
     }),
     Credentials({
       name: "Credentials",
@@ -38,17 +38,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "パスワード", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
-        const password = credentials?.password as string | undefined;
-        if (!email || !password) throw new Error("MISSING_CREDENTIALS");
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
-        if (!user || !user.password) throw new Error("INVALID_EMAIL");
-        if (password === "MAGIC_LINK") return user;
-        const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) throw new Error("INVALID_PASSWORD");
-        return user;
+        try {
+          const email = credentials?.email as string | undefined;
+          const password = credentials?.password as string | undefined;
+          if (!email || !password) throw new Error("MISSING_CREDENTIALS");
+          const user = await prisma.user.findUnique({
+            where: { email },
+          });
+          if (!user || !user.password) throw new Error("INVALID_EMAIL");
+          if (password === "MAGIC_LINK") return user;
+          const isValid = await bcrypt.compare(password, user.password);
+          if (!isValid) throw new Error("INVALID_PASSWORD");
+          return user;
+        } catch (error) {
+          console.error("Auth error during build/runtime:", error);
+          return null;
+        }
       },
     }),
   ],
@@ -89,7 +94,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // 查询是否已有该邮箱的用户
         const existingUser = await prisma.user.findUnique({
-          where: { email: user.email! },
+          where: { email: user.email ?? "" },
           include: { profile: true, accounts: true },
         });
         // 如果是全新 OAuth 用户（Google/LINE） → NextAuth 刚创建 user
@@ -97,7 +102,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // NextAuth 已经创建 user，所以 user.id 已存在
           await prisma.profile.create({
             data: {
-              userId: user.id!,
+              userId: user.id ?? "",
               isOwner: true,
               isSitter: false,
             },
