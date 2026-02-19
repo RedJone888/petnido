@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { serviceSchema, ServiceInput } from "@/lib/zod/services";
+// import { serviceSchema, ServiceInput } from "@/lib/zod/services";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
@@ -32,90 +32,90 @@ export default function EditProfilePage() {
   const utils = trpc.useUtils();
 
   // 读取现有プロフィール
-  const { data: profile, isLoading } = trpc.services.getMine.useQuery();
+  // const { data: profile, isLoading } = trpc.services.getMine.useQuery();
 
-  const updateProfile = trpc.services.update.useMutation({
-    onSuccess: async () => {
-      await utils.services.getMine.invalidate();
-      setLastSavedAt(new Date());
-      setSaving(false);
-    },
-    onError: (err) => {
-      setSaving(false);
-      toast.error(err.message || "保存に失敗しました");
-    },
-  });
+  // const updateProfile = trpc.services.update.useMutation({
+  //   onSuccess: async () => {
+  //     await utils.services.getMine.invalidate();
+  //     setLastSavedAt(new Date());
+  //     setSaving(false);
+  //   },
+  //   onError: (err) => {
+  //     setSaving(false);
+  //     toast.error(err.message || "保存に失敗しました");
+  //   },
+  // });
 
-  const form = useForm<ServiceInput>({
-    resolver: zodResolver(serviceSchema),
-    defaultValues: {
-      bio: "",
-      petTypes: [],
-      experience: 0,
-      services: [],
-      price: 0,
-      area: "",
-      availability: "",
-      images: [],
-    },
-  });
+  // const form = useForm<>({
+  //   resolver: zodResolver(),
+  //   defaultValues: {
+  //     bio: "",
+  //     petTypes: [],
+  //     experience: 0,
+  //     services: [],
+  //     price: 0,
+  //     area: "",
+  //     availability: "",
+  //     images: [],
+  //   },
+  // });
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors },
-  } = form;
+  // const {
+  //   register,
+  //   handleSubmit,
+  //   setValue,
+  //   watch,
+  //   reset,
+  //   formState: { errors },
+  // } = form;
 
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   // 初次载入时用 profile 填充表单
-  useEffect(() => {
-    if (profile) {
-      reset({
-        bio: profile.bio ?? "",
-        petTypes: profile.petTypes ?? [],
-        experience: profile.experience ?? 0,
-        services: profile.services ?? [],
-        price: profile.price ?? 0,
-        area: profile.area ?? "",
-        availability: profile.availability ?? "",
-        images: profile.images ?? [],
-      });
-      setPreviewUrls(profile.images ?? []);
-    }
-  }, [profile, reset]);
+  // useEffect(() => {
+  //   if (profile) {
+  //     reset({
+  //       bio: profile.bio ?? "",
+  //       petTypes: profile.petTypes ?? [],
+  //       experience: profile.experience ?? 0,
+  //       services: profile.services ?? [],
+  //       price: profile.price ?? 0,
+  //       area: profile.area ?? "",
+  //       availability: profile.availability ?? "",
+  //       images: profile.images ?? [],
+  //     });
+  //     setPreviewUrls(profile.images ?? []);
+  //   }
+  // }, [profile, reset]);
 
   // 自动保存字段（混合模式：文本类自动保存，其他字段手动）
-  const autoSaveFields = watch(["bio", "area", "availability", "experience"]);
+  // const autoSaveFields = watch(["bio", "area", "availability", "experience"]);
 
-  useEffect(() => {
-    if (!profile) return; // 还没加载完不要保存
+  // useEffect(() => {
+  //   if (!profile) return; // 还没加载完不要保存
 
-    const timeout = setTimeout(() => {
-      const values = form.getValues();
-      setSaving(true);
-      updateProfile.mutate(values);
-    }, 1000); // 1秒 debounce
+  //   const timeout = setTimeout(() => {
+  //     const values = form.getValues();
+  //     setSaving(true);
+  //     updateProfile.mutate(values);
+  //   }, 1000); // 1秒 debounce
 
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    autoSaveFields[0],
-    autoSaveFields[1],
-    autoSaveFields[2],
-    autoSaveFields[3],
-  ]);
+  //   return () => clearTimeout(timeout);
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [
+  //   autoSaveFields[0],
+  //   autoSaveFields[1],
+  //   autoSaveFields[2],
+  //   autoSaveFields[3],
+  // ]);
 
   // 手动保存：包括图片、petTypes、services 等全部字段
-  const onSubmit = (values: ServiceInput) => {
-    setSaving(true);
-    updateProfile.mutate(values);
-  };
+  // const onSubmit = (values: ServiceInput) => {
+  //   setSaving(true);
+  //   updateProfile.mutate(values);
+  // };
 
   const savingLabel = useMemo(() => {
     if (saving) return "保存中…";
@@ -124,14 +124,14 @@ export default function EditProfilePage() {
     return "";
   }, [saving, lastSavedAt]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-neutral-600">
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        読み込み中…
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="flex items-center justify-center py-16 text-sm text-neutral-600">
+  //       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+  //       読み込み中…
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -149,7 +149,7 @@ export default function EditProfilePage() {
           {savingLabel && (
             <span className="text-xs text-neutral-500">{savingLabel}</span>
           )}
-          {profile && (
+          {/* {profile && (
             <Button
               type="button"
               variant="outlineDark"
@@ -159,13 +159,13 @@ export default function EditProfilePage() {
               公開プロフィールを見る
               <ExternalLink className="w-3 h-3 ml-1" />
             </Button>
-          )}
+          )} */}
         </div>
       </div>
 
       {/* Notion 風カード */}
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        // onSubmit={handleSubmit(onSubmit)}
         className="space-y-8 bg-neutral-50/80 border border-neutral-200 rounded-3xl p-6"
       >
         {/* 自己紹介 */}
@@ -178,14 +178,14 @@ export default function EditProfilePage() {
             あなたの経験、ペットへの想い、得意なケアなどを書いてください。
           </p>
           <textarea
-            {...register("bio")}
+            // {...register("bio")}
             rows={5}
             className="w-full rounded-2xl border border-neutral-200 p-3 text-sm resize-none bg-white"
             placeholder="例：子どもの頃からずっとうさぎと暮らしてきました。繊細な子でも安心して過ごせるよう、静かな環境づくりとゆっくりしたコミュニケーションを大切にしています。"
           />
-          {errors.bio && (
+          {/* {errors.bio && (
             <p className="text-xs text-red-500 mt-1">{errors.bio.message}</p>
-          )}
+          )} */}
         </section>
 
         {/* 対応ペット & サービス（模板） */}
@@ -200,34 +200,34 @@ export default function EditProfilePage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {petOptions.map((p) => {
-                const selected = watch("petTypes")?.includes(p);
+                // const selected = watch("petTypes")?.includes(p);
                 return (
                   <button
                     type="button"
                     key={p}
-                    onClick={() =>
-                      setValue(
-                        "petTypes",
-                        toggleInArray(watch("petTypes") || [], p),
-                        { shouldDirty: true }
-                      )
-                    }
-                    className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                      selected
-                        ? "bg-[--purple1]/10 border-[--purple2] text-[--purple2]"
-                        : "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-                    }`}
+                    // onClick={() =>
+                    //   setValue(
+                    //     "petTypes",
+                    //     toggleInArray(watch("petTypes") || [], p),
+                    //     { shouldDirty: true }
+                    //   )
+                    // }
+                    // className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                    //   selected
+                    //     ? "bg-[--purple1]/10 border-[--purple2] text-[--purple2]"
+                    //     : "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+                    // }`}
                   >
                     {p}
                   </button>
                 );
               })}
             </div>
-            {errors.petTypes && (
+            {/* {errors.petTypes && (
               <p className="text-xs text-red-500 mt-1">
                 {errors.petTypes.message as string}
               </p>
-            )}
+            )} */}
           </div>
 
           {/* サービス種類 */}
@@ -240,34 +240,34 @@ export default function EditProfilePage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {serviceOptions.map((s) => {
-                const selected = watch("services")?.includes(s);
+                // const selected = watch("services")?.includes(s);
                 return (
                   <button
                     type="button"
                     key={s}
-                    onClick={() =>
-                      setValue(
-                        "services",
-                        toggleInArray(watch("services") || [], s),
-                        { shouldDirty: true }
-                      )
-                    }
-                    className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                      selected
-                        ? "bg-[--purple1]/10 border-[--purple2] text-[--purple2]"
-                        : "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-                    }`}
+                    // onClick={() =>
+                    //   setValue(
+                    //     "services",
+                    //     toggleInArray(watch("services") || [], s),
+                    //     { shouldDirty: true }
+                    //   )
+                    // }
+                    // className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                    //   selected
+                    //     ? "bg-[--purple1]/10 border-[--purple2] text-[--purple2]"
+                    //     : "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+                    // }`}
                   >
                     {s}
                   </button>
                 );
               })}
             </div>
-            {errors.services && (
+            {/* {errors.services && (
               <p className="text-xs text-red-500 mt-1">
                 {errors.services.message as string}
               </p>
-            )}
+            )} */}
           </div>
         </section>
 
@@ -283,17 +283,17 @@ export default function EditProfilePage() {
             <div className="flex items-center gap-2">
               <input
                 type="number"
-                {...register("price", { valueAsNumber: true })}
+                // {...register("price", { valueAsNumber: true })}
                 className="flex-1 rounded-2xl border border-neutral-200 p-2 text-sm bg-white"
                 placeholder="例：3000"
               />
               <span className="text-xs text-neutral-600">円</span>
             </div>
-            {errors.price && (
+            {/* {errors.price && (
               <p className="text-xs text-red-500 mt-1">
                 {errors.price.message}
               </p>
-            )}
+            )} */}
           </div>
 
           <div>
@@ -304,13 +304,13 @@ export default function EditProfilePage() {
               市区町村や沿線名など、大まかなエリアを書いてください。
             </p>
             <input
-              {...register("area")}
+              // {...register("area")}
               className="w-full rounded-2xl border border-neutral-200 p-2 text-sm bg-white"
               placeholder="例：大阪市内（此花区・北区周辺）"
             />
-            {errors.area && (
+            {/* {errors.area && (
               <p className="text-xs text-red-500 mt-1">{errors.area.message}</p>
-            )}
+            )} */}
           </div>
 
           <div>
@@ -321,15 +321,15 @@ export default function EditProfilePage() {
               例：平日夜間 / 土日終日など、ざっくりで構いません。
             </p>
             <input
-              {...register("availability")}
+              // {...register("availability")}
               className="w-full rounded-2xl border border-neutral-200 p-2 text-sm bg-white"
               placeholder="例：平日19時以降 / 土日祝は終日OK"
             />
-            {errors.availability && (
+            {/* {errors.availability && (
               <p className="text-xs text-red-500 mt-1">
                 {errors.availability.message}
               </p>
-            )}
+            )} */}
           </div>
         </section>
 
@@ -353,10 +353,10 @@ export default function EditProfilePage() {
                   const file = e.target.files?.[0];
                   if (!file) return;
                   const url = URL.createObjectURL(file);
-                  const current = watch("images") || [];
-                  const next = [...current, url];
-                  setPreviewUrls(next);
-                  setValue("images", next, { shouldDirty: true });
+                  // const current = watch("images") || [];
+                  // const next = [...current, url];
+                  // setPreviewUrls(next);
+                  // setValue("images", next, { shouldDirty: true });
                 }}
               />
             </label>
@@ -373,7 +373,7 @@ export default function EditProfilePage() {
                   onClick={() => {
                     const next = previewUrls.filter((u) => u !== url);
                     setPreviewUrls(next);
-                    setValue("images", next, { shouldDirty: true });
+                    // setValue("images", next, { shouldDirty: true });
                   }}
                 >
                   ×

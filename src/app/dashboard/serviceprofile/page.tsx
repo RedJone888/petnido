@@ -6,11 +6,11 @@ import { useServiceProfile } from "@/hooks/useServiceProfile";
 import LoadingPage from "@/components/ui/LoadingPage";
 import ServiceProfile from "./ServiceProfile";
 
-export function uid(prefix = "id") {
-  return `${prefix}_${Math.random()
-    .toString(16)
-    .slice(2)}_${Date.now().toString(16)}`;
-}
+// export function uid(prefix = "id") {
+//   return `${prefix}_${Math.random()
+//     .toString(16)
+//     .slice(2)}_${Date.now().toString(16)}`;
+// }
 
 export default function ServiceProfilePage() {
   const { getServiceProfile, toggleSitter } = useServiceProfile();
