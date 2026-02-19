@@ -1,7 +1,12 @@
 import Link from "next/link";
 import NeedDetailPage from "@/components/browse/needs/NeedDetailPage";
 
-export default function ActualDetailsPage({ need }: { need: { id: string } }) {
+export default function ActualDetailsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  // const need = await getNeed(params.id)
   return (
     <div className="max-w-4xl mx-auto p-6">
       <Link
@@ -23,7 +28,8 @@ export default function ActualDetailsPage({ need }: { need: { id: string } }) {
         </svg>
         一覧に戻る (返回列表)
       </Link>
-      <NeedDetailPage initialNeed={need} />
+      {/* <NeedDetailPage /> */}
+      {/* <NeedDetailPage initialNeed={need} /> */}
     </div>
   );
 }

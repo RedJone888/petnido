@@ -55,7 +55,8 @@ export default function DashboardMatches() {
 
       <div className="space-y-6">
         {matches.map((match) => (
-          <MatchCard key={match.id} data={match} />
+          // <MatchCard key={match.id} data={match} />
+          <>test</>
         ))}
       </div>
     </div>
@@ -67,12 +68,12 @@ export default function DashboardMatches() {
 ------------------------------------------ */
 
 type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
-
+type roleStatus = "OWNER" | "SITTER";
 interface MatchData {
   id: string;
   needTitle: string;
   sitterName: string;
-  role: "OWNER" | "SITTER";
+  role: roleStatus;
   startDate: string;
   endDate: string;
   price: number;

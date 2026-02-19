@@ -6,7 +6,7 @@ import {
 import { needCreateSchema, needUpdateSchema } from "@/lib/zod/needs";
 import { linkPhotos, syncPhotos } from "@/server/lib/photos";
 import { z } from "zod";
-import { NeedStatus } from "@prisma/client";
+import { NeedStatus, PetType } from "@prisma/client";
 
 export const needRouter = router({
   listMine: protectedProcedure.query(async ({ ctx }) => {
@@ -133,11 +133,13 @@ export const needRouter = router({
         // --- 第三步：循环处理 NeedPetNeedPet (创建 + 认领图片) ---
         await Promise.all(
           needPets.map(async (np) => {
-            const { photoIds, ...rest } = np;
+            const { photoIds, petCategory, ...rest } = np;
             // a. 创建子表 NeedPet 记录
+
             const newNeedPet = await tx.needPet.create({
               data: {
                 needId: newNeed.id,
+                petCategory: petCategory as PetType,
                 ...rest,
               },
             });
@@ -192,19 +194,28 @@ export const needRouter = router({
         if (needPets && needPets.length > 0) {
           await Promise.all(
             needPets.map(async (np) => {
-              const { photoIds: needPetPhotoIds, id: needPetId, ...rest } = np;
+              const {
+                photoIds: needPetPhotoIds,
+                id: needPetId,
+                petCategory,
+                ...rest
+              } = np;
               let finalNeedPetId: string;
               if (needPetId) {
                 // 修改已有宠物
                 const updatedNeedPet = await tx.needPet.update({
                   where: { id: needPetId },
-                  data: rest,
+                  data: { petCategory: petCategory as PetType, ...rest },
                 });
                 finalNeedPetId = updatedNeedPet.id;
               } else {
                 // 新增宠物
                 const newNeedPet = await tx.needPet.create({
-                  data: { needId: id, ...rest },
+                  data: {
+                    needId: id,
+                    petCategory: petCategory as PetType,
+                    ...rest,
+                  },
                 });
                 finalNeedPetId = newNeedPet.id;
               }

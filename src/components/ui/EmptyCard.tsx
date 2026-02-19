@@ -1,3 +1,4 @@
+import { PawPrint } from "lucide-react";
 export default function EmptyCard({
   title,
   desc,

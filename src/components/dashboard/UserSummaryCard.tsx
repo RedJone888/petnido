@@ -7,7 +7,7 @@ export default function UserSummaryCard() {
   const { data: session } = useSession();
   const name = session?.user?.name || "ゲスト";
   const email = session?.user?.email || "";
-  const { color1, color2 } = stringToAvatarColors(email || name);
+  // const { color1, color2 } = stringToAvatarColors(email || name);
   return (
     <section className="flex items-center justify-between gap-6 mb-8">
       <div>
@@ -25,8 +25,8 @@ export default function UserSummaryCard() {
           name={session?.user?.name}
           email={session?.user?.email}
           size={64}
-          color1={color1}
-          color2={color2}
+          // color1={color1}
+          // color2={color2}
         />
         <div className="text-right">
           <p>{name}</p>

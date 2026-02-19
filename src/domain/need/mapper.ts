@@ -1,7 +1,7 @@
 import { NeedCreateInput, NeedForm, NeedPetForm } from "@/lib/zod/needs";
 import { inferAllPetTypeFromText } from "@/domain/pet/inferPetTypes";
 import { PetType } from "@prisma/client";
-import { NeedApi, NeedPetApi } from "./api.types";
+import { OneNeedApi, NeedPetApi } from "./api.types";
 import { photoApiToForm } from "../attachment/mapper";
 import { format } from "date-fns";
 export function needPetApiToForm(np: NeedPetApi): NeedPetForm & { id: string } {
@@ -17,7 +17,7 @@ export function needPetApiToForm(np: NeedPetApi): NeedPetForm & { id: string } {
   };
 }
 
-export function needApiToForm(service: NeedApi): NeedForm & { id: string } {
+export function needApiToForm(service: OneNeedApi): NeedForm & { id: string } {
   const {
     ownerId,
     createdAt,

@@ -1,4 +1,4 @@
-import { AttachmentPresignedFromApi } from "./api.types";
+// import { AttachmentPresignedFromApi } from "./api.types";
 import { getFileSignature } from "./getFileSignature";
 interface Props {
   file: File;
@@ -11,7 +11,7 @@ export const uploadSingleImage = async ({
   signature,
   serviceKind,
   folder = "others",
-}: Props): Promise<AttachmentPresignedFromApi> => {
+}: Props) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("type", folder); // 这里的 type 对应后端的文件夹
