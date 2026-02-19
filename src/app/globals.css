@@ -1,0 +1,160 @@
+@import "tailwindcss";
+@import "react-day-picker/dist/style.css";
+@import "leaflet/dist/leaflet.css";
+/* 覆盖浏览器默认的 autofill 背景色 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+  -webkit-text-fill-color: #000 !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+/* 针对 Webkit 浏览器 (Chrome, Safari, Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px; /* 纵向滚动条宽度 */
+  height: 6px; /* 横向滚动条高度 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* 轨道背景色：透明更高级 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0; /* 滚动条滑块颜色 (slate-200) */
+  border-radius: 10px; /* 圆角 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1; /* 鼠标悬停时的颜色 (slate-300) */
+}
+
+/* 针对 Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+@layer base {
+  body[data-layout="home"] {
+    @apply min-h-screen;
+  }
+  body[data-layout="app"] {
+    @apply h-screen;
+  }
+  body[data-layout="app"] #__main-content {
+    @apply overflow-hidden;
+  }
+}
+
+/* === 全站主题色：PetNido Purple === */
+@theme {
+  --navbar-height: 81px;
+  --radius: 10px;
+  /* === 核心品牌色 (Brand) === */
+  --color-brand-50: #f5f0ff;
+  --color-brand-100: #ede5ff;
+  --color-brand-700: #5b21b6;
+
+  /* 渐变组合 */
+  --color-brand-grad-from: #a85cff; /* purple1 */
+  --color-brand-grad-to: #7a2cff; /* purple2 */
+
+  /* === 语义色 (Semantic) === */
+  /* 成功 (募集中/已确认) */
+  --color-success-bg: #f0fdf4;
+  --color-success-text: #166534;
+  --color-success-border: #bbf7d0;
+
+  /* 警告 (期限切れ/注意) */
+  --color-warning-bg: #fffbe6;
+  --color-warning-text: #9a6700;
+  --color-warning-border: #ffe58f;
+
+  /* 危险 (キャンセル/削除) */
+  --color-danger-bg: #fef2f2;
+  --color-danger-text: #991b1b;
+  --color-danger-border: #fecaca;
+
+  /* 信息 (寄养/接送等) */
+  --color-info-bg: #f0f9ff;
+  --color-info-text: #075985;
+  --color-info-border: #bae6fd;
+
+  /* === 中性色 (Neutral) === */
+  --color-slate-50: #f8fafc;
+  --color-slate-200: #e2e8f0;
+  --color-slate-400: #94a3b8;
+  --color-slate-600: #475569;
+  --color-slate-800: #1e293b;
+
+  /* --color-primary: #7c3aed; 对应 text-primary */
+  /* --color-secondary: #a855f7; 对应 text-secondary */
+
+  --color-primary: #7a2cff;
+  --color-secondary: #a85cff;
+  --color-bg: #f5f5f5;
+  --color-success: #67c23a;
+  --color-warning: #e6a23c;
+  --color-danger: #f56c6c;
+
+  /* 文字颜色建议也加上 color 前缀，这样 Tailwind 才会生成 text- 和 bg- 类 */
+  --color-text-main: #333333;
+  --color-text-light: #999999;
+
+  --color-brand-700: #6d28d9;
+  --shadow-purple: 0 6px 18px rgba(124, 58, 237, 0.2);
+  --shadow-purple-lg: 0 10px 20px rgba(124, 58, 237, 0.4);
+
+  /* 阴影也统一管理 */
+  --shadow-brand-soft: 0 6px 18px rgba(124, 58, 237, 0.2);
+  --shadow-brand-strong: 0 10px 20px rgba(124, 58, 237, 0.4);
+
+  /* === 待修改 === */
+  --color-background: #ffffff;
+  --foreground: #111111;
+
+  --color-card: #ffffff;
+  --color-card-border: #e5e5e5;
+
+  --popover: #ffffff;
+  --popover-foreground: #111111;
+
+  /* --color-primary: #8200db; PetNido Purple */
+  /* --color-primary-hover: #9810fa; */
+  /* --color-primary-foreground: #ffffff; */
+  --color-background: #fff;
+  --color-input: #d5d5d4;
+
+  --secondary: #f6f2ff;
+  --secondary-foreground: #3a206d;
+
+  --color-border: #c0c0c0;
+  --input: #e5e7eb;
+  --ring: #8b2cf5;
+
+  --color-btn: #fff;
+  --color-btn-fore: #364153;
+  --color-btn-hover: #f9fafb;
+}
+
+.dark {
+  --background: #0c0a0f;
+  --foreground: #ffffff;
+
+  --card: #1a1625;
+  --card-foreground: #ffffff;
+
+  --popover: #1a1625;
+  --popover-foreground: #ffffff;
+
+  --primary: #9a59ff;
+  --primary-foreground: #111111;
+
+  --secondary: #2a2335;
+  --secondary-foreground: #ffffff;
+
+  --border: #3a3247;
+  --input: #3a3247;
+  --ring: #9a59ff;
+}
