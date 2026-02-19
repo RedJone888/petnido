@@ -2,7 +2,7 @@
 // import { trpc } from "@/utils/trpc";
 // import { useRouter, useSearchParams } from "next/navigation";
 // import { useEffect, useRef } from "react";
-import { signIn } from "next-auth/react";
+// import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 
 export default function VerifyPage() {

@@ -131,7 +131,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         // 🔥 如果你允许同邮箱绑定（推荐），自动补 Account
         const hasThisProvider = existingUser.accounts.some(
-          (acc) => acc.provider === account.provider
+          (acc) => acc.provider === account.provider,
         );
         if (!hasThisProvider) {
           await prisma.account.create({
