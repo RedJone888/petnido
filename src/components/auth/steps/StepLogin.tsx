@@ -1,25 +1,68 @@
+"use client";
 import { FloatingInput } from "@/components/ui/FloatingInput";
-import type { Errors } from "@/components/auth/AuthModal";
 import { LoadingButton } from "@/components/ui/LoadingButton";
-export default function StepLogin({
-  handleLogin,
-  email,
-  password,
-  handleChangePassword,
-  verifyErrors,
-  loading,
-  handleCancel,
-  errorMsg,
-}: {
-  handleLogin: (e: React.FormEvent) => void;
+import type { StepType } from "@/domain/auth/type";
+import { useState } from "react";
+import { stepLoginSchema } from "@/lib/zod/auth";
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
+type Props = {
   email: string;
-  password: string;
-  handleChangePassword: (v: string) => void;
-  verifyErrors: Errors;
-  loading: boolean;
-  handleCancel: () => void;
-  errorMsg: string;
-}) {
+  setStep: (step: StepType) => void;
+  handleSuccessRedirect: () => void;
+};
+export default function StepLogin({
+  email,
+  setStep,
+  handleSuccessRedirect,
+}: Props) {
+  const [password, setPassword] = useState("");
+  const [passwordFormatError, setPasswordFormatError] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const handleChangePassword = (password: string) => {
+    if (passwordFormatError) setPasswordFormatError("");
+    if (apiError) setApiError("");
+    setPassword(password);
+  };
+  const handleCancel = () => {
+    setPassword("");
+    setStep("email");
+  };
+  // 2. 普通密码登录逻辑
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiError("");
+    // 1. Zod 校验
+    const validate = stepLoginSchema.safeParse({ email, password });
+    if (!validate.success) {
+      const msg =
+        validate.error.formErrors.fieldErrors.password?.[0] ||
+        "パスワードを入力してください";
+      setPasswordFormatError(msg);
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false, // 必须为 false，否则 NextAuth 会接管跳转
+      });
+      if (result?.error) {
+        setApiError("メールアドレスまたはパスワードが正しくありません。");
+        return;
+      }
+      // 登录成功
+      toast.success("ログインしました！");
+      handleSuccessRedirect(); // 执行自动跳转
+    } catch (error) {
+      // 这里的 catch 捕获的是浏览器级别的网络异常或代码崩溃
+      setApiError("ネットワークエラーが発生しました");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
   return (
     <form className="space-y-6" onSubmit={handleLogin}>
       <h3 className="text-lg font-semibold text-gray-900 text-left mb-6">
@@ -32,29 +75,24 @@ export default function StepLogin({
         label="パスワード"
         value={password}
         onChange={handleChangePassword}
-        error={verifyErrors.password}
+        error={passwordFormatError}
       />
 
-      {errorMsg && (
-        <p className="text-red-500 text-sm text-center">{errorMsg}</p>
+      {apiError && (
+        <p className="text-red-500 text-sm text-center">{apiError}</p>
       )}
 
       <div className="flex justify-end gap-3 pt-2">
-        <LoadingButton onClick={handleCancel} variant="ghost">
+        <LoadingButton type="button" onClick={handleCancel} variant="ghost">
           キャンセル
         </LoadingButton>
-        <LoadingButton type="submit" loading={loading} loadingText="確認中...">
+        <LoadingButton
+          type="submit"
+          loading={loginLoading}
+          loadingText="確認中..."
+        >
           ログインする
         </LoadingButton>
-      </div>
-      {/* Terms 区域 */}
-      <div className="flex justify-end gap-4 text-xs text-gray-500">
-        <a href="/terms" className="hover:underline">
-          利用規約
-        </a>
-        <a href="/privacy" className="hover:underline">
-          プライバシーポリシー
-        </a>
       </div>
     </form>
   );

@@ -42,8 +42,8 @@ export default function DashboardShell({
       <div className="max-w-7xl mx-auto h-full overflow-hidden py-2 flex">
         <aside
           className={cn(
-            "shrink-0 transition-all duration-300 overflow-y-auto mt-4",
-            isExpanded ? "w-56 mr-4" : "w-18",
+            "shrink-0 transition-all duration-300 overflow-y-auto pt-4",
+            isExpanded ? "w-56" : "w-18",
           )}
         >
           <div className="pl-4 my-2.5 text-sm font-medium flex items-center">
@@ -73,6 +73,7 @@ export default function DashboardShell({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   className={cn(
                     "group flex items-center gap-3 pl-4 my-2.5 rounded-r-full rounded-l-none text-sm transition-all",
                     "whitespace-nowrap select-none font-medium",
@@ -103,8 +104,10 @@ export default function DashboardShell({
             })}
           </nav>
         </aside>
-        <main className="flex-1 overflow-hidden bg-white rounded-xl shadow-[0px_0px_40px_rgba(15,23,42,0.08)]">
-          {children}
+        <main className="flex-1 px-4">
+          <div className="overflow-hidden h-full bg-white rounded-xl shadow-[0px_0px_20px_rgba(15,23,42,0.08)]">
+            {children}
+          </div>
         </main>
       </div>
     </div>

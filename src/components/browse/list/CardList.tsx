@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import NeedCard from "@/app/public/browse/needs/NeedCard";
+// import NeedCard from "@/app/(app)/public/browse/needs/NeedCard";
 import SitterCard from "@/components/browse/sitters/SitterCard";
 
 export default async function CardList({

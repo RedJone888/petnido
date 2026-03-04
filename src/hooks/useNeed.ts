@@ -2,14 +2,18 @@
 import { trpc } from "@/utils/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
+
 export function useNeed(id?: string) {
   const utils = trpc.useUtils();
+  const { data: session } = useSession();
   const [pagination, setPagination] = useState({
     limit: 50,
     cursor: undefined as string | undefined,
   });
-  const listMine = trpc.need.listMine.useQuery();
-
+  const listMine = trpc.need.listMine.useQuery(undefined, {
+    enabled: !!session,
+  });
   const getNeedById = trpc.need.getById.useQuery(
     { id: id! },
     { enabled: !!id },

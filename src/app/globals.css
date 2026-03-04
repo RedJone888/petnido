@@ -35,18 +35,6 @@ input:-webkit-autofill:focus {
   scrollbar-color: #e2e8f0 transparent;
 }
 
-@layer base {
-  body[data-layout="home"] {
-    @apply min-h-screen;
-  }
-  body[data-layout="app"] {
-    @apply h-screen;
-  }
-  body[data-layout="app"] #__main-content {
-    @apply overflow-hidden;
-  }
-}
-
 /* === 全站主题色：PetNido Purple === */
 @theme {
   --navbar-height: 81px;

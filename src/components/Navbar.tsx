@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import AuthModal from "@/components/auth/AuthModal";
 import { Button } from "@/components/ui/Button";
 import NotificationBell from "@/components/navbar/NotificationBell";
-import { Mail } from "lucide-react";
+import { Mail, Menu, X } from "lucide-react";
 import UserMenu from "@/components/navbar/UserMenu";
+import { useAuthModal } from "@/providers/AuthModalProvider";
+import cn from "@/lib/cn";
+import Image from "next/image";
 const mockNotifications = [
   {
     id: "1",
@@ -29,8 +31,8 @@ const mockNotifications = [
 export default function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [openAuth, setOpenAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   //Dropdown: 点击外部 & Esc 关闭
@@ -61,24 +63,16 @@ export default function Navbar() {
     { href: "/public/browse/needs", label: "お世話の依頼を見る" },
     { href: "/public/browse/sitters", label: "シッターを探す" },
   ];
-  const handleOpenAuth = () => {
-    const currentUrl = window.location.href;
-    localStorage.setItem("authRedirect", currentUrl);
-    setOpenAuth(true);
-  };
-  const handleCloseAuth = () => {
-    localStorage.removeItem("authRedirect");
-    setOpenAuth(false);
-  };
+  const { openAuthModal } = useAuthModal();
   return (
-    <nav className="w-full bg-background border-b border-border sticky top-0 z-50">
+    <nav className="w-full bg-background border-b border-border sticky top-0 z-888">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-20 px-6">
         {/* Logo */}
-        <Link
-          href="/"
-          className="text-2xl font-semibold text-primary tracking-widest"
-        >
-          PetNido
+        <Link href="/" className="flex items-center gap-3">
+          <Image src="/favicon.svg" alt="logo" width={36} height={36} />
+          <span className="text-2xl font-[Open_Sans] font-semibold text-primary tracking-widest">
+            PetNido
+          </span>
         </Link>
 
         {/* Desktop Links */}
@@ -93,9 +87,11 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`hover:text-secondary transition ${
-                  isActive ? "text-primary font-medium" : ""
-                }`}
+                prefetch={false}
+                className={cn(
+                  "hover:text-secondary transition",
+                  isActive ? "text-primary font-medium" : "",
+                )}
               >
                 {link.label}
               </Link>
@@ -106,7 +102,7 @@ export default function Navbar() {
             <Button
               className="ml-4 rounded-full px-6 py-2"
               variant="primary"
-              onClick={handleOpenAuth}
+              onClick={() => openAuthModal()}
             >
               ログイン
             </Button>
@@ -133,11 +129,63 @@ export default function Navbar() {
               />
             </div>
           )}
-          <AuthModal open={openAuth} onClose={handleCloseAuth} />
         </div>
 
-        {/* Mobile Menu Placeholder (未来可做汉堡菜单) */}
-        <div className="md:hidden text-gray-700">☰</div>
+        {/* Mobile Hamburger */}
+        <button
+          className="md:hidden text-2xl text-gray-700"
+          onClick={() => setMobileOpen(!mobileOpen)}
+        >
+          {mobileOpen ? <X /> : <Menu />}
+        </button>
+        {mobileOpen && (
+          <>
+            {/* 背景遮罩 */}
+            <div
+              className="fixed inset-0 bg-black/30 z-40"
+              onClick={() => setMobileOpen(false)}
+            />
+            {/* 侧边菜单 */}
+            <div className="md:hidden absolute top-full right-0 w-56 bg-white z-50 shadow-lg p-6">
+              <div className="flex flex-col space-y-6">
+                {links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="text-gray-700 hover:text-primary text-center"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                {!session && (
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      // handleOpenAuth();
+                      openAuthModal();
+                      setMobileOpen(false);
+                    }}
+                  >
+                    ログイン
+                  </Button>
+                )}
+                {session && (
+                  <>
+                    <Link
+                      href="/message"
+                      onClick={() => setMobileOpen(false)}
+                      className="text-center"
+                    >
+                      メッセージ
+                    </Link>
+                    <button onClick={() => setMobileOpen(false)}>通知</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
       <style jsx>{`
         .animate-fadeIn {

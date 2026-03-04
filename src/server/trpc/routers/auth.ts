@@ -17,7 +17,7 @@ import {
 export const authRouter = router({
   checkEmailExist: publicProcedure
     .input(stepEmailSchema)
-    .query(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         const user = await ctx.prisma.user.findUnique({
           where: { email: input.email },
@@ -138,7 +138,7 @@ export const authRouter = router({
           html: `
           <div style="font-family:Arial; font-size:14px; color:#333">
             <p>${input.username}さん、こんにちは。</p>
-            <p>PetNido へのご登録ありがとうございます</p>。
+            <p>PetNido へのご登録ありがとうございます。</p>
             <p>以下の認証コードを入力してください：</p>
             <h2 style="font-size:28px; letter-spacing:4px;">${code}</h2>
             <p>10分以内にご入力ください。</p>

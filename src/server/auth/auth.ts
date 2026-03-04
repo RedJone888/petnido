@@ -38,22 +38,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "パスワード", type: "password" },
       },
       authorize: async (credentials) => {
-        try {
-          const email = credentials?.email as string | undefined;
-          const password = credentials?.password as string | undefined;
-          if (!email || !password) throw new Error("MISSING_CREDENTIALS");
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
-          if (!user || !user.password) throw new Error("INVALID_EMAIL");
-          if (password === "MAGIC_LINK") return user;
-          const isValid = await bcrypt.compare(password, user.password);
-          if (!isValid) throw new Error("INVALID_PASSWORD");
-          return user;
-        } catch (error) {
-          console.error("Auth error during build/runtime:", error);
-          return null;
-        }
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        if (!email || !password) return null;
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
+        // 如果用户不存在，抛出特定错误
+        if (!user || !user.password) return null;
+        if (password === "MAGIC_LINK") return user;
+        const isValid = await bcrypt.compare(password, user.password);
+        // 如果密码错误，抛出特定错误
+        if (!isValid) return null;
+        return user;
       },
     }),
   ],
@@ -114,6 +111,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const claims = decodeJwt(account.id_token as string);
           // claims.picture 就是 Google 头像
           const googleImage = claims.picture;
+          // const googleImage = user.image;
           // 自动同步头像，仅当用户没有头像
           if (!existingUser.image && googleImage) {
             await prisma.user.update({

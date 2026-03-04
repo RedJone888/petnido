@@ -1,9 +1,9 @@
 "use client";
-import { signOut } from "next-auth/react";
 import UserAvatar from "@/components/navbar/UserAvatar";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
-import { UserStar, MessageCircleHeart, LogOut } from "lucide-react";
+import { UserStar, MessageCircleHeart } from "lucide-react";
+import LogoutButton from "./LogoutButton";
 interface UserMenuProps {
   session: any;
   avatarRef: React.RefObject<HTMLDivElement>;
@@ -20,23 +20,26 @@ export default function UserMenu({
 }: UserMenuProps) {
   const menuItems = [
     {
-      type: "link",
       label: "マイページ",
       href: "/dashboard",
       icon: UserStar,
     },
     {
-      type: "link",
       label: "メッセージ",
       href: "/messages",
       icon: MessageCircleHeart,
     },
-    { type: "logout", icon: LogOut },
   ];
 
   return (
     <div className="relative">
-      <div ref={avatarRef} onClick={() => setMenuOpen(!menuOpen)}>
+      <div
+        ref={avatarRef}
+        onClick={(e) => {
+          e.stopPropagation();
+          setMenuOpen(!menuOpen);
+        }}
+      >
         <UserAvatar
           image={session.user?.image}
           name={session.user?.name}
@@ -63,17 +66,7 @@ export default function UserMenu({
           <div className="pt-4 pb-2 flex flex-col px-6 gap-2">
             {menuItems.map((item, idx) => {
               const Icon = item.icon;
-              return item.type === "logout" ? (
-                <Button
-                  key={idx}
-                  variant="ghost"
-                  className="rounded-xl px-4 py-2 text-md gap-4"
-                  onClick={() => signOut()}
-                >
-                  <Icon size={18} className="text-primary" />
-                  ログアウト
-                </Button>
-              ) : (
+              return (
                 <Button
                   key={idx}
                   href={item.href!}
@@ -86,6 +79,7 @@ export default function UserMenu({
                 </Button>
               );
             })}
+            <LogoutButton />
           </div>
         </div>
       )}
