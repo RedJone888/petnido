@@ -20,7 +20,7 @@ export default function Modal({
   isProcessing = false,
 }: Props) {
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-999">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
         <div className="w-full sm:max-w-2xl rounded-3xl bg-white shadow-xl border border-border overflow-hidden">

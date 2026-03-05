@@ -22,7 +22,13 @@ import Link from "next/link";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
 
-export default function ServiceCard({ service }: { service: ServiceApi }) {
+export default function ServiceCard({
+  service,
+  isSitter,
+}: {
+  service: ServiceApi;
+  isSitter: boolean;
+}) {
   const router = useRouter();
   const { toggleActive, deleteService } = useService();
   const confirm = useConfirm();
@@ -135,7 +141,7 @@ export default function ServiceCard({ service }: { service: ServiceApi }) {
           <div
             className={cn(
               "flex items-center gap-1 px-2 py-0.5 rounded-lg shadow-sm backdrop-blur bg-white/90 font-bold text-[10px]",
-              isActive
+              isSitter && isActive
                 ? "text-green-600 bg-green-50"
                 : "text-amber-600 bg-amber-50",
             )}
@@ -143,15 +149,21 @@ export default function ServiceCard({ service }: { service: ServiceApi }) {
             <span
               className={cn(
                 "w-1.5 h-1.5 rounded-full",
-                isActive ? "bg-green-500" : "border border-amber-500",
+                isSitter && isActive
+                  ? "bg-green-500"
+                  : "border border-amber-500",
               )}
             ></span>
-            <span>{isActive ? "公開中" : "停止中"}</span>
+            <span>{isSitter && isActive ? "公開中" : "停止中"}</span>
           </div>
 
           {/* 右上角开关 */}
           <div className="scale-90 origin-top-right">
-            <Switch checked={isActive} onCheckedChange={handleToggle} />
+            <Switch
+              checked={isSitter && isActive}
+              onCheckedChange={handleToggle}
+              disabled={!isSitter}
+            />
           </div>
         </div>
       </div>
