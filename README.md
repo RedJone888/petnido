@@ -65,7 +65,7 @@ PetNido is a C2C matching platform designed to connect pet owners with sitters. 
 | **State Management** | Zustand (Global), TanStack Query (Server State) |
 | **Forms/Validation** | React Hook Form + Zod                           |
 | **UI/Styling**       | Tailwind CSS, Radix UI, Lucide React            |
-| **Maps/Charts**      | Leaflet/Mapbox/React-map-gl, ECharts            |
+| **Maps/Charts**      | Maplibre GL, ECharts                            |
 | **Media Storage**    | Cloudinary                                      |
 
 ### ■ 技術的なこだわり / Technical Highlights
