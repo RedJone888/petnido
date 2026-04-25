@@ -1,10 +1,10 @@
 "use client";
 
 import { PawPrint } from "lucide-react";
-import EmptyState from "@/components/dashboard/EmptyState";
+import EmptyState from "../_components/EmptyState";
 import { useServiceProfile } from "@/hooks/useServiceProfile";
-import LoadingPage from "@/components/ui/LoadingPage";
-import ServiceProfile from "./ServiceProfile";
+import LoadingPage from "@/components/shared/loading-page";
+import ServiceProfile from "./_components/ServiceProfile";
 
 // export function uid(prefix = "id") {
 //   return `${prefix}_${Math.random()
@@ -35,7 +35,7 @@ export default function ServiceProfilePage() {
         icon={<PawPrint className="w-10 h-10" />}
         title="シッターとして活動を始めませんか？"
         description="あなたの経験やペットへの思いをプロフィールにまとめて、飼い主さんの信頼を築きましょう。まずはシッター登録から始めてください。あなたの経験やケアの得意分野、対応できるペットを登録して、ペットシッターとしての第一歩を踏み出しましょう。"
-        actionLabel="シッター登録を始める"
+        btnLabel="シッター登録を始める"
         onAction={() => toggleSitter.mutate({ active: true })}
       />
     );

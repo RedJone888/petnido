@@ -1,5 +1,5 @@
 "use client";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { SiLine } from "react-icons/si";
 import { Mail } from "lucide-react";
 import Image from "next/image";

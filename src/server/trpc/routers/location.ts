@@ -10,7 +10,7 @@ export const locationRouter = router({
         q: z.string().min(1),
         limit: z.number().default(5),
         countrycodes: z.string(),
-      })
+      }),
     )
     .query(async ({ input }) => {
       const key = `jp:${input.q}:${input.limit}`;
@@ -44,7 +44,7 @@ export const locationRouter = router({
       z.object({
         lat: z.number(),
         lon: z.number(),
-      })
+      }),
     )
     .query(async ({ input }) => {
       try {
@@ -75,7 +75,7 @@ export const locationRouter = router({
       z.object({
         q: z.string().min(1),
         limit: z.number().max(5).default(5),
-      })
+      }),
     )
     .query(async ({ input }) => {
       const key = `jp:${input.q}:${input.limit}`;

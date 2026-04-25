@@ -1,7 +1,7 @@
 "use client";
 import type { StepType } from "@/domain/auth/type";
-import { FloatingInput } from "@/components/ui/FloatingInput";
-import { LoadingButton } from "@/components/ui/LoadingButton";
+import { FloatInput } from "@/components/shared/float-input";
+import { LoadingButton } from "@/components/shared/loading-button";
 import { stepSignupLinkSchema } from "@/lib/zod/auth";
 import { useState } from "react";
 import { TRPCClientError } from "@trpc/client";
@@ -75,14 +75,14 @@ export default function StepSignup({
       <h3 className="text-lg font-semibold text-gray-900 text-left mb-6">
         新規登録
       </h3>
-      <FloatingInput label="メールアドレス" value={email} editable={false} />
-      <FloatingInput
+      <FloatInput label="メールアドレス" value={email} editable={false} />
+      <FloatInput
         label="ユーザー名"
         value={username}
         onChange={handleChangeUsername}
         error={usernameFormatError}
       />
-      <FloatingInput
+      <FloatInput
         type="password"
         label="パスワード"
         value={password}

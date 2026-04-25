@@ -7,49 +7,55 @@ import { needCreateSchema, needUpdateSchema } from "@/lib/zod/needs";
 import { linkPhotos, syncPhotos } from "@/server/lib/photos";
 import { z } from "zod";
 import { NeedStatus, PetType } from "@prisma/client";
+import {
+  getNeedById,
+  listUserNeeds,
+  listBrowseNeeds,
+} from "@/server/domains/needs/queries";
 
 export const needRouter = router({
   listMine: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session!.user!.id;
+    const userId = ctx.session.user.id;
     // await ctx.prisma.need.updateMany({
     //   where: { ownerId: userId, status: "OPEN", endDate: { lt: new Date() } },
     //   data: { status: "CLOSED" },
     // });
-    const needs = await ctx.prisma.need.findMany({
-      where: { ownerId: userId },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        startDate: true,
-        endDate: true,
-        frequencyType: true,
-        customDays: true,
-        customTimes: true,
-        fosterRange: true,
-        transportMethod: true,
-        addressRaw: true,
-        totalPrice: true,
-        priceAmount: true,
-        currency: true,
-        category: true,
-        photos: {
-          where: { status: 1 },
-          orderBy: { order: "asc" },
-          take: 1,
-          select: { url: true },
-        },
-        needPets: {
-          select: {
-            petCategory: true,
-            petType: true,
-            count: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    return needs;
+    return listUserNeeds(userId);
+    // const needs = await ctx.prisma.need.findMany({
+    //   where: { ownerId: userId },
+    //   select: {
+    //     id: true,
+    //     title: true,
+    //     status: true,
+    //     startDate: true,
+    //     endDate: true,
+    //     frequencyType: true,
+    //     customDays: true,
+    //     customTimes: true,
+    //     fosterRange: true,
+    //     transportMethod: true,
+    //     addressRaw: true,
+    //     totalPrice: true,
+    //     priceAmount: true,
+    //     currency: true,
+    //     category: true,
+    //     photos: {
+    //       where: { status: 1 },
+    //       orderBy: { order: "asc" },
+    //       take: 1,
+    //       select: { url: true },
+    //     },
+    //     needPets: {
+    //       select: {
+    //         petCategory: true,
+    //         petType: true,
+    //         count: true,
+    //       },
+    //     },
+    //   },
+    //   orderBy: { createdAt: "desc" },
+    // });
+    // return needs;
   }),
   listAll: publicProcedure
     .input(
@@ -59,55 +65,41 @@ export const needRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const limit = input.limit ?? 50;
-      const needs = await ctx.prisma.need.findMany({
-        where: { status: "OPEN", endDate: { gt: new Date() } },
-        include: {
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          photos: {
-            where: { status: 1 },
-            orderBy: { order: "asc" },
-          },
-          needPets: {
-            include: {
-              photos: {
-                where: { status: 1 },
-                orderBy: { order: "asc" },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-      });
-      return needs;
+      return listBrowseNeeds({ limit: input.limit ?? 50 });
+      // const limit = input.limit ?? 50;
+      // const needs = await ctx.prisma.need.findMany({
+      //   where: { status: "OPEN", endDate: { gt: new Date() } },
+      //   include: {
+      //     owner: {
+      //       select: {
+      //         id: true,
+      //         name: true,
+      //         image: true,
+      //       },
+      //     },
+      //     photos: {
+      //       where: { status: 1 },
+      //       orderBy: { order: "asc" },
+      //     },
+      //     needPets: {
+      //       include: {
+      //         photos: {
+      //           where: { status: 1 },
+      //           orderBy: { order: "asc" },
+      //         },
+      //       },
+      //     },
+      //   },
+      //   orderBy: { createdAt: "desc" },
+      //   take: limit,
+      // });
+      // return needs;
     }),
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      return await ctx.prisma.need.findUnique({
-        where: { id: input.id },
-        include: {
-          photos: {
-            where: { status: 1 },
-            orderBy: { order: "asc" },
-          },
-          needPets: {
-            include: {
-              photos: {
-                where: { status: 1 },
-                orderBy: { order: "asc" },
-              },
-            },
-          },
-        },
-      });
+      // if(!ctx.session) throw new Error("UNAUTHORIZED");
+      return getNeedById(input.id);
     }),
   createNeed: protectedProcedure
     .input(needCreateSchema)
@@ -231,19 +223,19 @@ export const needRouter = router({
         return updatedNeed;
       });
     }),
-  stats: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session!.user!.id;
-    const [totalNeeds, completedNeeds] = await ctx.prisma.$transaction([
-      ctx.prisma.need.count({ where: { ownerId: userId } }),
-      ctx.prisma.need.count({ where: { ownerId: userId, status: "CLOSED" } }),
-    ]);
-    const reviewCount = 0;
-    return {
-      totalNeeds,
-      completedNeeds,
-      reviewCount,
-    };
-  }),
+  // stats: protectedProcedure.query(async ({ ctx }) => {
+  //   const userId = ctx.session!.user!.id;
+  //   const [totalNeeds, completedNeeds] = await ctx.prisma.$transaction([
+  //     ctx.prisma.need.count({ where: { ownerId: userId } }),
+  //     ctx.prisma.need.count({ where: { ownerId: userId, status: "CLOSED" } }),
+  //   ]);
+  //   const reviewCount = 0;
+  //   return {
+  //     totalNeeds,
+  //     completedNeeds,
+  //     reviewCount,
+  //   };
+  // }),
   updateStatus: protectedProcedure
     .input(z.object({ id: z.string(), status: z.nativeEnum(NeedStatus) }))
     .mutation(async ({ ctx, input }) => {

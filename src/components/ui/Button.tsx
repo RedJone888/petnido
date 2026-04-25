@@ -1,4 +1,4 @@
-"use client";
+// "use client";
 import Link from "next/link";
 import { forwardRef } from "react";
 import cn from "@/lib/cn";

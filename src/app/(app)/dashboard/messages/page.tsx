@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MessageCircle } from "lucide-react";
-import EmptyState from "@/components/dashboard/EmptyState";
+import EmptyState from "../_components/EmptyState";
 export default function MessagesPage() {
   const hasMessage = true;
   if (!hasMessage) {

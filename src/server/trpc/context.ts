@@ -1,5 +1,5 @@
 //负责createContext(session+db)
-import { auth } from "@/server/auth/auth";
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export async function createContext() {

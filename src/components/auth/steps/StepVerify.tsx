@@ -1,5 +1,5 @@
-import VerificationCodeInput from "@/components/auth/VerificationCodeInput";
-import { LoadingButton } from "@/components/ui/LoadingButton";
+import VerificationCodeInput from "@/components/shared/verifi-code-input";
+import { LoadingButton } from "@/components/shared/loading-button";
 import { useAuth } from "@/hooks/useAuth";
 import { TRPCClientError } from "@trpc/client";
 import { signIn } from "next-auth/react";

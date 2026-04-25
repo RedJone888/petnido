@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 // import { serviceSchema, ServiceInput } from "@/lib/zod/services";
 import { trpc } from "@/utils/trpc";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2, PawPrint, ExternalLink } from "lucide-react";

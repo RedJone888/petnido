@@ -1,4 +1,4 @@
-import FooterSimple from "@/components/FooterSimple";
+import FooterSimple from "./_components/FooterSimple";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

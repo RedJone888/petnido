@@ -1,22 +1,20 @@
-import "@/app/globals.css";
-import { Inter } from "next/font/google";
+import "./globals.css";
 import { Toaster } from "sonner";
-import Navbar from "@/components/Navbar";
+import Navbar from "./_components/Navbar";
 import { GlobalConfirm } from "@/components/GlobalConfirm";
 import { Metadata } from "next";
-import { Providers } from "@/providers/Providers";
-const inter = Inter({ subsets: ["latin"] });
-
+import { Providers } from "@/components/providers/Providers";
+import { inter, kiwiMaru } from "@/components/fonts";
 export const metadata: Metadata = {
   title: "PetNido",
   description: "ペットシッターのマッチングサービス",
-  icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png" }],
-  },
+  // icons: {
+  //   icon: [
+  //     { url: "/favicon.ico" },
+  //     { url: "/favicon.svg", type: "image/svg+xml" },
+  //   ],
+  //   apple: [{ url: "/apple-touch-icon.png" }],
+  // },
   // manifest: "/manifest.json",
 };
 
@@ -32,7 +30,9 @@ export default function RootLayout({
   // };
   return (
     <html lang="ja">
-      <body className={`flex flex-col ${inter.className} min-h-screen`}>
+      <body
+        className={`flex flex-col ${kiwiMaru.className} antialiased min-h-screen`}
+      >
         <Providers>
           <Navbar />
           <main className="flex-1 flex flex-col">{children}</main>

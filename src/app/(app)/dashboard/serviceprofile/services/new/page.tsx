@@ -3,12 +3,12 @@
 import { useMemo } from "react";
 import { useService } from "@/hooks/useService";
 import { useServiceProfile } from "@/hooks/useServiceProfile";
-import ServiceForm from "@/app/(app)/dashboard/serviceprofile/services/ServiceForm";
+import { ServiceForm } from "../_components/form";
 import { createEmptyService } from "@/domain/service/defaults";
 import type { ServiceCreateInput } from "@/lib/zod/services";
-import LoadingPage from "@/components/ui/LoadingPage";
+import LoadingPage from "@/components/shared/loading-page";
 
-export default function NewServicePage() {
+export default function ServiceNewPage() {
   const { getLocationAndCurrency } = useServiceProfile();
   const serviceProfile = getLocationAndCurrency.data;
   const INITIAL_VALUES = useMemo(() => {

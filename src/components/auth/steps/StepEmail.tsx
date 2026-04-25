@@ -1,7 +1,7 @@
 "use client";
 import type { StepType } from "@/domain/auth/type";
-import { FloatingInput } from "@/components/ui/FloatingInput";
-import { LoadingButton } from "@/components/ui/LoadingButton";
+import { FloatInput } from "@/components/shared/float-input";
+import { LoadingButton } from "@/components/shared/loading-button";
 import { stepEmailSchema } from "@/lib/zod/auth";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,7 +61,7 @@ export default function StepEmail({ email, setEmail, setStep }: Props) {
         メールでログイン
       </h3>
 
-      <FloatingInput
+      <FloatInput
         label="メールアドレス"
         value={email}
         onChange={handleChangeEmail}

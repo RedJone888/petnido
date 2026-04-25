@@ -123,3 +123,5 @@ PetNido is a C2C matching platform designed to connect pet owners with sitters. 
 - [LinkedIn](链接) | [GitHub](https://github.com/RedJone888) | [Email](redjoan.guo@gmail.com)
 
 **PetNido** - \*Designed with love for pets
+
+Next.js の Intercepting Routes を使って、モーダルと通常ページを両立しています」

@@ -1,6 +1,6 @@
 "use client";
-import { FloatingInput } from "@/components/ui/FloatingInput";
-import { LoadingButton } from "@/components/ui/LoadingButton";
+import { FloatInput } from "@/components/shared/float-input";
+import { LoadingButton } from "@/components/shared/loading-button";
 import type { StepType } from "@/domain/auth/type";
 import { useState } from "react";
 import { stepLoginSchema } from "@/lib/zod/auth";
@@ -68,9 +68,9 @@ export default function StepLogin({
       <h3 className="text-lg font-semibold text-gray-900 text-left mb-6">
         ログイン
       </h3>
-      <FloatingInput label="メールアドレス" value={email} editable={false} />
+      <FloatInput label="メールアドレス" value={email} editable={false} />
 
-      <FloatingInput
+      <FloatInput
         type="password"
         label="パスワード"
         value={password}

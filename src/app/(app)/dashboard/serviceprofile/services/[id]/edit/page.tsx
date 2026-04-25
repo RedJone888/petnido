@@ -2,9 +2,9 @@
 import { useService } from "@/hooks/useService";
 import { serviceApiToForm } from "@/domain/service/mapper";
 import type { ServiceCreateInput } from "@/lib/zod/services";
-import ServiceForm from "@/app/(app)/dashboard/serviceprofile/services/ServiceForm";
-import LoadingPage from "@/components/ui/LoadingPage";
-export default function EditServicePage({
+import { ServiceForm } from "../../_components/form";
+import LoadingPage from "@/components/shared/loading-page";
+export default function ServiceEditPage({
   params,
 }: {
   params: { id: string };

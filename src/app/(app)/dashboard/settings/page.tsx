@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Toggle from "@/components/ui/Toggle";
+import Toggle from "@/components/ui/toggle";
 
 export default function SettingsPage() {
   const [acceptAsSitter, setAcceptAsSitter] = useState(true);

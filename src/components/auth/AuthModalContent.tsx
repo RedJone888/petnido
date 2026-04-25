@@ -6,7 +6,7 @@ import StepEmail from "./steps/StepEmail";
 import StepLogin from "./steps/StepLogin";
 import StepSignup from "./steps/StepSignup";
 import StepVerify from "./steps/StepVerify";
-import { useAuthModal } from "@/providers/AuthModalProvider";
+import { useAuthModal } from "@/components/providers/AuthModalProvider";
 import type { StepType } from "@/domain/auth/type";
 import { useAuth } from "@/hooks/useAuth";
 import cn from "@/lib/cn";

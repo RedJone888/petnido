@@ -1,4 +1,4 @@
-import FooterHome from "@/components/FooterHome";
+import FooterHome from "./_components/FooterHome";
 
 export default function HomeLayout({
   children,

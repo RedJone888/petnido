@@ -18,6 +18,7 @@ export function useNeed(id?: string) {
     { id: id! },
     { enabled: !!id },
   );
+
   const getAllNeeds = trpc.need.listAll.useQuery(
     {
       limit: pagination.limit,
