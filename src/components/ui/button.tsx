@@ -1,71 +1,129 @@
-// "use client";
 import Link from "next/link";
 import { forwardRef } from "react";
 import cn from "@/lib/cn";
+
 const variantStyles = {
   primary: cn(
-    "text-white bg-linear-to-br from-secondary to-primary",
-    "shadow-brand-soft hover:shadow-brand-strong",
-    "duration-200 ease-out",
+    "text-on-primary bg-primary",
+    "shadow-lg hover:shadow-xl",
+    "hover:scale-105 active:scale-95",
   ),
-  // "bg-brand-600 hover:bg-brand-700 shadow-purple hover:shadow-purple-lg",
-  // primary: [
-  //   "shadow-[0_6px_18px_rgba(0,0,0,0.2)]",
-  //   "duration-200 ease-out",
-  //   "hover:shadow-[0_10px_20px_rgba(0,0,0,0.4)]",
-  // ].join(" "),
-  // primary: "bg-primary-hover text-primary-foreground hover:bg-primary",
-  outlineDark: [
-    "text-neutral-800",
-    "bg-white",
-    "border border-gray-300",
-    "shadow-[0_6px_18px_rgba(0,0,0,0.2)]",
-    "duration-200 ease-out",
-    "hover:shadow-[0_10px_20px_rgba(0,0,0,0.4)]",
-  ].join(" "),
-  // outlineDark:
-  //   "bg-white border border-btn-fore hover:bg-btn-hover text-btn-fore",
+  secondary: cn(
+    "bg-on-primary text-primary hover:bg-primary/5",
+    "border-2 border-primary/10 shadow-lg ",
+    "shadow-sm",
+  ),
+  solid: cn("bg-primary hover:bg-brand-700 text-on-primary", "shadow-xl"),
+  danger: cn("bg-danger-text hover:bg-red-600 text-on-primary", "shadow-xl"),
+  outline: cn(
+    "border border-primary ",
+    "bg-on-primary hover:bg-primary",
+    "text-primary hover:text-on-primary",
+  ),
+  outlineMuted: cn(
+    "border border-slate-200 hover:border-primary",
+    "bg-on-primary",
+    "text-slate-400 hover:text-primary",
+  ),
+  outlineDanger: cn(
+    "border border-slate-200 hover:border-red-500",
+    "bg-on-primary",
+    "text-slate-400 hover:text-red-500",
+  ),
+  ghost: cn(
+    "border border-transparent bg-transparent",
+    "text-gray-500 hover:bg-brand-50 hover:text-primary",
+  ),
+  link: cn(
+    "border border-transparent bg-transparent",
+    "text-primary shadow-none gap-2 hover:gap-3",
+  ),
+  // Backward-compatible aliases. Prefer solid/outlineMuted/outlineDanger/link.
+  outline1:
+    "border border-slate-200 hover:border-primary bg-white text-slate-400 hover:text-primary",
+  outline2:
+    "border border-slate-200 hover:border-red-500 bg-white text-slate-400 hover:text-red-500",
+  ghost1:
+    "border border-transparent bg-transparent text-primary shadow-none gap-2 hover:gap-3",
+  // Backward-compatible aliases. Prefer primary/secondary/outline/ghost/danger.
+  outlineDark:
+    "border border-primary bg-white text-primary hover:bg-primary hover:text-white",
   outlineLight:
-    "bg-white text-neutral-800 border border-neutral-300 hover:bg-neutral-50",
-  ghost:
-    "bg-transparent text-primary border border-purple1 hover:bg-neutral-100",
-  stepCancel: [
-    "text-primary",
-    "bg-linear-to-br from-white to-neutral-100",
-    "shadow-[0_6px_18px_rgba(0,0,0,0.2)]",
-    "duration-200 ease-out",
-    "hover:shadow-[0_10px_20px_rgba(0,0,0,0.4)]",
-  ].join(" "),
+    "border border-neutral-300 bg-white text-neutral-800 hover:border-primary hover:bg-brand-50 hover:text-primary",
+  stepCancel:
+    "border border-transparent bg-brand-50 text-primary shadow-brand-soft hover:bg-brand-100 hover:shadow-brand-strong",
 };
 
+const sizeStyles = {
+  icon: "p-2 text-sm",
+  sm: "px-3.5 py-2 text-sm",
+  md: "px-6 py-2.5 text-md",
+  lg: "px-8 py-4 text-md",
+};
+
+const shapeStyles = {
+  default: "rounded-xl",
+  pill: "rounded-full",
+};
+
+export type ButtonVariant = keyof typeof variantStyles;
+export type ButtonSize = keyof typeof sizeStyles;
+export type ButtonShape = keyof typeof shapeStyles;
+
 type BaseProps = {
-  variant?: keyof typeof variantStyles;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  shape?: ButtonShape;
   className?: string;
   children: React.ReactNode;
 };
+
 type ButtonAsButton = BaseProps &
   React.ButtonHTMLAttributes<HTMLButtonElement> & { href?: never };
+
 type ButtonAsLink = BaseProps &
-  React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "outlineDark" | "outlineLight" | "ghost" | "stepCancel";
-};
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+    href: string;
+    disabled?: never;
+    type?: never;
+  };
+
+export type ButtonProps = ButtonAsButton;
+export type ButtonLinkProps = ButtonAsLink;
 
 export const Button = forwardRef<
   HTMLButtonElement | HTMLAnchorElement,
   ButtonAsButton | ButtonAsLink
->(({ className, variant = "primary", ...props }, ref) => {
-  const baseClass = cn(
-    "inline-flex items-center justify-center gap-2 transition-all",
-    "rounded-xl py-2.5 px-6 text-sm font-bold",
-    "active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
-    variantStyles[variant],
-    className,
-  );
-  if ("href" in props) {
-    return <Link className={baseClass} {...(props as any)} />;
-  }
-  return <button className={baseClass} {...props} />;
-});
+>(
+  (
+    {
+      className = "",
+      variant = "primary",
+      size = "md",
+      shape = "default",
+      ...props
+    },
+    ref,
+  ) => {
+    const baseClass = cn(
+      "inline-flex items-center justify-center gap-2 transition-all",
+      "font-bold duration-200 ease-out cursor-pointer",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+      "disabled:pointer-events-none disabled:opacity-50",
+      sizeStyles[size],
+      shapeStyles[shape],
+      variantStyles[variant],
+      className,
+    );
+
+    if ("href" in props) {
+      return (
+        <Link ref={ref as any} className={baseClass} {...(props as any)} />
+      );
+    }
+
+    return <button ref={ref as any} className={baseClass} {...props} />;
+  },
+);
 
 Button.displayName = "Button";

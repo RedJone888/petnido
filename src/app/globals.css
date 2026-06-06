@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "react-day-picker/dist/style.css";
 @import "leaflet/dist/leaflet.css";
+
 /* 覆盖浏览器默认的 autofill 背景色 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -35,8 +36,57 @@ input:-webkit-autofill:focus {
   scrollbar-color: #e2e8f0 transparent;
 }
 
-/* === 全站主题色：PetNido Purple === */
+@theme inline {
+  --font-sans: var(--font-plus-jakarta);
+}
 @theme {
+  --color-background: var(--background);
+  --color-on-background: var(--on-background);
+  --color-outline-variant: var(--outline-variant);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+  --color-primary-container: var(--primary-container);
+  --color-secondary: var(--secondary);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-variant: var(--surface-variant);
+  --color-on-surface-variant: var(--on-surface-variant);
+
+  --spacing-margin-desktop: 64px;
+  --spacing-margin-mobile: 16px;
+  --spacing-container-max-width: 1200px;
+  --spacing-gutter: 24px;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 600;
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--font-weight: 700;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-xl: 40px;
+  --text-headline-xl--line-height: 48px;
+  --text-headline-xl--font-weight: 700;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-label-md: 14px;
+  --text-label-md--line-height: 20px;
+  --text-label-md--font-weight: 600;
+  --text-label-md--letter-spacing: 0.05em;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 400;
+
   --navbar-height: 81px;
   --radius: 10px;
   /* === 核心品牌色 (Brand) === */
@@ -76,11 +126,9 @@ input:-webkit-autofill:focus {
   --color-slate-600: #475569;
   --color-slate-800: #1e293b;
 
-  /* --color-primary: #7c3aed; 对应 text-primary */
-  /* --color-secondary: #a855f7; 对应 text-secondary */
+  /* --color-primary: #7c3aed; #7a2cff; #8200db;*/
+  /* --color-secondary: #a855f7; #a85cff #f6f2ff*/
 
-  --color-primary: #7a2cff;
-  --color-secondary: #a85cff;
   --color-bg: #f5f5f5;
   --color-success: #67c23a;
   --color-warning: #e6a23c;
@@ -98,8 +146,6 @@ input:-webkit-autofill:focus {
   --shadow-brand-soft: 0 6px 18px rgba(124, 58, 237, 0.2);
   --shadow-brand-strong: 0 10px 20px rgba(124, 58, 237, 0.4);
 
-  /* === 待修改 === */
-  --color-background: #ffffff;
   --foreground: #111111;
 
   --color-card: #ffffff;
@@ -107,14 +153,10 @@ input:-webkit-autofill:focus {
 
   --popover: #ffffff;
   --popover-foreground: #111111;
-
-  /* --color-primary: #8200db; PetNido Purple */
   /* --color-primary-hover: #9810fa; */
-  /* --color-primary-foreground: #ffffff; */
-  --color-background: #fff;
+
   --color-input: #d5d5d4;
 
-  --secondary: #f6f2ff;
   --secondary-foreground: #3a206d;
 
   --color-border: #c0c0c0;
@@ -124,6 +166,28 @@ input:-webkit-autofill:focus {
   --color-btn: #fff;
   --color-btn-fore: #364153;
   --color-btn-hover: #f9fafb;
+}
+
+:root {
+  --background: #f8f9ff;
+  --on-background: #121c28;
+  --outline-variant: #ccc3d8;
+  --primary: #630ed4;
+  --on-primary: #ffffff;
+  --primary-fixed: #eaddff;
+  --on-primary-fixed-variant: #5a00c6;
+  --primary-container: #7c3aed;
+  --secondary: #855300;
+  --secondary-fixed: #ffddb8;
+  --secondary-container: #fea619;
+  --on-secondary-container: #684000;
+  --on-surface-variant: #4a4455;
+  --surface-dim: #d1dbec;
+  --surface-variant: #d9e3f4;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eef4ff;
+  --surface-container: #e5eeff;
+  --tertiary-container: #a15100;
 }
 
 .dark {
@@ -145,4 +209,437 @@ input:-webkit-autofill:focus {
   --border: #3a3247;
   --input: #3a3247;
   --ring: #9a59ff;
+}
+
+/* === Home V2 design draft: scoped tokens and utilities === */
+.home-v2 {
+  --hv2-primary: #630ed4;
+  --hv2-primary-container: #7c3aed;
+  --hv2-primary-fixed: #eaddff;
+  --hv2-on-primary-fixed-variant: #5a00c6;
+  --hv2-secondary: #855300;
+  --hv2-secondary-container: #fea619;
+  --hv2-on-secondary-container: #684000;
+  --hv2-tertiary-container: #a15100;
+  --hv2-background: #f8f9ff;
+  --hv2-surface-low: #eef4ff;
+  --hv2-surface-container: #e5eeff;
+  --hv2-surface-variant: #d9e3f4;
+  --hv2-outline: #7b7487;
+  --hv2-outline-variant: #ccc3d8;
+  --hv2-on-background: #121c28;
+  --hv2-on-surface-muted: #4a4455;
+  background: var(--hv2-background);
+  color: var(--hv2-on-background);
+}
+
+.hv2-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+@media (min-width: 768px) {
+  .hv2-container {
+    padding-inline: 64px;
+  }
+}
+
+.hv2-heading-xl {
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.hv2-heading-lg {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.hv2-heading-md {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+.hv2-body-lg {
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--hv2-on-surface-muted);
+}
+
+.hv2-body-md {
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--hv2-on-surface-muted);
+}
+
+.hv2-label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.hv2-badge {
+  display: inline-block;
+  border-radius: 9999px;
+  background: var(--hv2-primary-fixed);
+  color: var(--hv2-on-primary-fixed-variant);
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hv2-hero-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #f0ebff 100%);
+}
+.hero-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #f0ebff 100%);
+}
+
+.hv2-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 256px;
+  height: 256px;
+  border-radius: 9999px;
+  background: #ffddb8;
+  opacity: 0.3;
+  filter: blur(48px);
+}
+
+.hv2-hero-image {
+  position: relative;
+  overflow: hidden;
+  border: 8px solid #ffffff;
+  border-radius: 2rem;
+  aspect-ratio: 16 / 10;
+  box-shadow: 0 12px 24px -10px rgba(99, 14, 212, 0.15);
+}
+.pill-shadow {
+  box-shadow: 0 12px 24px -10px rgba(99, 14, 212, 0.15);
+}
+
+.hv2-hero-image img,
+.hv2-need-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hv2-button-primary,
+.hv2-button-secondary,
+.hv2-cta-light,
+.hv2-cta-dark,
+.hv2-footer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.hv2-button-primary {
+  border-radius: 12px;
+  background: var(--hv2-primary);
+  color: #ffffff;
+  padding: 16px 32px;
+  box-shadow: 0 10px 20px rgba(99, 14, 212, 0.18);
+}
+
+.hv2-button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(99, 14, 212, 0.24);
+}
+
+.hv2-button-secondary {
+  border: 2px solid rgba(99, 14, 212, 0.1);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--hv2-primary);
+  padding: 16px 32px;
+}
+
+.hv2-button-secondary:hover {
+  background: rgba(99, 14, 212, 0.05);
+}
+
+.hv2-service-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(204, 195, 216, 0.3);
+  border-radius: 24px;
+  background: var(--hv2-surface-low);
+  padding: 32px;
+  transition: all 0.2s ease;
+}
+
+.hv2-service-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 22px rgba(18, 28, 40, 0.08);
+}
+
+.hv2-service-icon,
+.hv2-flow-marker,
+.hv2-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.hv2-service-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 32px;
+  border-radius: 12px;
+  color: #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.hv2-service-card:hover .hv2-service-icon {
+  transform: scale(1.1);
+}
+
+.service-tone-primary,
+.journey-tone-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.journey-icon-secondary,
+.service-tone-secondary {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.journey-tone-secondary {
+  background: var(--secondary);
+  color: #ffffff;
+}
+
+.service-tone-tertiary {
+  background: var(--tertiary-container);
+  color: #ffffff;
+}
+
+.journey-icon-primary {
+  background: var(--primary-fixed);
+  color: var(--primary);
+}
+.journey-title-primary {
+  color: var(--primary);
+}
+.hv2-title-primary {
+  color: var(--hv2-primary);
+}
+
+.journey-title-secondary {
+  color: var(--on-secondary-container);
+}
+
+.hv2-link-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--hv2-primary);
+  font-weight: 800;
+  transition: gap 0.2s ease;
+}
+
+.hv2-link-action:hover {
+  gap: 12px;
+}
+
+.hv2-flow-tab {
+  border-radius: 9999px;
+  padding: 10px 32px;
+  color: var(--hv2-on-surface-muted);
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.hv2-flow-tab.is-active {
+  background: #ffffff;
+  color: var(--hv2-primary);
+  box-shadow: 0 1px 6px rgba(18, 28, 40, 0.08);
+}
+
+.hv2-flow-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ffffff;
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 32px;
+  text-align: left;
+  box-shadow: 0 1px 10px rgba(18, 28, 40, 0.04);
+  backdrop-filter: blur(8px);
+}
+
+.hv2-flow-marker {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.hv2-step-list {
+  position: relative;
+  display: grid;
+  gap: 32px;
+}
+
+.hv2-step-list::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 24px;
+  width: 2px;
+  background: rgba(99, 14, 212, 0.1);
+}
+
+.hv2-step-number {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 4px solid var(--hv2-background);
+  border-radius: 9999px;
+}
+
+.hv2-need-card {
+  overflow: hidden;
+  border: 1px solid var(--hv2-outline-variant);
+  border-radius: 24px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.hv2-need-card:hover {
+  box-shadow: 0 18px 34px rgba(18, 28, 40, 0.12);
+}
+
+.hv2-card-tag {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  border-radius: 9999px;
+  background: var(--hv2-primary-fixed);
+  color: var(--hv2-on-primary-fixed-variant);
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hv2-sitter-card {
+  border-radius: 2rem;
+  background: #ffffff;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 1px 8px rgba(18, 28, 40, 0.04);
+  transition: all 0.2s ease;
+}
+
+.hv2-sitter-card:hover {
+  transform: translateY(-8px);
+}
+
+.hv2-sitter-card > img {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 16px;
+  border: 4px solid var(--hv2-primary-fixed);
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+.hv2-mini-tag {
+  border-radius: 4px;
+  background: var(--hv2-surface-variant);
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hv2-profile-button {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hv2-primary);
+  border-radius: 9999px;
+  color: var(--hv2-primary);
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.hv2-profile-button:hover {
+  background: var(--hv2-primary);
+  color: #ffffff;
+}
+
+.hv2-final-cta {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3rem;
+  background: var(--hv2-primary-container);
+  padding: 80px 32px;
+}
+
+.hv2-dot-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background-image: radial-gradient(
+    circle at 2px 2px,
+    white 1px,
+    transparent 0
+  );
+  background-size: 40px 40px;
+}
+
+.hv2-cta-light,
+.hv2-cta-dark {
+  border-radius: 9999px;
+  padding: 16px 40px;
+  font-size: 18px;
+}
+
+.hv2-cta-light {
+  background: #ffffff;
+  color: var(--hv2-primary);
+  box-shadow: 0 16px 30px rgba(18, 28, 40, 0.16);
+}
+
+.hv2-cta-light:hover {
+  transform: scale(1.04);
+}
+
+.hv2-cta-dark {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: var(--hv2-primary);
+  color: #ffffff;
+}
+
+.hv2-cta-dark:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hv2-footer-button {
+  border-radius: 9999px;
+  background: var(--hv2-primary);
+  color: #ffffff;
+  padding: 10px 24px;
 }

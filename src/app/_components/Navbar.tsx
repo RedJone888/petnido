@@ -12,6 +12,7 @@ import cn from "@/lib/cn";
 import Image from "next/image";
 import { CreateNeedButton, LoginButton } from "@/components/shared/buttons";
 import { LogoutButton } from "@/components/shared/buttons";
+import { Button } from "@/components/ui/button";
 const mockNotifications = [
   {
     id: "1",
@@ -64,49 +65,56 @@ export default function Navbar() {
     { href: "/public/needs", label: "お世話の依頼を見る" },
     { href: "/public/sitters", label: "シッターを探す" },
   ];
+  const links1 = [
+    { href: "/public/needs", label: "View All Needs" },
+    { href: "/public/sitters", label: "View All Sitters" },
+    { href: "#", label: "Our Community" },
+    { href: "#", label: "Help" },
+  ];
   return (
-    <nav className="w-full bg-background border-b border-border sticky top-0 z-999">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-16 md:h-20 px-4 md:px-6">
+    <header className="bg-surface-container-lowest sticky top-0 z-999 shadow-sm border-b border-outline-variant/20">
+      <nav className="flex items-center justify-between w-full h-20 px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto">
         {/* 1. Logo: 移动端缩小文字 */}
-        <Link href="/" className="flex items-center gap-2 md:gap-3">
+        <Link href="/" className="flex items-center gap-2">
           <Image
             src="/favicon.svg"
-            alt="logo"
+            alt="PetNido Logo"
             width={30}
             height={30}
-            className="md:w-9 md:h-9"
+            className="w-10 h-10"
           />
-          <span className="text-xl md:text-3xl font-bold text-primary tracking-widest">
+          <span className="text-headline-md font-bold text-primary">
             PetNido
           </span>
         </Link>
-
+        {/* 桌面端链接 (仅 md 以上显示) */}
+        <div className="hidden md:flex items-center space-x-8">
+          {links1.map((link) => {
+            const isActive =
+              link.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(link.href + "/") ||
+                  pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                // prefetch={false}
+                className={`text-label-md ${cn(
+                  "hover:text-primary transition-colors duration-200 ",
+                  isActive
+                    ? "text-primary font-bold border-b-2 border-primary pb-1"
+                    : "text-on-surface-variant font-medium",
+                )}`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
         {/* Desktop Links */}
         {/* 2. 右侧操作区 */}
         <div className="flex items-center gap-2 md:gap-8">
-          {/* 桌面端链接 (仅 md 以上显示) */}
-          <div className="hidden md:flex items-center gap-8 text-gray-700">
-            {links.map((link) => {
-              const isActive =
-                link.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(link.href + "/") ||
-                    pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  // prefetch={false}
-                  className={cn(
-                    "hover:text-secondary transition",
-                    isActive ? "text-primary font-medium" : "",
-                  )}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
           {/* 已登录状态下的：通知和消息 (移动端也显示，提高优先级) */}
           {session && (
             <div className="flex items-center gap-1 md:gap-8">
@@ -128,8 +136,16 @@ export default function Navbar() {
           {/* 未登录显示登录按钮 */}
           {
             !session && (
-              <div className="hidden md:block">
-                <LoginButton />
+              <div className="flex items-center gap-4">
+                {/* <LoginButton /> */}
+                <Button
+                  variant="primary"
+                  size="md"
+                  shape="pill"
+                  className="font-label-md"
+                >
+                  Sign In
+                </Button>
               </div>
             )
             // (
@@ -211,22 +227,23 @@ export default function Navbar() {
             </div>
           </>
         )}
-      </div>
-      <style jsx>{`
-        .animate-fadeIn {
-          animation: fadeIn 0.15s ease-out;
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-6px);
+
+        <style jsx>{`
+          .animate-fadeIn {
+            animation: fadeIn 0.15s ease-out;
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-6px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
-        }
-      `}</style>
-    </nav>
+        `}</style>
+      </nav>
+    </header>
   );
 }

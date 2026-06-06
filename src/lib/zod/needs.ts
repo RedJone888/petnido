@@ -81,32 +81,58 @@ const needValidation = (data: any, ctx: z.RefinementCtx) => {
     }
   }
 };
-const needBase = z.object({
+const commonFields = z.object({
   title: z.string().min(1, "请输入标题"),
-  category: z.nativeEnum(ServiceCategory),
-  requirement: z.string().min(1, "请输入需求说明"),
   startDate: z.string().min(1, "请选择开始日期"),
   endDate: z.string().min(1, "请选择结束日期"),
-  frequencyType: z.nativeEnum(FrequencyType).nullable(),
   addressRaw: z.string().min(1, "请选择地点"),
   addressLat: z.number(),
   addressLon: z.number(),
+  requirement: z.string().min(1, "请输入需求说明"),
   currency: z.nativeEnum(Currency),
-  fosterRange: z.nativeEnum(DistanceRange).nullable(),
-  transportMethod: z.nativeEnum(TransportMethod).nullable(),
   status: z.nativeEnum(NeedStatus),
 });
-export const needFormSchema = needBase
-  .extend({
-    customDays: z.string().nullable(),
-    customTimes: z.string().nullable(),
-    needPets: z.array(needPetFormSchema).min(1),
-    photos: z.array(z.custom<ImageItem>()),
-    priceAmount: z.string().min(1, "请输入价格"),
-    totalPrice: z.string().min(1, "请输入jiage"),
-  })
-  .superRefine(needValidation);
-const neeApiSchema = needBase.extend({
+
+// 封装一个工厂函数，避免前后端 Schema 重复写 discriminatedUnion 逻辑
+function createNeedSchema<T extends z.ZodRawShape>(specificFields: z.ZodObject<T>) {
+  const base = commonFields.merge(specificFields);
+  return z.discriminatedUnion("category", [
+    // VISIT 类型：强制要求 frequencyType
+    base.extend({
+      category: z.literal(ServiceCategory.VISIT),
+      frequencyType: z.nativeEnum(FrequencyType),
+      fosterRange: z.any().nullable().optional(),     // 允许但在该类型下不强制校验
+      transportMethod: z.any().nullable().optional(), 
+    }),
+    // FOSTER 类型：强制要求 fosterRange 和 transportMethod
+    base.extend({
+      category: z.literal(ServiceCategory.FOSTER),
+      fosterRange: z.nativeEnum(DistanceRange),
+      transportMethod: z.nativeEnum(TransportMethod),
+      frequencyType: z.any().nullable().optional(),
+    }),
+    // OTHER 类型
+    base.extend({
+      category: z.literal(ServiceCategory.OTHER),
+      frequencyType: z.any().nullable().optional(),
+      fosterRange: z.any().nullable().optional(),
+      transportMethod: z.any().nullable().optional(),
+    }),
+  ]);
+}
+
+const formSpecificFields = z.object({
+  customDays: z.string().nullable(),
+  customTimes: z.string().nullable(),
+  needPets: z.array(needPetFormSchema).min(1),
+  photos: z.array(z.custom<ImageItem>()),
+  priceAmount: z.string().min(1, "请输入价格"),
+  totalPrice: z.string().min(1, "请输入jiage"),
+});
+
+export const needFormSchema = createNeedSchema(formSpecificFields).superRefine(needValidation);
+
+const apiSpecificFields = z.object({
   customDays: z.coerce.number().int().default(1).nullable(),
   customTimes: z.coerce.number().int().default(0).nullable(),
   needPets: z.array(needPetApiSchema).min(1),
@@ -114,9 +140,13 @@ const neeApiSchema = needBase.extend({
   priceAmount: z.coerce.number().int().default(0).nullable(),
   totalPrice: z.coerce.number().int().default(0),
 });
-export const needCreateSchema = neeApiSchema.superRefine(needValidation);
-export const needUpdateSchema = neeApiSchema
-  .extend({
+
+const needApiSchema = createNeedSchema(apiSpecificFields);
+
+export const needCreateSchema = needApiSchema.superRefine(needValidation);
+
+export const needUpdateSchema = createNeedSchema(
+  apiSpecificFields.extend({
     id: z.string(),
     needPets: z
       .array(
@@ -126,7 +156,8 @@ export const needUpdateSchema = neeApiSchema
       )
       .min(1),
   })
-  .superRefine(needValidation);
+).superRefine(needValidation);
+
 export type NeedCreateInput = z.infer<typeof needCreateSchema>;
 export type NeedPetForm = z.input<typeof needPetFormSchema>;
 export type NeedForm = z.input<typeof needFormSchema>;

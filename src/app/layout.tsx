@@ -4,7 +4,7 @@ import Navbar from "./_components/Navbar";
 import { GlobalConfirm } from "@/components/GlobalConfirm";
 import { Metadata } from "next";
 import { Providers } from "@/components/providers/Providers";
-import { inter, kiwiMaru } from "@/components/fonts";
+import { inter, kiwiMaru, plusJakarta } from "@/components/fonts";
 export const metadata: Metadata = {
   title: "PetNido",
   description: "ペットシッターのマッチングサービス",
@@ -29,9 +29,10 @@ export default function RootLayout({
   //   setOpenAuth(false);
   // };
   return (
-    <html lang="ja">
+    <html lang="en">
       <body
-        className={`flex flex-col ${kiwiMaru.className} antialiased min-h-screen`}
+        // ${kiwiMaru.className}
+        className={`bg-background text-on-background overflow-x-hidden flex flex-col ${plusJakarta.variable} font-sans antialiased min-h-screen`}
       >
         <Providers>
           <Navbar />

@@ -5,6 +5,7 @@ interface NeedDetailPageProps {
   } | null;
 }
 export default function NeedDetailPage({ initialNeed }: any) {
+  console.log("initialNeed",initialNeed)
   return (
     // <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
     //   <div className="bg-white rounded-xl w-[90%] max-w-5xl p-6 relative shadow-lg animate-fade-in">
