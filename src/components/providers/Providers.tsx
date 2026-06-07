@@ -5,6 +5,7 @@ import { trpc } from "@/utils/trpc";
 import { httpBatchLink } from "@trpc/client";
 import { useState } from "react";
 import { AuthModalProvider } from "@/components/providers/AuthModalProvider";
+import { LanguageProvider } from "./language-provider";
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   const [trpcClient] = useState(() =>
@@ -20,7 +21,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <AuthModalProvider>{children}</AuthModalProvider>
+          <AuthModalProvider>
+            <LanguageProvider>{children}</LanguageProvider>
+          </AuthModalProvider>
         </QueryClientProvider>
       </trpc.Provider>
     </SessionProvider>

@@ -1,3 +1,5 @@
+"use client";
+import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -28,6 +30,7 @@ function FooterCol({
   );
 }
 export default function FooterHome() {
+  const { t } = useLanguage();
   return (
     <footer className="bg-surface-container border-t border-outline-variant/30">
       <div className="flex flex-col md:flex-row justify-between items-start w-full py-16 px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto">
@@ -45,8 +48,7 @@ export default function FooterHome() {
             </span>
           </div>
           <p className="text-body-md text-on-surface-variant max-w-xs mb-8">
-            Connecting neighbors for a safer, happier pet community. Dedicated
-            to personal care for all furry family members.
+            {t.home.footerHome.text}
           </p>
           <Button
             href="/dashboard/needs/new"
@@ -54,20 +56,22 @@ export default function FooterHome() {
             size="md"
             shape="pill"
           >
-            Post Your Need
+            {t.home.postNeed}
           </Button>
         </div>
         <div className="flex flex-wrap gap-12 md:gap-24">
           <FooterLinks
-            title="Platform"
-            links={["View All Needs", "View All Sitters", "Safety Measures"]}
+            title={t.home.footerHome.platform.title}
+            links={t.home.footerHome.platform.links}
           />
           <FooterLinks
-            title="Support"
-            links={["Help Center", "Community Guidelines", "Verification Info"]}
+            title={t.home.footerHome.support.title}
+            links={t.home.footerHome.support.links}
           />
           <div className="flex flex-col gap-4">
-            <h6 className="font-bold text-primary">Follow Us</h6>
+            <h6 className="font-bold text-primary">
+              {t.home.footerHome.follow}
+            </h6>
             <div className="flex gap-4 text-on-surface-variant">
               <Earth className="cursor-pointer hover:text-primary" />
               <Share2 className="cursor-pointer hover:text-primary" />
@@ -76,13 +80,13 @@ export default function FooterHome() {
         </div>
       </div>
       <div className="border-t border-outline-variant/10 py-8 px-margin-mobile md:px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-4 text-on-surface-variant text-sm max-w-container-max-width mx-auto text-center md:text-left">
-        <p>© 2026 PetNido. All rights reserved.</p>
+        <p>© 2026 PetNido. {t.home.footerHome.right}</p>
         <div className="flex gap-8">
           <a className="hover:text-primary" href="#">
-            プライバシーポリシー
+            {t.home.footerHome.privacy}
           </a>
           <a className="hover:text-primary" href="#">
-            利用規約
+            {t.home.footerHome.terms}
           </a>
         </div>
       </div>

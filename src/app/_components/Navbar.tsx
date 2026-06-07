@@ -1,5 +1,12 @@
 "use client";
 
+import { useLanguage } from "@/components/providers/language-provider";
+
+const languageItems = [
+  { lang: "en", label: "English" },
+  { lang: "zh", label: "中文" },
+  { lang: "ja", label: "日本語" },
+] as const;
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
@@ -60,16 +67,13 @@ export default function Navbar() {
       document.removeEventListener("keydown", handleEsc);
     };
   }, []);
+  const { lang, setLang, t } = useLanguage();
+
   const links = [
-    { href: "/", label: "ホーム" },
-    { href: "/public/needs", label: "お世話の依頼を見る" },
-    { href: "/public/sitters", label: "シッターを探す" },
-  ];
-  const links1 = [
-    { href: "/public/needs", label: "View All Needs" },
-    { href: "/public/sitters", label: "View All Sitters" },
-    { href: "#", label: "Our Community" },
-    { href: "#", label: "Help" },
+    { href: "/public/needs", label: t.nav.needs },
+    { href: "/public/sitters", label: t.nav.sitters },
+    { href: "#", label: t.nav.community },
+    { href: "#", label: t.nav.help },
   ];
   return (
     <header className="bg-surface-container-lowest sticky top-0 z-999 shadow-sm border-b border-outline-variant/20">
@@ -89,7 +93,7 @@ export default function Navbar() {
         </Link>
         {/* 桌面端链接 (仅 md 以上显示) */}
         <div className="hidden md:flex items-center space-x-8">
-          {links1.map((link) => {
+          {links.map((link) => {
             const isActive =
               link.href === "/"
                 ? pathname === "/"
@@ -115,6 +119,23 @@ export default function Navbar() {
         {/* Desktop Links */}
         {/* 2. 右侧操作区 */}
         <div className="flex items-center gap-2 md:gap-8">
+          <div className="flex items-center rounded-full border border-outline-variant/40 p-1">
+            {languageItems.map((item) => (
+              <button
+                key={item.lang}
+                type="button"
+                onClick={() => setLang(item.lang)}
+                className={cn(
+                  "h-7 min-w-7 rounded-full px-2 text-xs font-bold transition",
+                  lang === item.lang
+                    ? "bg-primary text-on-primary"
+                    : "text-on-surface-variant hover:text-primary",
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           {/* 已登录状态下的：通知和消息 (移动端也显示，提高优先级) */}
           {session && (
             <div className="flex items-center gap-1 md:gap-8">
@@ -144,7 +165,7 @@ export default function Navbar() {
                   shape="pill"
                   className="font-label-md"
                 >
-                  Sign In
+                  {t.nav.signIn}
                 </Button>
               </div>
             )

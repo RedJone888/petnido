@@ -1,3 +1,5 @@
+"use client";
+import { useLanguage } from "@/components/providers/language-provider";
 import cn from "@/lib/cn";
 import Link from "next/link";
 import { MoveRight } from "lucide-react";
@@ -13,6 +15,7 @@ export function ServiceInfo({
   };
   className: string;
 }) {
+  const { t } = useLanguage();
   return (
     <article
       className={cn(
@@ -31,7 +34,7 @@ export function ServiceInfo({
         href="/public/sitters"
         className="mt-auto flex items-center text-primary font-bold gap-2 cursor-pointer group-hover:gap-3 transition-all"
       >
-        Learn More
+        {t.home.serviceBento.link}
         <MoveRight size={18} className="group-hover:scale-110" />
       </Link>
     </article>
