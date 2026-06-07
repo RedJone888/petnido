@@ -1,9 +1,10 @@
 import { NeedCreateInput, NeedForm, NeedPetForm } from "@/lib/zod/needs";
 import { inferAllPetTypeFromText } from "@/domain/pet/inferPetTypes";
-import { PetType } from "@prisma/client";
+import { PetType, ServiceCategory } from "@prisma/client";
 import { OneNeedApi, NeedPetApi } from "./api.types";
 import { photoApiToForm } from "../attachment/mapper";
 import { format } from "date-fns";
+
 export function needPetApiToForm(np: NeedPetApi): NeedPetForm & { id: string } {
   return {
     id: np.id,
@@ -33,7 +34,7 @@ export function needApiToForm(service: OneNeedApi): NeedForm & { id: string } {
     ...rest
   } = service;
 
-  return {
+  const result = {
     ...rest,
     startDate: format(new Date(startDate), "yyyy-MM-dd"),
     endDate: format(new Date(endDate), "yyyy-MM-dd"),
@@ -44,6 +45,7 @@ export function needApiToForm(service: OneNeedApi): NeedForm & { id: string } {
     priceAmount: priceAmount?.toString() || "",
     totalPrice: totalPrice.toString(),
   };
+  return result as unknown as NeedForm & { id: string };
 }
 export function needFormToApi(values: NeedForm): NeedCreateInput {
   const {

@@ -68,7 +68,6 @@ const needValidation = (data: any, ctx: z.RefinementCtx) => {
       }
     }
   }
-
   if (data.startDate && data.endDate) {
     const from = parseISO(data.startDate);
     const to = parseISO(data.endDate);
@@ -94,15 +93,17 @@ const commonFields = z.object({
 });
 
 // 封装一个工厂函数，避免前后端 Schema 重复写 discriminatedUnion 逻辑
-function createNeedSchema<T extends z.ZodRawShape>(specificFields: z.ZodObject<T>) {
+function createNeedSchema<T extends z.ZodRawShape>(
+  specificFields: z.ZodObject<T>,
+) {
   const base = commonFields.merge(specificFields);
   return z.discriminatedUnion("category", [
     // VISIT 类型：强制要求 frequencyType
     base.extend({
       category: z.literal(ServiceCategory.VISIT),
       frequencyType: z.nativeEnum(FrequencyType),
-      fosterRange: z.any().nullable().optional(),     // 允许但在该类型下不强制校验
-      transportMethod: z.any().nullable().optional(), 
+      fosterRange: z.any().nullable().optional(), // 允许但在该类型下不强制校验
+      transportMethod: z.any().nullable().optional(),
     }),
     // FOSTER 类型：强制要求 fosterRange 和 transportMethod
     base.extend({
@@ -130,7 +131,8 @@ const formSpecificFields = z.object({
   totalPrice: z.string().min(1, "请输入jiage"),
 });
 
-export const needFormSchema = createNeedSchema(formSpecificFields).superRefine(needValidation);
+export const needFormSchema =
+  createNeedSchema(formSpecificFields).superRefine(needValidation);
 
 const apiSpecificFields = z.object({
   customDays: z.coerce.number().int().default(1).nullable(),
@@ -155,7 +157,7 @@ export const needUpdateSchema = createNeedSchema(
         }),
       )
       .min(1),
-  })
+  }),
 ).superRefine(needValidation);
 
 export type NeedCreateInput = z.infer<typeof needCreateSchema>;
