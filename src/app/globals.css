@@ -20,7 +20,13 @@ input:-webkit-autofill:focus {
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent; /* 轨道背景色：透明更高级 */
 }
-
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #e2e8f0; /* 滚动条滑块颜色 (slate-200) */
   border-radius: 10px; /* 圆角 */
@@ -48,6 +54,7 @@ input:-webkit-autofill:focus {
   --color-primary-fixed: var(--primary-fixed);
   --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
   --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
   --color-secondary: var(--secondary);
   --color-secondary-fixed: var(--secondary-fixed);
   --color-secondary-container: var(--secondary-container);
@@ -57,13 +64,16 @@ input:-webkit-autofill:focus {
   --color-surface-container-lowest: var(--surface-container-lowest);
   --color-surface-container-low: var(--surface-container-low);
   --color-surface-container: var(--surface-container);
+  --color-on-surface: var(--on-surface);
   --color-surface-variant: var(--surface-variant);
   --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
 
-  --spacing-margin-desktop: 64px;
   --spacing-margin-mobile: 16px;
+  --spacing-margin-desktop: 64px;
   --spacing-container-max-width: 1200px;
   --spacing-gutter: 24px;
+
   --text-headline-md: 24px;
   --text-headline-md--line-height: 32px;
   --text-headline-md--font-weight: 600;
@@ -79,6 +89,12 @@ input:-webkit-autofill:focus {
   --text-label-md--line-height: 20px;
   --text-label-md--font-weight: 600;
   --text-label-md--letter-spacing: 0.05em;
+  --text-headline-md-mobile: 20px;
+  --text-headline-md-mobile--line-height: 28px;
+  --text-headline-md-mobile--font-weight: 600;
+  --text-headline-lg-mobile: 28px;
+  --text-headline-lg-mobile--line-height: 36px;
+  --text-headline-lg-mobile--font-weight: 700;
 
   --text-body-md: 16px;
   --text-body-md--line-height: 24px;
@@ -177,17 +193,21 @@ input:-webkit-autofill:focus {
   --primary-fixed: #eaddff;
   --on-primary-fixed-variant: #5a00c6;
   --primary-container: #7c3aed;
+  --on-primary-container: #ede0ff;
   --secondary: #855300;
   --secondary-fixed: #ffddb8;
   --secondary-container: #fea619;
   --on-secondary-container: #684000;
-  --on-surface-variant: #4a4455;
+  --surface: #f8f9ff;
+  --on-surface: #121c28;
   --surface-dim: #d1dbec;
   --surface-variant: #d9e3f4;
+  --on-surface-variant: #4a4455;
   --surface-container-lowest: #ffffff;
   --surface-container-low: #eef4ff;
   --surface-container: #e5eeff;
   --tertiary-container: #a15100;
+  --outline: #7b7487;
 }
 
 .dark {
@@ -209,6 +229,66 @@ input:-webkit-autofill:focus {
   --border: #3a3247;
   --input: #3a3247;
   --ring: #9a59ff;
+}
+
+/* Scoped visual system for the current homepage. The legacy homepage below
+   src/app/(home)/page.tsx intentionally keeps the original global tokens. */
+.home-premium {
+  --background: #fbfaf8;
+  --primary: #5d3a86;
+  --on-primary: #ffffff;
+  --primary-fixed: #eee8f4;
+  --on-primary-fixed-variant: #5d3a86;
+  --primary-container: #5d3a86;
+  --on-primary-container: #ffffff;
+  --secondary: #9a6a3e;
+  --secondary-fixed: #f2e6d9;
+  --secondary-container: #c7925b;
+  --on-secondary-container: #3d2a1c;
+  --surface: #fbfaf8;
+  --on-surface: #211d27;
+  --surface-variant: #f4f1f6;
+  --on-surface-variant: #706a78;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f4f1f6;
+  --surface-container: #eeeaf0;
+  --outline: #e6e0e8;
+  --outline-variant: #e6e0e8;
+  --tertiary-container: #5d3a86;
+}
+
+.home-premium .hero-gradient {
+  background: #fbfaf8;
+}
+
+.home-premium .service-tone-primary,
+.home-premium .service-tone-secondary,
+.home-premium .service-tone-tertiary {
+  background: #eee8f4;
+  color: #5d3a86;
+}
+
+.home-premium .journey-icon-primary,
+.home-premium .journey-index-0-primary {
+  background: #eee8f4;
+  color: #5d3a86;
+}
+
+.home-premium .journey-btn-0-primary {
+  background: #5d3a86;
+  color: #ffffff;
+}
+
+.home-premium .journey-icon-secondary,
+.home-premium .journey-index-0-secondary {
+  background: #f2e6d9;
+  color: #8a5d34;
+}
+
+.home-premium .journey-btn-0-secondary {
+  border-color: #c7925b;
+  background: transparent;
+  color: #8a5d34;
 }
 
 /* === Home V2 design draft: scoped tokens and utilities === */
@@ -238,6 +318,19 @@ input:-webkit-autofill:focus {
   max-width: 1200px;
   margin-inline: auto;
   padding-inline: 16px;
+}
+
+.site-shell {
+  width: 100%;
+  max-width: 1480px;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+
+@media (min-width: 768px) {
+  .site-shell {
+    padding-inline: 40px;
+  }
 }
 
 @media (min-width: 768px) {
@@ -409,29 +502,37 @@ input:-webkit-autofill:focus {
 }
 
 .service-tone-primary,
-.journey-tone-primary {
+.journey-index-0-primary {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary);
+}
+.journey-index-1-primary {
+  background: var(--primary-fixed);
+  color: var(--primary);
+}
+.journey-index-0-secondary {
+  background: var(--secondary);
+  color: var(--on-primary);
+}
+.journey-index-1-secondary {
+  background: var(--secondary-fixed);
+  color: var(--secondary);
+}
+.journey-icon-primary,
+.journey-btn-0-primary {
+  background: var(--primary-container);
+  color: var(--on-primary);
 }
 
 .journey-icon-secondary,
+.journey-btn-0-secondary,
 .service-tone-secondary {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
 }
-.journey-tone-secondary {
-  background: var(--secondary);
-  color: #ffffff;
-}
-
 .service-tone-tertiary {
   background: var(--tertiary-container);
   color: #ffffff;
-}
-
-.journey-icon-primary {
-  background: var(--primary-fixed);
-  color: var(--primary);
 }
 .journey-title-primary {
   color: var(--primary);
@@ -439,11 +540,33 @@ input:-webkit-autofill:focus {
 .hv2-title-primary {
   color: var(--hv2-primary);
 }
-
 .journey-title-secondary {
   color: var(--on-secondary-container);
 }
-
+.journey-bg-primary {
+  background: color-mix(in srgb, var(--primary-container) 5%, transparent);
+  border-color: color-mix(in srgb, var(--primary-container) 20%, transparent);
+}
+.journey-bg-secondary {
+  background: color-mix(in srgb, var(--secondary-container) 5%, transparent);
+  border-color: color-mix(in srgb, var(--secondary-container) 20%, transparent);
+}
+.journey-btn-1-primary {
+  background: var(--on-primary);
+  color: var(--primary);
+  border-color: var(--primary-container);
+}
+.journey-btn-1-primary:hover {
+  background: color-mix(in srgb, var(--primary-container) 5%, transparent);
+}
+.journey-btn-1-secondary {
+  background: var(--on-primary);
+  color: var(--secondary);
+  border-color: var(--secondary-container);
+}
+.journey-btn-1-secondary:hover {
+  background: color-mix(in srgb, var(--secondary-container) 5%, transparent);
+}
 .hv2-link-action {
   display: inline-flex;
   align-items: center;
@@ -642,4 +765,30 @@ input:-webkit-autofill:focus {
   background: var(--hv2-primary);
   color: #ffffff;
   padding: 10px 24px;
+}
+
+@keyframes needs-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.needs-marquee-track {
+  animation: needs-marquee-scroll 38s linear infinite;
+  will-change: transform;
+}
+
+.needs-marquee:hover .needs-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .needs-marquee-track {
+    animation: none;
+    transform: none;
+  }
 }

@@ -37,7 +37,7 @@ export default function NavLinks() {
   return (
     <aside
       className={cn(
-        "shrink-0 transition-all duration-300 overflow-y-auto pt-4",
+        "hidden shrink-0 overflow-y-auto pt-4 transition-all duration-300 md:block",
         isExpanded ? "w-56" : "w-18",
       )}
     >

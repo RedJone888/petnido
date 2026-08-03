@@ -17,7 +17,7 @@ export default async function NeedsPage() {
         icon={<ClipboardList className="w-10 h-10" />}
         title="まだ依頼はありません"
         description="外出や出張のとき、大切な家族であるペットを安心して任せられるシッターさんを探してみませんか？"
-        href="/dashboard/needs/new"
+        href="/needs/create"
         btnLabel="新しい依頼を作成する"
       />
     );

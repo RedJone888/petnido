@@ -1,6 +1,6 @@
 import "./globals.css";
 import { Toaster } from "sonner";
-import Navbar from "./_components/Navbar";
+import SiteChrome from "./_components/SiteChrome";
 import { GlobalConfirm } from "@/components/GlobalConfirm";
 import { Metadata } from "next";
 import { Providers } from "@/components/providers/Providers";
@@ -35,8 +35,7 @@ export default function RootLayout({
         className={`bg-background text-on-background overflow-x-hidden flex flex-col ${plusJakarta.variable} font-sans antialiased min-h-screen`}
       >
         <Providers>
-          <Navbar />
-          <main className="flex-1 flex flex-col">{children}</main>
+          <SiteChrome>{children}</SiteChrome>
           {/* 全局层组件 */}
           <GlobalConfirm />
           <Toaster

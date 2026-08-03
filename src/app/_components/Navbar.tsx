@@ -1,269 +1,169 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Menu, X } from "lucide-react";
+import { useState } from "react";
+
 import { useLanguage } from "@/components/providers/language-provider";
+import { LogoutButton } from "@/components/shared/buttons";
+import { useAuthModal } from "@/components/providers/AuthModalProvider";
+import cn from "@/lib/cn";
+import NotificationBell from "./navbar/NotificationBell";
+import UserMenu from "./navbar/UserMenu";
+import { useRef } from "react";
 
 const languageItems = [
-  { lang: "en", label: "English" },
+  { lang: "en", label: "EN" },
   { lang: "zh", label: "中文" },
   { lang: "ja", label: "日本語" },
 ] as const;
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React, { useState, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
 
-import NotificationBell from "./navbar/NotificationBell";
-import { Mail, Menu, X } from "lucide-react";
-import UserMenu from "./navbar/UserMenu";
-import cn from "@/lib/cn";
-import Image from "next/image";
-import { CreateNeedButton, LoginButton } from "@/components/shared/buttons";
-import { LogoutButton } from "@/components/shared/buttons";
-import { Button } from "@/components/ui/button";
+const navCopy = {
+  en: {
+    needs: "Browse needs",
+    sitters: "Find sitters",
+    how: "How care works",
+    signIn: "Sign in",
+  },
+  zh: {
+    needs: "浏览需求",
+    sitters: "寻找 sitter",
+    how: "照护如何进行",
+    signIn: "登录",
+  },
+  ja: {
+    needs: "依頼を見る",
+    sitters: "シッターを探す",
+    how: "お世話の流れ",
+    signIn: "ログイン",
+  },
+} as const;
+
 const mockNotifications = [
   {
     id: "1",
-    title: "新しいメッセージ",
-    body: "大阪市此花区でのペットシッター募集に返信がありました。",
-    createdAt: "5分前",
+    title: "New message",
+    body: "A sitter replied to your care need.",
+    createdAt: "5 min",
     read: false,
-  },
-  {
-    id: "2",
-    title: "ご予約の確認",
-    body: "12月24日のうさぎのお世話予約が承認されました。",
-    createdAt: "昨日",
-    read: true,
   },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { openAuthModal } = useAuthModal();
+  const { lang, setLang } = useLanguage();
+  const text = navCopy[lang];
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  //Dropdown: 点击外部 & Esc 关闭
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(target) &&
-        avatarRef.current &&
-        !avatarRef.current.contains(target)
-      ) {
-        setMenuOpen(false);
-      }
-    }
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEsc);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEsc);
-    };
-  }, []);
-  const { lang, setLang, t } = useLanguage();
-
   const links = [
-    { href: "/public/needs", label: t.nav.needs },
-    { href: "/public/sitters", label: t.nav.sitters },
-    { href: "#", label: t.nav.community },
-    { href: "#", label: t.nav.help },
+    { href: "/public/needs", label: text.needs },
+    { href: "/public/sitters", label: text.sitters },
+    { href: "/how-it-works", label: text.how },
   ];
+
   return (
-    <header className="bg-surface-container-lowest sticky top-0 z-999 shadow-sm border-b border-outline-variant/20">
-      <nav className="flex items-center justify-between w-full h-20 px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto">
-        {/* 1. Logo: 移动端缩小文字 */}
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/favicon.svg"
-            alt="PetNido Logo"
-            width={30}
-            height={30}
-            className="w-10 h-10"
-          />
-          <span className="text-headline-md font-bold text-primary">
-            PetNido
-          </span>
+    <header className="fixed inset-x-0 top-0 z-[999] border-b border-[#e7e0e8] bg-[#fffdf9]/95 backdrop-blur-lg">
+      <nav className="site-shell flex h-16 items-center justify-between gap-5">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="PetNido home">
+          <Image src="/favicon.svg" alt="" width={38} height={38} className="h-9 w-9" />
+          <span className="text-2xl font-bold tracking-[0.015em] text-[#5d3a86] [font-family:'PT_Sans_Narrow','Avenir_Next_Condensed','Arial_Narrow',sans-serif] [font-stretch:condensed] md:text-[1.7rem]">PetNido</span>
         </Link>
-        {/* 桌面端链接 (仅 md 以上显示) */}
-        <div className="hidden md:flex items-center space-x-8">
+
+        <div className="hidden items-center gap-7 lg:flex">
           {links.map((link) => {
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href + "/") ||
-                  pathname === link.href;
+            const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                // prefetch={false}
-                className={`text-label-md ${cn(
-                  "hover:text-primary transition-colors duration-200 ",
-                  isActive
-                    ? "text-primary font-bold border-b-2 border-primary pb-1"
-                    : "text-on-surface-variant font-medium",
-                )}`}
+                className={cn(
+                  "relative py-2 text-sm font-semibold text-[#625a67] transition hover:text-[#5d3a86]",
+                  active && "text-[#5d3a86] after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:rounded-full after:bg-[#5d3a86]",
+                )}
               >
                 {link.label}
               </Link>
             );
           })}
         </div>
-        {/* Desktop Links */}
-        {/* 2. 右侧操作区 */}
-        <div className="flex items-center gap-2 md:gap-8">
-          <div className="flex items-center rounded-full border border-outline-variant/40 p-1">
+
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="hidden items-center rounded-full border border-[#ddd4df] bg-white p-1 md:flex">
             {languageItems.map((item) => (
               <button
                 key={item.lang}
                 type="button"
                 onClick={() => setLang(item.lang)}
                 className={cn(
-                  "h-7 min-w-7 rounded-full px-2 text-xs font-bold transition",
-                  lang === item.lang
-                    ? "bg-primary text-on-primary"
-                    : "text-on-surface-variant hover:text-primary",
+                  "h-7 rounded-full px-2.5 text-[11px] font-bold transition",
+                  lang === item.lang ? "bg-[#eee7f3] text-[#5d3a86]" : "text-[#817a85] hover:text-[#5d3a86]",
                 )}
               >
                 {item.label}
               </button>
             ))}
           </div>
-          {/* 已登录状态下的：通知和消息 (移动端也显示，提高优先级) */}
-          {session && (
-            <div className="flex items-center gap-1 md:gap-8">
-              <NotificationBell notifications={mockNotifications} />
 
-              {/* 桌面端头像入口 */}
+          {session ? (
+            <>
+              <NotificationBell notifications={mockNotifications} />
               <div className="hidden md:block">
                 <UserMenu
                   session={session}
                   avatarRef={avatarRef}
                   menuRef={menuRef}
-                  menuOpen={menuOpen}
-                  setMenuOpen={setMenuOpen}
+                  menuOpen={userMenuOpen}
+                  setMenuOpen={setUserMenuOpen}
                 />
               </div>
+            </>
+          ) : (
+            <div className="hidden lg:block">
+              <button type="button" onClick={() => openAuthModal()} className="h-11 rounded-xl px-4 text-sm font-bold text-[#5d3a86] transition hover:bg-[#f2edf4]">
+                {text.signIn}
+              </button>
             </div>
           )}
 
-          {/* 未登录显示登录按钮 */}
-          {
-            !session && (
-              <div className="flex items-center gap-4">
-                {/* <LoginButton /> */}
-                <Button
-                  variant="primary"
-                  size="md"
-                  shape="pill"
-                  className="font-label-md"
-                >
-                  {t.nav.signIn}
-                </Button>
-              </div>
-            )
-            // (
-            //   <Button
-            //     className="ml-4 rounded-full px-6 py-2"
-            //     variant="primary"
-            //     onClick={() => openAuthModal()}
-            //   >
-            //     ログイン
-            //   </Button>
-            // )
-          }
-          {/* 3. 手机端汉堡按钮 */}
           <button
-            className="md:hidden p-2 text-gray-700"
-            onClick={() => setMobileOpen(!mobileOpen)}
+            type="button"
+            aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((open) => !open)}
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#ddd4df] bg-white text-[#5d3a86] lg:hidden"
           >
-            {mobileOpen ? <X size={28} /> : <Menu size={28} />}
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        {/* 4. 手机端全屏/侧边抽屉 */}
         {mobileOpen && (
-          <>
-            {/* 背景遮罩 */}
-            {/* <div
-              className="fixed inset-0 bg-black/30 z-40"
-              onClick={() => setMobileOpen(false)}
-            /> */}
-            {/* 侧边菜单 */}
-            <div className="md:hidden absolute top-full right-0 w-[70%] bg-white z-50 shadow-2xl animate-fadeIn">
-              <div className="flex flex-col h-full">
-                {/* 页面导航 */}
-                <div className="p-6 flex flex-col gap-6">
-                  {links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileOpen(false)}
-                      className="block text-lg font-medium text-gray-800"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-                {/* 两个核心 CTA 按钮 */}
-                <div className="flex flex-col gap-3 pb-6 border-b border-gray-100">
-                  {/* <CreateNeedButton />
-                  <CreateNeedButton /> */}
-                  {/* <CreateService className="w-full" variant="outline" /> */}
-                </div>
-                {/* 底部用户信息区 */}
-                <div className="p-6 border-t border-gray-100 bg-gray-50">
-                  {session ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 mb-4">
-                        {/* 这里显示头像和欢迎词 */}
-                        <Image
-                          src={session.user?.image || "/default-avatar.png"}
-                          width={40}
-                          height={40}
-                          className="rounded-full"
-                          alt="user"
-                        />
-                        <span className="font-semibold text-gray-700">
-                          {session.user?.name} 様
-                        </span>
-                      </div>
-                      <Link href="/dashboard" className="block text-primary">
-                        マイページ
-                      </Link>
-                      <LogoutButton />
-                    </div>
-                  ) : (
-                    <LoginButton />
-                  )}
-                </div>
+          <div className="absolute inset-x-0 top-full border-b border-[#e7e0e8] bg-[#fffdf9] shadow-[0_22px_45px_-34px_rgba(44,33,50,.55)] lg:hidden">
+            <div className="site-shell py-5">
+              <div className="grid gap-1">
+                {links.map((link) => (
+                  <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3.5 text-base font-bold text-[#3f3843] hover:bg-[#f2edf4]">
+                    {link.label}
+                  </Link>
+                ))}
               </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#e7e0e8] pt-4">
+                {languageItems.map((item) => (
+                  <button key={item.lang} onClick={() => setLang(item.lang)} className={cn("rounded-lg border px-2 py-2 text-xs font-bold", lang === item.lang ? "border-[#5d3a86] bg-[#eee7f3] text-[#5d3a86]" : "border-[#ddd4df] text-[#817a85]")}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              {!session ? <button type="button" onClick={() => openAuthModal()} className="mt-3 flex h-12 w-full items-center justify-center rounded-xl border border-[#bfaec8] text-sm font-bold text-[#5d3a86]">{text.signIn}</button> : <div className="mt-3"><LogoutButton /></div>}
             </div>
-          </>
+          </div>
         )}
-
-        <style jsx>{`
-          .animate-fadeIn {
-            animation: fadeIn 0.15s ease-out;
-          }
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-6px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}</style>
       </nav>
     </header>
   );

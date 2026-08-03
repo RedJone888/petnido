@@ -113,7 +113,7 @@ export default function NeedProfile({ needs, user }: Props) {
           新しい依頼を作成する
         </button> */}
         <Button
-          href="/dashboard/needs/new"
+          href="/needs/create"
           //  href={`/dashboard/needs/${id}/edit`}
           //   onClick={() => router.push("/dashboard/needs/new")}
           className="shrink-0 rounded-full px-4 py-1.5 shadow-sm shadow-purple-100"

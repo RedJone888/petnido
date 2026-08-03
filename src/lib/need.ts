@@ -3,6 +3,24 @@ export function getNeedById(id: string) {
   return prisma.need.findUnique({
     where: { id },
     include: {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          createdAt: true,
+          profile: {
+            select: {
+              bio: true,
+            },
+          },
+          _count: {
+            select: {
+              needs: true,
+            },
+          },
+        },
+      },
       photos: {
         where: { status: 1 },
         orderBy: { order: "asc" },

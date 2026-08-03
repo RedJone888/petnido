@@ -3,3 +3,19 @@ node_modules
 .env*
 *storybook.log
 storybook-static
+
+# Local OS and compiler artifacts
+.DS_Store
+*.tsbuildinfo
+
+# Local QA, audit, document-rendering, and font caches
+.audit/
+.codex-audit/
+.codex-qa/
+.docx-assets/
+
+# Generated prototype build output
+home-visits-prototype/dist/
+
+# Microsoft Office temporary lock files
+~$*.docx

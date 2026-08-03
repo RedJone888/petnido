@@ -47,17 +47,8 @@ export function LogoutButton() {
   );
 }
 export function CreateNeedButton({ initialSession }: CreateButtonProps) {
-  const { openAuthModal } = useAuthModal();
   const router = useRouter();
-  const handleCreateNeed = () => {
-    if (!initialSession) {
-      // 没登录，明确指定登录后去发布页
-      openAuthModal("/dashboard/needs/new");
-      return;
-    }
-    // 已登录，直接跳转
-    router.push("/dashboard/needs/new");
-  };
+  const handleCreateNeed = () => router.push("/needs/create");
   return (
     <Button
       variant="primary"

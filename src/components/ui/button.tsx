@@ -10,8 +10,7 @@ const variantStyles = {
   ),
   secondary: cn(
     "bg-on-primary text-primary hover:bg-primary/5",
-    "border-2 border-primary/10 shadow-lg ",
-    "shadow-sm",
+    "border-2 border-primary/10 shadow-lg",
   ),
   solid: cn("bg-primary hover:bg-brand-700 text-on-primary", "shadow-xl"),
   danger: cn("bg-danger-text hover:bg-red-600 text-on-primary", "shadow-xl"),

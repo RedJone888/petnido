@@ -14,15 +14,32 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
-    const saved = localStorage.getItem("lang") as Lang | null;
+    let saved: Lang | null = null;
+    try {
+      saved = localStorage.getItem("lang") as Lang | null;
+    } catch {
+      // Some embedded browsers restrict storage; the cookie below is the fallback.
+    }
+    if (saved !== "en" && saved !== "zh" && saved !== "ja") {
+      saved = (document.cookie.match(/(?:^|; )petnido_lang=(en|zh|ja)(?:;|$)/)?.[1] as Lang | undefined) ?? null;
+    }
     if (saved === "en" || saved === "zh" || saved === "ja") {
       setLangState(saved);
     }
   }, []);
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const setLang = (next: Lang) => {
     setLangState(next);
-    localStorage.setItem("lang", next);
+    try {
+      localStorage.setItem("lang", next);
+    } catch {
+      // Keep the in-memory choice and persist it with the cookie fallback.
+    }
+    document.cookie = `petnido_lang=${next}; path=/; max-age=31536000; samesite=lax`;
   };
 
   const value = useMemo(

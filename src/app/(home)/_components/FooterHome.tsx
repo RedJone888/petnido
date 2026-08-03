@@ -1,216 +1,115 @@
 "use client";
-import { useLanguage } from "@/components/providers/language-provider";
-import { Button } from "@/components/ui/button";
+
 import Image from "next/image";
 import Link from "next/link";
-import { Earth, Share2 } from "lucide-react";
-function FooterCol({
-  title,
-  items,
-}: {
-  title: string;
-  items: { href: string; label: string }[];
-}) {
+import { ArrowRight, Bird, Cat, Dog, Rabbit } from "lucide-react";
+
+import { useLanguage } from "@/components/providers/language-provider";
+
+const copy = {
+  en: {
+    text: "Neighbor-powered care for dogs, cats, rabbits, guinea pigs, birds and the routines that make each one unique.",
+    explore: "Explore",
+    learn: "Learn",
+    account: "Your account",
+    need: "Browse needs",
+    sitter: "Find sitters",
+    care: "Care types",
+    how: "How care works",
+    postNeed: "How to post a need",
+    postService: "How to publish a service",
+    dashboard: "Dashboard",
+    publish: "Post a need",
+    rights: "All rights reserved.",
+  },
+  zh: {
+    text: "由邻里共同提供的宠物照护，服务猫狗，也服务兔子、荷兰猪、鸟和每一种独特的生活习惯。",
+    explore: "探索",
+    learn: "了解",
+    account: "你的账号",
+    need: "浏览需求",
+    sitter: "寻找 sitter",
+    care: "三种照护方式",
+    how: "照护如何进行",
+    postNeed: "如何发布需求",
+    postService: "如何发布服务",
+    dashboard: "个人中心",
+    publish: "发布需求",
+    rights: "保留所有权利。",
+  },
+  ja: {
+    text: "犬、猫、うさぎ、モルモット、鳥、それぞれの習慣に寄り添う、地域で支えるペットケア。",
+    explore: "探す",
+    learn: "知る",
+    account: "アカウント",
+    need: "依頼を見る",
+    sitter: "シッターを探す",
+    care: "3つのケア形式",
+    how: "お世話の流れ",
+    postNeed: "依頼の投稿方法",
+    postService: "サービスの公開方法",
+    dashboard: "マイページ",
+    publish: "依頼を投稿",
+    rights: "All rights reserved.",
+  },
+} as const;
+
+export default function FooterHome() {
+  const { lang } = useLanguage();
+  const text = copy[lang];
+
+  return (
+    <footer className="border-t border-[#ded6e1] bg-[#302537] text-white">
+      <div className="site-shell py-12 md:py-16">
+        <div className="grid gap-12 lg:grid-cols-[1.25fr_2fr]">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <Image src="/favicon.svg" alt="" width={40} height={40} className="h-10 w-10 rounded-xl bg-white p-1" />
+              <span className="text-[1.7rem] font-bold tracking-[0.015em] [font-family:'PT_Sans_Narrow','Avenir_Next_Condensed','Arial_Narrow',sans-serif] [font-stretch:condensed]">PetNido</span>
+            </Link>
+            <p className="mt-5 max-w-sm text-sm leading-7 text-white/66">{text.text}</p>
+            <div className="mt-6 flex items-center gap-3 text-white/38">
+              <Dog size={20} /><Cat size={20} /><Rabbit size={20} /><Bird size={20} />
+            </div>
+            <Link href="/needs/create" className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-[#5d3a86]">
+              {text.publish}<ArrowRight size={16} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-9 sm:grid-cols-3">
+            <FooterGroup title={text.explore} links={[
+              [text.need, "/public/needs"],
+              [text.sitter, "/public/sitters"],
+              [text.care, "/care-types"],
+            ]} />
+            <FooterGroup title={text.learn} links={[
+              [text.how, "/how-it-works"],
+              [text.postNeed, "/how-it-works/needs"],
+              [text.postService, "/how-it-works/services"],
+            ]} />
+            <FooterGroup title={text.account} links={[
+              [text.dashboard, "/dashboard"],
+              [text.publish, "/needs/create"],
+              ["Safety & support", "#"],
+            ]} />
+          </div>
+        </div>
+        <div className="mt-12 flex flex-col gap-3 border-t border-white/12 pt-6 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
+          <p>© 2026 PetNido. {text.rights}</p>
+          <div className="flex gap-5"><Link href="#">Privacy</Link><Link href="#">Terms</Link></div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function FooterGroup({ title, links }: { title: string; links: [string, string][] }) {
   return (
     <div>
-      <h4 className="font-semibold text-gray-800 mb-4">{title}</h4>
-      <ul className="space-y-2 text-sm text-gray-500">
-        {items.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              className="hover:text-primary hover:underline transition"
-            >
-              {item.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <h3 className="text-sm font-bold text-white">{title}</h3>
+      <div className="mt-4 flex flex-col gap-3">
+        {links.map(([label, href]) => <Link key={`${label}-${href}`} href={href} className="text-sm text-white/62 transition hover:text-white">{label}</Link>)}
+      </div>
     </div>
   );
-}
-export default function FooterHome() {
-  const { t } = useLanguage();
-  return (
-    <footer className="bg-surface-container border-t border-outline-variant/30">
-      <div className="flex flex-col md:flex-row justify-between items-start w-full py-16 px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto">
-        <div className="mb-12 md:mb-0">
-          <div className="mb-6 flex items-center gap-2">
-            <Image
-              src="/favicon.svg"
-              alt="PetNido Logo"
-              width={28}
-              height={28}
-              className="h-8 w-8"
-            />
-            <span className="text-headline-md font-bold text-primary">
-              PetNido
-            </span>
-          </div>
-          <p className="text-body-md text-on-surface-variant max-w-xs mb-8">
-            {t.home.footerHome.text}
-          </p>
-          <Button
-            href="/dashboard/needs/new"
-            variant="primary"
-            size="md"
-            shape="pill"
-          >
-            {t.home.postNeed}
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-12 md:gap-24">
-          <FooterLinks
-            title={t.home.footerHome.platform.title}
-            links={t.home.footerHome.platform.links}
-          />
-          <FooterLinks
-            title={t.home.footerHome.support.title}
-            links={t.home.footerHome.support.links}
-          />
-          <div className="flex flex-col gap-4">
-            <h6 className="font-bold text-primary">
-              {t.home.footerHome.follow}
-            </h6>
-            <div className="flex gap-4 text-on-surface-variant">
-              <Earth className="cursor-pointer hover:text-primary" />
-              <Share2 className="cursor-pointer hover:text-primary" />
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="border-t border-outline-variant/10 py-8 px-margin-mobile md:px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-4 text-on-surface-variant text-sm max-w-container-max-width mx-auto text-center md:text-left">
-        <p>© 2026 PetNido. {t.home.footerHome.right}</p>
-        <div className="flex gap-8">
-          <a className="hover:text-primary" href="#">
-            {t.home.footerHome.privacy}
-          </a>
-          <a className="hover:text-primary" href="#">
-            {t.home.footerHome.terms}
-          </a>
-        </div>
-      </div>
-    </footer>
-  );
-}
-function FooterLinks({ title, links }: { title: string; links: string[] }) {
-  return (
-    <div className="flex flex-col gap-4">
-      <h3 className="font-bold text-primary">{title}</h3>
-      {links.map((link) => (
-        <Link
-          key={link}
-          href="#"
-          className="text-on-surface-variant transition-all hover:text-primary"
-        >
-          {link}
-        </Link>
-      ))}
-    </div>
-  );
-}
-function test() {
-  return (
-    <footer className="border-t border-[rgba(204,195,216,0.3)] bg-[var(--hv2-surface-container)]">
-      <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 py-8">
-        {/* Brand */}
-        <div className="-mt-2">
-          <h3 className="flex items-center gap-2 mb-3">
-            <Image src="/favicon.svg" alt="logo" width={28} height={28} />
-            <span className="text-2xl font-bold text-primary tracking-wider">
-              PetNido
-            </span>
-          </h3>
-          <p className="text-gray-500 leading-relaxed text-sm px-2">
-            ペットと人がやさしくつながる、 あたたかいコミュニティを目指して
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 col-span-2">
-          <FooterCol
-            title="サービス"
-            items={[
-              { href: "/public/browse/needs", label: "お世話の依頼を見る" },
-              { href: "/public/browse/sitters", label: "シッターを探す" },
-              { href: "/dashboard", label: "マイページ" },
-            ]}
-          />
-
-          <FooterCol
-            title="PetNidoについて"
-            items={[
-              { href: "/", label: "ホーム" },
-              { href: "#thought", label: "私たちの思い" },
-              { href: "#question", label: "よくある質問" },
-            ]}
-          />
-
-          <FooterCol
-            title="サポート"
-            items={[
-              { href: "#inquiry", label: "お問い合わせ" },
-              { href: "#rules", label: "利用規約" },
-              { href: "#policy", label: "プライバシーポリシー" },
-            ]}
-          />
-        </div>
-      </div>
-      <div className="text-center text-gray-400 text-sm">
-        © {new Date().getFullYear()} PetNido — ペットと人がつながる場所
-      </div>
-      <div className="hv2-container flex flex-col items-start justify-between gap-12 py-16 md:flex-row">
-        <div>
-          <div className="mb-6 flex items-center gap-2">
-            <img
-              src="/favicon.svg"
-              alt="PetNido Logo"
-              className="h-8 w-8 rounded-lg"
-            />
-            <span className="text-2xl font-bold text-[var(--hv2-primary)]">
-              PetNido
-            </span>
-          </div>
-          <p className="hv2-body-md mb-8 max-w-xs">
-            Connecting neighbors for a safer, happier pet community.
-          </p>
-          {/* <Link href="/dashboard/needs/new" className="hv2-footer-button">
-              Post Your Need
-            </Link> */}
-          <Button variant="primary" size="md" shape="pill">
-            Post Your Need
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-12 md:gap-24">
-          <FooterLinks
-            title="Platform"
-            links={["View All Needs", "View All Sitters", "Safety Measures"]}
-          />
-          <FooterLinks
-            title="Support"
-            links={["Help Center", "Community Guidelines", "Verification Info"]}
-          />
-          <div className="flex flex-col gap-4">
-            <h3 className="font-bold text-[var(--hv2-primary)]">Follow Us</h3>
-            <div className="flex gap-4 text-[var(--hv2-on-surface-muted)]">
-              {/* <Globe className="cursor-pointer hover:text-[var(--hv2-primary)]" /> */}
-              <Share2 className="cursor-pointer hover:text-[var(--hv2-primary)]" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}
-{
-  /* 
-      <div
-        class="border-t border-outline-variant/10 py-8 px-margin-mobile md:px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-4 text-on-surface-variant font-body-md text-sm max-w-container-max-width mx-auto text-center md:text-left"
-      >
-        <p>© 2026 PetNido. All rights reserved.</p>
-        <div class="flex gap-8">
-          <a class="hover:text-primary" href="#">プライバシーポリシー</a>
-          <a class="hover:text-primary" href="#">利用規約</a>
-        </div>
-      </div>
-    </footer> */
 }
