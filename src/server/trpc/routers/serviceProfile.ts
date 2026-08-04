@@ -1,10 +1,36 @@
 import { router, protectedProcedure } from "@/server/trpc/trpc";
-import { baseInfoSchema } from "@/lib/zod/serviceProfile";
+import {
+  baseInfoSchema,
+  onboardingProviderProfileSchema,
+} from "@/lib/zod/serviceProfile";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { requireOwnedServiceProfile } from "@/server/domains/resource-ownership";
 
 export const serviceProfileRouter = router({
+  completeOnboarding: protectedProcedure
+    .input(onboardingProviderProfileSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      return ctx.prisma.$transaction(async (tx) => {
+        const advanced = await tx.profile.updateMany({
+          where: { userId, onboardingStep: "PROVIDER_PROFILE" },
+          data: { onboardingStep: "COMPLETE", isSitter: true },
+        });
+        if (advanced.count !== 1) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "CONFLICTING_UPDATE",
+          });
+        }
+        await tx.serviceProfile.upsert({
+          where: { userId },
+          update: input,
+          create: { userId, ...input },
+        });
+        return { nextStep: "COMPLETE" as const };
+      });
+    }),
   // 当前用户的 profile + services 一起取回
   getMine: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user?.id;

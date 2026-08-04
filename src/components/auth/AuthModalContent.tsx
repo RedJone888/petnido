@@ -11,6 +11,10 @@ import type { StepType } from "@/domain/auth/type";
 import { useAuth } from "@/hooks/useAuth";
 import cn from "@/lib/cn";
 import { toast } from "sonner";
+import {
+  authContinuationUrl,
+  sanitizeReturnTo,
+} from "@/domain/auth/return-to";
 
 export default function AuthModalContent() {
   const router = useRouter();
@@ -30,15 +34,13 @@ export default function AuthModalContent() {
   const { closeAuthModal } = useAuthModal();
   // 统一跳转方法
   const handleSuccessRedirect = () => {
-    const redirectUrl = localStorage.getItem("authRedirect") || "/";
-    const curretPath = window.location.pathname;
+    const redirectUrl = sanitizeReturnTo(
+      localStorage.getItem("authRedirect"),
+      "/dashboard",
+    );
     localStorage.removeItem("authRedirect"); // 及时清理
-    if (redirectUrl === curretPath && curretPath.startsWith("/public")) {
-      closeAuthModal();
-    } else {
-      router.push(redirectUrl);
-      closeAuthModal();
-    }
+    router.push(authContinuationUrl(redirectUrl));
+    closeAuthModal();
   };
   const { sendVerifyCode } = useAuth();
   const startTimer = () => {
@@ -72,7 +74,7 @@ export default function AuthModalContent() {
   return (
     <>
       <div
-        className="relative bg-white w-full max-w-md rounded-3xl shadow-xl p-10 animate-fadeIn"
+        className="animate-fadeIn relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-5 shadow-xl sm:p-10"
         onClick={(e) => e.stopPropagation()} // 防止点击内容区也关闭弹窗
       >
         {/* 背景图 */}
@@ -81,14 +83,16 @@ export default function AuthModalContent() {
         {/* Close button */}
         <button
           onClick={() => closeAuthModal()}
-          className="absolute top-2 -left-24 w-10 h-10 bg-black/20 rounded-full text-white text-2xl flex items-center justify-center hover:bg-black/30 transition"
+          type="button"
+          aria-label="Close login dialog"
+          className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/10 text-2xl text-gray-700 transition hover:bg-black/20"
         >
           ×
         </button>
-        <div className="relative flex flex-col h-[500px] z-10">
+        <div className="relative z-10 flex h-[min(500px,calc(100dvh-88px))] min-h-[420px] flex-col">
           {/* Title */}
           <div className="text-center pb-6 shrink-0">
-            <h2 className="text-3xl font-bold text-gray-800 whitespace-pre-line tracking-tight">
+            <h2 className="pr-8 text-2xl font-bold tracking-tight text-gray-800 whitespace-pre-line sm:pr-0 sm:text-3xl">
               ようこそ、PetNido へ
             </h2>
             <p className="text-gray-600 mt-2 whitespace-pre-line">
@@ -97,7 +101,7 @@ export default function AuthModalContent() {
           </div>
           <div
             className={cn(
-              "flex-1 overflow-y-auto px-6",
+              "flex-1 overflow-y-auto px-1 sm:px-6",
               step === "select"
                 ? "flex flex-col items-center justify-center"
                 : "py-6 space-y-8",
@@ -108,16 +112,22 @@ export default function AuthModalContent() {
                 <StepSelect
                   setStep={setStep}
                   onGoogle={() => {
-                    const url =
-                      localStorage.getItem("authRedirect") ||
-                      window.location.pathname;
-                    signIn("google", { redirectTo: url });
+                    const target = sanitizeReturnTo(
+                      localStorage.getItem("authRedirect"),
+                      "/dashboard",
+                    );
+                    signIn("google", {
+                      redirectTo: authContinuationUrl(target),
+                    });
                   }}
                   onLine={() => {
-                    const url =
-                      localStorage.getItem("authRedirect") ||
-                      window.location.pathname;
-                    signIn("line", { redirectTo: url });
+                    const target = sanitizeReturnTo(
+                      localStorage.getItem("authRedirect"),
+                      "/dashboard",
+                    );
+                    signIn("line", {
+                      redirectTo: authContinuationUrl(target),
+                    });
                   }}
                 />
                 <p className="text-left text-xs text-neutral-500 mt-8">

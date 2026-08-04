@@ -15,5 +15,12 @@ export const serviceProfileRatingSchema = z.object({
   reviewCount: z.number().optional(),
 });
 
+export const onboardingProviderProfileSchema = z
+  .object({
+    introduction: z.string().trim().min(1).max(2000),
+    monthsExperience: z.number().int().min(0).max(1200).nullable(),
+  })
+  .strict();
+
 export type BaseLocation = z.infer<typeof baseLocationSchema>;
 export type BaseInfo = z.infer<typeof baseInfoSchema>;

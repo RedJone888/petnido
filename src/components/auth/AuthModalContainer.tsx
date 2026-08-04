@@ -13,7 +13,7 @@ export default function AuthModalContainer({ open }: { open: boolean }) {
   // 如果弹窗没开启，或者还没在客户端挂载好，直接不渲染
   if (!open || !mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-999">
+    <div className="fixed inset-0 z-999 flex items-center justify-center overflow-y-auto bg-black/40 px-4 py-6 backdrop-blur-sm">
       <AuthModalContent />
     </div>,
     document.body,

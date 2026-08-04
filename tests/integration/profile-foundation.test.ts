@@ -4,6 +4,7 @@ import { PrismaClient } from "../../.generated/validation-client";
 import { petRouter } from "../../src/server/trpc/routers/pet";
 import { profileRouter } from "../../src/server/trpc/routers/profile";
 import { savedLocationRouter } from "../../src/server/trpc/routers/savedLocation";
+import { serviceProfileRouter } from "../../src/server/trpc/routers/serviceProfile";
 
 const prisma = new PrismaClient();
 
@@ -17,6 +18,7 @@ function context(userId: string) {
 }
 
 async function reset() {
+  await prisma.serviceProfile.deleteMany();
   await prisma.userLocation.deleteMany();
   await prisma.pet.deleteMany();
   await prisma.profile.deleteMany();
@@ -55,6 +57,33 @@ describe("profile foundation", () => {
       onboardingStep: "COMPLETE",
       initialIntent: "POST_NEED",
     });
+  });
+
+  it("confirms provider mode and creates one service profile", async () => {
+    const user = await createUser("provider@example.com");
+    const profileCaller = profileRouter.createCaller(context(user.id));
+    await profileCaller.completeOnboardingProfile({
+      nickname: "Provider",
+      avatarUrl: null,
+      preferredLocale: "ja",
+      timeZone: "Asia/Tokyo",
+    });
+    await profileCaller.chooseInitialIntent({ intent: "OFFER_SERVICE" });
+
+    const providerCaller = serviceProfileRouter.createCaller(context(user.id));
+    await expect(
+      providerCaller.completeOnboarding({
+        introduction: "I have cared for cats for several years.",
+        monthsExperience: 36,
+      }),
+    ).resolves.toEqual({ nextStep: "COMPLETE" });
+
+    expect(await prisma.serviceProfile.count({ where: { userId: user.id } })).toBe(
+      1,
+    );
+    expect(
+      await prisma.profile.findUniqueOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({ onboardingStep: "COMPLETE", isSitter: true });
   });
 
   it("isolates pet updates and archives instead of deleting", async () => {

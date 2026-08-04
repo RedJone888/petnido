@@ -1,6 +1,6 @@
 "use client";
 import AuthModalContainer from "@/components/auth/AuthModalContainer";
-import { createContext, ReactNode, useContext, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useState } from "react";
 interface AuthModalContextType {
   openAuthModal: (redirectUrl?: string) => void; // 允许传入可选的跳转地址
   closeAuthModal: () => void;
@@ -12,16 +12,16 @@ const AuthModalContext = createContext<AuthModalContextType | undefined>(
 
 export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const openAuthModal = (redirectUrl?: string) => {
+  const openAuthModal = useCallback((redirectUrl?: string) => {
     // 逻辑：如果调用时传了地址就存传的，没传就存当前路径
-    const targetUrl = redirectUrl || window.location.pathname;
+    const targetUrl = redirectUrl || "/dashboard";
     localStorage.setItem("authRedirect", targetUrl);
     setIsModalOpen(true);
-  };
-  const closeAuthModal = () => {
+  }, []);
+  const closeAuthModal = useCallback(() => {
     // localStorage.removeItem("authRedirect");
     setIsModalOpen(false);
-  };
+  }, []);
   return (
     <AuthModalContext.Provider value={{ openAuthModal, closeAuthModal }}>
       {children}

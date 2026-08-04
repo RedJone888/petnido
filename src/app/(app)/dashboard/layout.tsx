@@ -1,9 +1,24 @@
 import NavLinks from "./_components/nav-links";
-export default function DashboardLayout({
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/auth/sign-in?returnTo=%2Fdashboard");
+  }
+  const profile = await prisma.profile.findUnique({
+    where: { userId: session.user.id },
+    select: { onboardingStep: true },
+  });
+  if (!profile || profile.onboardingStep !== "COMPLETE") {
+    redirect("/auth/continue?returnTo=%2Fdashboard");
+  }
   return (
     <div className="bg-[#f6f7fb] h-full">
       <div className="mx-auto flex h-full max-w-7xl overflow-hidden md:py-2">

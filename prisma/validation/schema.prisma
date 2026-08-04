@@ -17,6 +17,7 @@ model User {
   profile   Profile?
   pets      Pet[]
   locations UserLocation[]
+  serviceProfile ServiceProfile?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -64,6 +65,16 @@ model UserLocation {
   updatedAt        DateTime  @updatedAt
   @@index([userId, isDefault])
   @@index([userId, archivedAt])
+}
+
+model ServiceProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  introduction     String?
+  monthsExperience Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model EmailVerificationChallenge {
