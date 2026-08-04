@@ -498,3 +498,5 @@ export const publishDraftSaveSchema = z.discriminatedUnion("kind", [
 export type NeedPublishInput = z.infer<typeof needPublishSchema>;
 export type ServicePublishInput = z.infer<typeof servicePublishSchema>;
 export type PublishDraftEnvelope = z.infer<typeof publishDraftEnvelopeSchema>;
+export type PublishDraftCreateInput = z.infer<typeof publishDraftCreateSchema>;
+export type PublishDraftSaveInput = z.infer<typeof publishDraftSaveSchema>;
