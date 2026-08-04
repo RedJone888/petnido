@@ -10,6 +10,7 @@ import { profileRouter } from "@/server/trpc/routers/profile";
 import { petRouter } from "@/server/trpc/routers/pet";
 import { savedLocationRouter } from "@/server/trpc/routers/savedLocation";
 import { notificationPreferenceRouter } from "@/server/trpc/routers/notificationPreference";
+import { publishDraftRouter } from "@/server/trpc/routers/publishDraft";
 export const appRouter = router({
   auth: authRouter,
   need: needRouter,
@@ -21,5 +22,6 @@ export const appRouter = router({
   pet: petRouter,
   savedLocation: savedLocationRouter,
   notificationPreference: notificationPreferenceRouter,
+  publishDraft: publishDraftRouter,
 });
 export type AppRouter = typeof appRouter;

@@ -9,34 +9,35 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  image     String?
-  avatarAttachmentId String? @unique
-  avatarAttachment   Attachment? @relation("UserAvatar", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
-  password  String?
-  profile   Profile?
-  pets      Pet[]
-  locations UserLocation[]
-  serviceProfile ServiceProfile?
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
+  name                   String?
+  image                  String?
+  avatarAttachmentId     String?                 @unique
+  avatarAttachment       Attachment?             @relation("UserAvatar", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
+  password               String?
+  profile                Profile?
+  pets                   Pet[]
+  locations              UserLocation[]
+  serviceProfile         ServiceProfile?
   notificationPreference NotificationPreference?
-  attachments Attachment[] @relation("AttachmentOwner")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  attachments            Attachment[]            @relation("AttachmentOwner")
+  publishDraftsV2        PublishDraftV2[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
 }
 
 model Profile {
-  id       String  @id @default(cuid())
-  userId   String  @unique
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isOwner  Boolean @default(true)
-  isSitter Boolean @default(false)
-  bio              String?
-  onboardingStep   String  @default("PROFILE")
-  initialIntent    String?
-  preferredLocale  String  @default("ja")
-  timeZone         String  @default("Asia/Tokyo")
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isOwner         Boolean @default(true)
+  isSitter        Boolean @default(false)
+  bio             String?
+  onboardingStep  String  @default("PROFILE")
+  initialIntent   String?
+  preferredLocale String  @default("ja")
+  timeZone        String  @default("Asia/Tokyo")
 }
 
 model Pet {
@@ -51,39 +52,41 @@ model Pet {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
+
   @@index([ownerId, archivedAt])
 }
 
 model UserLocation {
-  id               String    @id @default(cuid())
+  id               String           @id @default(cuid())
   userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   label            String?
   lat              Float
   lon              Float
   regionLabel      String?
-  displayPrecision String    @default("MAP_POINT")
-  isDefault        Boolean   @default(false)
+  displayPrecision String           @default("MAP_POINT")
+  isDefault        Boolean          @default(false)
   archivedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   providerDefaults ServiceProfile[]
+
   @@index([userId, isDefault])
   @@index([userId, archivedAt])
 }
 
 model ServiceProfile {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  introduction     String?
-  monthsExperience Int?
-  baseCurrency     String?
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  introduction      String?
+  monthsExperience  Int?
+  baseCurrency      String?
   defaultLocationId String?
-  defaultLocation  UserLocation? @relation(fields: [defaultLocationId], references: [id], onDelete: SetNull)
-  isAccepting      Boolean @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  defaultLocation   UserLocation? @relation(fields: [defaultLocationId], references: [id], onDelete: SetNull)
+  isAccepting       Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
 model NotificationPreference {
@@ -107,6 +110,28 @@ model Attachment {
   createdAt DateTime @default(now())
 }
 
+model PublishDraftV2 {
+  id                 String    @id
+  ownerId            String
+  owner              User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  kind               String
+  mode               String?
+  schemaVersion      Int
+  revision           Int       @default(0)
+  currentStep        String
+  payloadJson        String
+  status             String    @default("ACTIVE")
+  publishedNeedId    String?   @unique
+  publishedServiceId String?   @unique
+  lastValidatedAt    DateTime?
+  publishedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([ownerId, status, updatedAt])
+  @@index([kind, mode, status])
+}
+
 model EmailVerificationChallenge {
   id              String    @id @default(cuid())
   identifier      String
@@ -121,6 +146,7 @@ model EmailVerificationChallenge {
   consumedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
   @@unique([identifier, purpose])
   @@index([expiresAt])
 }
@@ -133,6 +159,7 @@ model AuthRateLimitBucket {
   expiresAt       DateTime
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@index([action, expiresAt])
 }
 
@@ -145,13 +172,14 @@ model ValidationUser {
 }
 
 model ValidationPet {
-  id        String                   @id @default(cuid())
+  id        String                  @id @default(cuid())
   ownerId   String
-  owner     ValidationUser           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner     ValidationUser          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
   petType   String
   careNotes String?
   snapshots ValidationPetSnapshot[]
+
   @@index([ownerId])
 }
 
@@ -167,12 +195,12 @@ model ValidationLocation {
 }
 
 model ValidationNeed {
-  id             String                   @id @default(cuid())
+  id             String                  @id @default(cuid())
   ownerId        String
-  owner          ValidationUser           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  idempotencyKey String                   @unique
+  owner          ValidationUser          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  idempotencyKey String                  @unique
   mode           String
-  state          String                   @default("OPEN")
+  state          String                  @default("OPEN")
   title          String
   startsAt       DateTime
   endsAt         DateTime
@@ -186,7 +214,8 @@ model ValidationNeed {
   currency       String
   pets           ValidationPetSnapshot[]
   tasks          ValidationNeedTask[]
-  createdAt      DateTime                 @default(now())
+  createdAt      DateTime                @default(now())
+
   @@index([state, endsAt, createdAt])
 }
 
@@ -199,6 +228,7 @@ model ValidationPetSnapshot {
   name      String
   petType   String
   careNotes String?
+
   @@unique([needId, petId])
 }
 
@@ -210,6 +240,7 @@ model ValidationNeedTask {
   petRef       String
   category     String
   instructions String
+
   @@index([needId, scheduledAt])
 }
 
@@ -229,6 +260,7 @@ model ValidationCapacityBucket {
   dateKey        String
   maxPetCapacity Int
   bookedPetCount Int               @default(0)
+
   @@unique([serviceId, dateKey])
 }
 
@@ -243,5 +275,6 @@ model ValidationBooking {
   dateKey        String
   petCount       Int
   createdAt      DateTime          @default(now())
+
   @@index([serviceId, startsAt, endsAt, state])
 }

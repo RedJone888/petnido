@@ -4,6 +4,7 @@
 
 | Flag | 默认 | 控制范围 | 回滚动作 |
 |---|---|---|---|
+| `FEATURE_PUBLISHING_V2` | off | V2 需求/服务草稿 API 与共用发布基础 | 禁止访问未迁移表；保留已存草稿，旧页面继续工作 |
 | `FEATURE_GUIDED_NEED_PUBLISH` | off | 新引导流程真实发布 | 切回旧新建页；保留草稿 |
 | `FEATURE_PUBLIC_MARKETPLACE_V2` | off | `/needs`、`/services`、`/providers` | 旧公开页继续只读 |
 | `FEATURE_CONVERSATIONS_V2` | off | 会话、应聘/预约消息 | 禁止新动作，已建数据保持可读 |

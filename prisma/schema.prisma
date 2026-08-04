@@ -12,6 +12,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 // -----------------------
 //  Enums
 // -----------------------
@@ -39,15 +40,16 @@ enum NeedStatus {
 }
 
 enum ServiceCategory {
-  VISIT   // 上门喂养
-  FOSTER  // 家庭寄养
-  OTHER   // 通用/其他
+  VISIT // 上门喂养
+  FOSTER // 家庭寄养
+  OTHER // 通用/其他
 }
 
 enum AvailabilityRangeType {
   LONG_TERM
   DATE_RANGE
 }
+
 enum AvailabilityWeekPattern {
   EVERYDAY
   WEEKDAYS_ONLY
@@ -55,10 +57,11 @@ enum AvailabilityWeekPattern {
 }
 
 enum PriceUnit {
-  DAY      // 1日あたり
-  HOUR     // 1時間あたり
-  VISIT    // 1回あたり（ドロップインなど）
+  DAY // 1日あたり
+  HOUR // 1時間あたり
+  VISIT // 1回あたり（ドロップインなど）
 }
+
 enum Currency {
   JPY
   USD
@@ -83,153 +86,295 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum PublishKindV2 {
+  NEED
+  SERVICE
+}
+
+enum PublishDraftStatusV2 {
+  ACTIVE
+  PUBLISHED
+  ABANDONED
+}
+
+enum PublishModeV2 {
+  HOME_VISIT
+  BOARDING
+  CUSTOM
+}
+
+enum NeedStateV2 {
+  DRAFT
+  OPEN
+  MATCHED
+  CLOSED
+  CANCELLED
+}
+
+enum ServiceStateV2 {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum MoneyKindV2 {
+  EXACT
+  RANGE
+  OPEN
+}
+
+enum AdditionalCostKindV2 {
+  TRAVEL
+  SUPPLY
+}
+
+enum CostModeV2 {
+  NONE
+  FIXED
+  ACTUAL
+  DISCUSS
+}
+
+enum TaskPriorityV2 {
+  MUST
+  NICE
+}
+
+enum TaskScheduleKindV2 {
+  EACH_VISIT
+  DAILY
+  REPEATING
+  ONCE
+  AS_NEEDED
+}
+
+enum VisitWindowKindV2 {
+  FLEXIBLE
+  PREFERRED
+}
+
+enum SupplyProviderV2 {
+  OWNER
+  PROVIDER
+  NOT_NEEDED
+}
+
+enum NeedRequirementKindV2 {
+  ENVIRONMENT_REQUIRED
+  UNACCEPTABLE
+  OTHER_NEED
+  WARNING
+}
+
+enum TransportModeV2 {
+  OWNER
+  PROVIDER
+  TAXI
+  DISCUSS
+}
+
+enum HandoffDirectionV2 {
+  OWNER_DROPOFF
+  PROVIDER_PICKUP
+  SPLIT
+  DISCUSS
+}
+
+enum AvailabilityRuleKindV2 {
+  WEEKLY
+  DATE_RANGE
+}
+
+enum PetSizeV2 {
+  TINY
+  SMALL
+  MEDIUM
+  LARGE
+  GIANT
+  ANY
+}
+
+enum PetAgeBandV2 {
+  YOUNG
+  ADULT
+  SENIOR
+  ANY
+}
+
+enum PriceUnitV2 {
+  HOUR
+  VISIT
+  DAY
+  FIXED
+}
+
+enum DiscountKindV2 {
+  FIXED
+  PERCENT
+}
+
+enum V2AttachmentPurpose {
+  GENERAL
+  EXPERIENCE
+  ENVIRONMENT
+  PET
+}
+
 // -----------------------
 //  Models
 // -----------------------
 model User {
-  id             String   @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image     String?
-  avatarAttachmentId String? @unique
+  id                 String      @id @default(cuid())
+  name               String?
+  email              String?     @unique
+  emailVerified      DateTime?
+  image              String?
+  avatarAttachmentId String?     @unique
   avatarAttachment   Attachment? @relation("UserAvatar", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
-  password  String? // (可选，OAuth用户无需密码)
-  role      UserRole @default(USER) // 后端用，前端再用 profileType 区分
+  password           String? // (可选，OAuth用户无需密码)
+  role               UserRole    @default(USER) // 后端用，前端再用 profileType 区分
 
-  profile   Profile?
-  pets      Pet[]
-  needs     Need[]
-  serviceProfile  ServiceProfile?
-  locations       UserLocation[]
+  profile                Profile?
+  pets                   Pet[]
+  needs                  Need[]
+  serviceProfile         ServiceProfile?
+  locations              UserLocation[]
   notificationPreference NotificationPreference?
-  attachment      Attachment[] @relation("AttachmentOwner")
-  applications    Application[]
-  sittings        Booking[] @relation("SitterBookings")
-  ownerBookings   Booking[] @relation("OwnerBookings")
-  messagesSent    Message[] @relation("MessagesFromUser")
-  messagesReceived Message[] @relation("MessagesToUser")
+  attachment             Attachment[]            @relation("AttachmentOwner")
+  applications           Application[]
+  sittings               Booking[]               @relation("SitterBookings")
+  ownerBookings          Booking[]               @relation("OwnerBookings")
+  messagesSent           Message[]               @relation("MessagesFromUser")
+  messagesReceived       Message[]               @relation("MessagesToUser")
+  publishDraftsV2        PublishDraftV2[]
+  needsV2                NeedV2[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   accounts Account[]
   sessions Session[]
 }
 
 model Profile {
-  id        String @id @default(cuid())
-  userId    String @unique
-  user      User   @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
 
-  bio           String?
-  isSitter      Boolean @default(false)
-  isOwner       Boolean @default(true)
-  onboardingStep String @default("PROFILE")
-  initialIntent  String?
-  preferredLocale String @default("ja")
-  timeZone       String @default("Asia/Tokyo")
+  bio             String?
+  isSitter        Boolean @default(false)
+  isOwner         Boolean @default(true)
+  onboardingStep  String  @default("PROFILE")
+  initialIntent   String?
+  preferredLocale String  @default("ja")
+  timeZone        String  @default("Asia/Tokyo")
 }
 
 model ServiceProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
 
   // 用户当前主要活动区域（默认值）
-  baseAreaRaw   String?    
-  baseLat       Float?
-  baseLon       Float?
-  baseCurrency  Currency?
+  baseAreaRaw       String?
+  baseLat           Float?
+  baseLon           Float?
+  baseCurrency      Currency?
   defaultLocationId String?
   defaultLocation   UserLocation? @relation(fields: [defaultLocationId], references: [id], onDelete: SetNull)
-  isAccepting       Boolean @default(true)
-  
-  introduction      String?
-  monthsExperience   Int?
+  isAccepting       Boolean       @default(true)
 
-  rating        Float  @default(0)
-  reviewCount   Int    @default(0)
+  introduction     String?
+  monthsExperience Int?
 
-  services  Service[]
+  rating      Float @default(0)
+  reviewCount Int   @default(0)
+
+  services   Service[]
+  servicesV2 ServiceV2[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Service {
-  id                String   @id @default(cuid())
-  serviceProfileId  String
-  serviceProfile    ServiceProfile @relation(fields: [serviceProfileId], references: [id])
- 
+  id               String         @id @default(cuid())
+  serviceProfileId String
+  serviceProfile   ServiceProfile @relation(fields: [serviceProfileId], references: [id])
+
   // 服务基本信息
-  serviceType    ServiceCategory   
-  customType     String?         
-  description    String?
-  isActive       Boolean @default(true)
+  serviceType ServiceCategory
+  customType  String?
+  description String?
+  isActive    Boolean         @default(true)
 
   // 服务地点（独立于 profile）
-  areaRaw   String 
-  areaLat   Float
-  areaLon   Float
-  currency  Currency
+  areaRaw  String
+  areaLat  Float
+  areaLon  Float
+  currency Currency
 
-  photos         Attachment[]
+  photos Attachment[]
 
   // 可用时间
   availabilityRangeType   AvailabilityRangeType
   availabilityWeekPattern AvailabilityWeekPattern
-  includeHolidays         Boolean @default(false)
-  availableFrom           DateTime? 
-  availableTo             DateTime? 
+  includeHolidays         Boolean                 @default(false)
+  availableFrom           DateTime?
+  availableTo             DateTime?
 
   // 价格
-  priceUnit   PriceUnit
-  priceRules      PriceRule[]
+  priceUnit  PriceUnit
+  priceRules PriceRule[]
 
   // 可服务宠物（系统推断）
   petTypes PetType[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
 }
-model PriceRule {
-  id          String     @id @default(cuid())
-  serviceId   String
-  service     Service    @relation(fields: [serviceId], references: [id])
 
-  groupLabel  String
-  price       Int       @default(0)
+model PriceRule {
+  id        String  @id @default(cuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  groupLabel String
+  price      Int    @default(0)
 }
+
 enum ServicePhotoKind {
   EXPERIENCE
   HOME
 }
 
 model Attachment {
-  id        String           @id @default(cuid())
+  id        String @id @default(cuid())
   userId    String
-  user      User     @relation("AttachmentOwner", fields: [userId], references: [id])
-  avatarFor User?    @relation("UserAvatar")
+  user      User   @relation("AttachmentOwner", fields: [userId], references: [id])
+  avatarFor User?  @relation("UserAvatar")
 
-  url         String           // 先存URL；后续接R2/S3
+  url         String // 先存URL；后续接R2/S3
   fileKey     String
-  order       Int @default(0)
-  status      Int @default(0) //0：TEMP  1：ACTIVE  2：DELETED
+  order       Int               @default(0)
+  status      Int               @default(0) //0：TEMP  1：ACTIVE  2：DELETED
   signature   String
   serviceKind ServicePhotoKind?
 
-  createdAt   DateTime         @default(now())
+  createdAt DateTime @default(now())
 
-  serviceId String?
-  service   Service? @relation(fields: [serviceId],references: [id],onDelete: Cascade)
-  needId    String?
-  need      Need? @relation(fields:[needId],references:[id],onDelete:Cascade)
-  petId     String?
-  pet       Pet? @relation(fields:[petId],references:[id],onDelete:Cascade)
-  needPetId String?
-  needPet   NeedPet? @relation(fields:[needPetId],references:[id],onDelete:Cascade)
+  serviceId      String?
+  service        Service?              @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  needId         String?
+  need           Need?                 @relation(fields: [needId], references: [id], onDelete: Cascade)
+  petId          String?
+  pet            Pet?                  @relation(fields: [petId], references: [id], onDelete: Cascade)
+  needPetId      String?
+  needPet        NeedPet?              @relation(fields: [needPetId], references: [id], onDelete: Cascade)
+  needV2Links    NeedV2Attachment[]
+  serviceV2Links ServiceV2Attachment[]
 }
 
 enum FrequencyType {
@@ -239,64 +384,67 @@ enum FrequencyType {
   EVERY_3_DAYS
   CUSTOM
 }
+
 enum DistanceRange {
   WITHIN_3KM
   WITHIN_5KM
   WITHIN_10KM
   NO_LIMIT
 }
+
 enum TransportMethod {
   SELF
   SITTER
   TAXI
   DISCUSS
 }
+
 model Need {
-  id        String       @id @default(cuid())
-  ownerId   String
-  owner     User     @relation(fields: [ownerId], references: [id])
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
 
   title         String
   category      ServiceCategory
   // 需求与备注
-  requirement  String
+  requirement   String
   // 时间与频率
-  startDate    DateTime
-  endDate      DateTime
+  startDate     DateTime
+  endDate       DateTime
   // 仅在 VISIT 模式下有效
-  frequencyType   FrequencyType? 
-  customDays      Int?
-  customTimes     Int? 
-  
+  frequencyType FrequencyType?
+  customDays    Int?
+  customTimes   Int?
+
   // 地点逻辑
-  addressRaw   String
-  addressLat   Float
-  addressLon   Float
-  currency     Currency
+  addressRaw      String
+  addressLat      Float
+  addressLon      Float
+  currency        Currency
   // 仅在 FOSTER 模式下有效
   fosterRange     DistanceRange?
   transportMethod TransportMethod?
-  status          NeedStatus @default(OPEN)
-  
+  status          NeedStatus       @default(OPEN)
+
   // 关联
-  needPets     NeedPet[]
-  photos       Attachment[]
-  
+  needPets NeedPet[]
+  photos   Attachment[]
+
   // 价格体系
-  priceAmount  Int?         // 单价
-  totalPrice   Int          // 最终显示给用户的总价（由前端计算或手动输入后传回）
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  archivedAt  DateTime?
-  applications  Application[]
-  bookings      Booking[]
+  priceAmount Int? // 单价
+  totalPrice  Int // 最终显示给用户的总价（由前端计算或手动输入后传回）
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  archivedAt   DateTime?
+  applications Application[]
+  bookings     Booking[]
 }
 
 model NeedPet {
-  id        String @id @default(cuid())
-  needId    String
-  need      Need @relation(fields:[needId],references:[id])
+  id          String       @id @default(cuid())
+  needId      String
+  need        Need         @relation(fields: [needId], references: [id])
   petCategory PetType
   petType     String?
   count       Int
@@ -305,36 +453,38 @@ model NeedPet {
   tags        String[]
   petIds      String[]
 }
+
 model Pet {
-  id        String   @id @default(cuid())
-  ownerId   String
-  owner     User     @relation(fields: [ownerId], references: [id])
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
 
-  name      String?
-  type      PetType
-  breed     String?
-  age       Int?
-  photos    Attachment[]
-  notes     String?
+  name   String?
+  type   PetType
+  breed  String?
+  age    Int?
+  photos Attachment[]
+  notes  String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  archivedAt DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  archivedAt      DateTime?
+  needSnapshotsV2 NeedPetSnapshotV2[]
 }
 
 model UserLocation {
-  id               String   @id @default(cuid())
+  id               String           @id @default(cuid())
   userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   label            String?
-  lat              Decimal  @db.Decimal(9, 6)
-  lon              Decimal  @db.Decimal(9, 6)
+  lat              Decimal          @db.Decimal(9, 6)
+  lon              Decimal          @db.Decimal(9, 6)
   regionLabel      String?
-  displayPrecision String   @default("MAP_POINT")
-  isDefault        Boolean  @default(false)
+  displayPrecision String           @default("MAP_POINT")
+  isDefault        Boolean          @default(false)
   archivedAt       DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   providerDefaults ServiceProfile[]
 
   @@index([userId, isDefault])
@@ -350,48 +500,387 @@ model NotificationPreference {
   updatedAt    DateTime @updatedAt
 }
 
+model PublishDraftV2 {
+  id                 String               @id @default(cuid())
+  ownerId            String
+  owner              User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  kind               PublishKindV2
+  mode               PublishModeV2?
+  schemaVersion      Int
+  revision           Int                  @default(0)
+  currentStep        String
+  payloadJson        String
+  status             PublishDraftStatusV2 @default(ACTIVE)
+  publishedNeedId    String?              @unique
+  publishedNeed      NeedV2?              @relation("NeedPublishedDraft", fields: [publishedNeedId], references: [id], onDelete: SetNull)
+  publishedServiceId String?              @unique
+  publishedService   ServiceV2?           @relation("ServicePublishedDraft", fields: [publishedServiceId], references: [id], onDelete: SetNull)
+  lastValidatedAt    DateTime?
+  publishedAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([ownerId, status, updatedAt])
+  @@index([kind, mode, status])
+}
+
+model LocationSnapshotV2 {
+  id               String     @id @default(cuid())
+  sourceLocationId String?
+  lat              Decimal    @db.Decimal(9, 6)
+  lon              Decimal    @db.Decimal(9, 6)
+  regionLabel      String?
+  displayPrecision String
+  need             NeedV2?
+  service          ServiceV2?
+  createdAt        DateTime   @default(now())
+}
+
+model NeedV2 {
+  id                 String                 @id @default(cuid())
+  ownerId            String
+  owner              User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  mode               PublishModeV2
+  state              NeedStateV2            @default(DRAFT)
+  title              String
+  description        String?
+  startsAt           DateTime
+  endsAt             DateTime
+  timeZone           String
+  locationSnapshotId String                 @unique
+  locationSnapshot   LocationSnapshotV2     @relation(fields: [locationSnapshotId], references: [id], onDelete: Restrict)
+  budgetKind         MoneyKindV2
+  minAmountMinor     BigInt?
+  maxAmountMinor     BigInt?
+  currency           Currency
+  negotiable         Boolean                @default(false)
+  archivedAt         DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  sourceDraft        PublishDraftV2?        @relation("NeedPublishedDraft")
+  homeVisitDetail    HomeVisitNeedDetailV2?
+  boardingDetail     BoardingNeedDetailV2?
+  pets               NeedPetSnapshotV2[]
+  tasks              NeedTaskV2[]
+  dateExceptions     NeedDateExceptionV2[]
+  visitWindows       NeedVisitWindowV2[]
+  supplies           NeedSupplyV2[]
+  requirements       NeedRequirementV2[]
+  additionalCosts    NeedAdditionalCostV2[]
+  attachments        NeedV2Attachment[]
+
+  @@index([state, endsAt, createdAt])
+  @@index([mode, state, endsAt])
+  @@index([ownerId, createdAt])
+}
+
+model HomeVisitNeedDetailV2 {
+  id                  String   @id @default(cuid())
+  needId              String   @unique
+  need                NeedV2   @relation(fields: [needId], references: [id], onDelete: Cascade)
+  intervalDays        Int
+  firstServiceDate    DateTime @db.Date
+  visitsPerServiceDay Int
+}
+
+model BoardingNeedDetailV2 {
+  id                        String             @id @default(cuid())
+  needId                    String             @unique
+  need                      NeedV2             @relation(fields: [needId], references: [id], onDelete: Cascade)
+  transportMode             TransportModeV2
+  handoffDirection          HandoffDirectionV2
+  maxProviderDistanceMeters Int?
+}
+
+model NeedDateExceptionV2 {
+  id     String   @id @default(cuid())
+  needId String
+  need   NeedV2   @relation(fields: [needId], references: [id], onDelete: Cascade)
+  date   DateTime @db.Date
+
+  @@unique([needId, date])
+}
+
+model NeedVisitWindowV2 {
+  id                 String            @id @default(cuid())
+  needId             String
+  need               NeedV2            @relation(fields: [needId], references: [id], onDelete: Cascade)
+  visitNumber        Int
+  kind               VisitWindowKindV2
+  preferredLocalTime String?
+
+  @@unique([needId, visitNumber])
+}
+
+model NeedPetSnapshotV2 {
+  id           String              @id @default(cuid())
+  needId       String
+  need         NeedV2              @relation(fields: [needId], references: [id], onDelete: Cascade)
+  clientPetKey String
+  sourcePetId  String?
+  sourcePet    Pet?                @relation(fields: [sourcePetId], references: [id], onDelete: SetNull)
+  name         String
+  petType      String
+  breed        String?
+  birthDate    DateTime?           @db.Date
+  weightGrams  Int?
+  sex          String
+  neutered     String
+  careNotes    String?
+  taskLinks    NeedTaskPetV2[]
+  supplies     NeedSupplyV2[]
+  requirements NeedRequirementV2[]
+
+  @@unique([needId, clientPetKey])
+  @@index([sourcePetId])
+  @@index([petType, needId])
+}
+
+model NeedTaskV2 {
+  id            String             @id @default(cuid())
+  needId        String
+  need          NeedV2             @relation(fields: [needId], references: [id], onDelete: Cascade)
+  clientTaskKey String
+  category      String
+  label         String
+  instructions  String?
+  priority      TaskPriorityV2
+  scheduleKind  TaskScheduleKindV2
+  visitNumbers  Int[]
+  localTimes    String[]
+  intervalDays  Int?
+  dueDate       DateTime?          @db.Date
+  trigger       String?
+  order         Int
+  petLinks      NeedTaskPetV2[]
+
+  @@unique([needId, clientTaskKey])
+  @@index([category, needId])
+}
+
+model NeedTaskPetV2 {
+  taskId String
+  task   NeedTaskV2        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  petId  String
+  pet    NeedPetSnapshotV2 @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, petId])
+  @@index([petId])
+}
+
+model NeedSupplyV2 {
+  id              String             @id @default(cuid())
+  needId          String
+  need            NeedV2             @relation(fields: [needId], references: [id], onDelete: Cascade)
+  clientSupplyKey String
+  petId           String?
+  pet             NeedPetSnapshotV2? @relation(fields: [petId], references: [id], onDelete: Cascade)
+  category        String
+  label           String
+  providedBy      SupplyProviderV2
+
+  @@unique([needId, clientSupplyKey])
+  @@index([petId])
+}
+
+model NeedRequirementV2 {
+  id     String                @id @default(cuid())
+  needId String
+  need   NeedV2                @relation(fields: [needId], references: [id], onDelete: Cascade)
+  petId  String?
+  pet    NeedPetSnapshotV2?    @relation(fields: [petId], references: [id], onDelete: Cascade)
+  kind   NeedRequirementKindV2
+  label  String
+
+  @@index([needId, kind])
+  @@index([petId])
+}
+
+model NeedAdditionalCostV2 {
+  id          String               @id @default(cuid())
+  needId      String
+  need        NeedV2               @relation(fields: [needId], references: [id], onDelete: Cascade)
+  kind        AdditionalCostKindV2
+  mode        CostModeV2
+  amountMinor BigInt?
+
+  @@unique([needId, kind])
+}
+
+model NeedV2Attachment {
+  needId       String
+  need         NeedV2              @relation(fields: [needId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment          @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  purpose      V2AttachmentPurpose @default(GENERAL)
+  order        Int                 @default(0)
+
+  @@id([needId, attachmentId])
+  @@index([attachmentId])
+}
+
+model ServiceV2 {
+  id                     String                           @id @default(cuid())
+  serviceProfileId       String
+  serviceProfile         ServiceProfile                   @relation(fields: [serviceProfileId], references: [id], onDelete: Restrict)
+  mode                   PublishModeV2
+  state                  ServiceStateV2                   @default(DRAFT)
+  title                  String
+  description            String?
+  timeZone               String
+  locationSnapshotId     String                           @unique
+  locationSnapshot       LocationSnapshotV2               @relation(fields: [locationSnapshotId], references: [id], onDelete: Restrict)
+  currency               Currency
+  serviceRadiusMeters    Int?
+  maxPetCapacity         Int?
+  archivedAt             DateTime?
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  sourceDraft            PublishDraftV2?                  @relation("ServicePublishedDraft")
+  boardingDetail         BoardingServiceDetailV2?
+  availabilityRules      ServiceAvailabilityRuleV2[]
+  availabilityExceptions ServiceAvailabilityExceptionV2[]
+  petPolicies            ServicePetPolicyV2[]
+  offerings              ServiceOfferingV2[]
+  priceRules             ServicePriceRuleV2[]
+  discounts              ServiceDiscountRuleV2[]
+  attachments            ServiceV2Attachment[]
+
+  @@index([state, mode, createdAt])
+  @@index([serviceProfileId, state])
+}
+
+model BoardingServiceDetailV2 {
+  id                     String    @id @default(cuid())
+  serviceId              String    @unique
+  service                ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  environmentDescription String
+  residentPetNotes       String?
+  suppliedItems          String[]
+}
+
+model ServiceAvailabilityRuleV2 {
+  id               String                 @id @default(cuid())
+  serviceId        String
+  service          ServiceV2              @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  kind             AvailabilityRuleKindV2
+  weekdays         Int[]
+  startsOn         DateTime?              @db.Date
+  endsOn           DateTime?              @db.Date
+  includesHolidays Boolean                @default(false)
+
+  @@index([serviceId, kind])
+}
+
+model ServiceAvailabilityExceptionV2 {
+  id        String    @id @default(cuid())
+  serviceId String
+  service   ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  date      DateTime  @db.Date
+  available Boolean
+  note      String?
+
+  @@unique([serviceId, date])
+}
+
+model ServicePetPolicyV2 {
+  id        String       @id @default(cuid())
+  serviceId String
+  service   ServiceV2    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  petType   String
+  size      PetSizeV2
+  ageBand   PetAgeBandV2
+  accepted  Boolean
+  notes     String?
+
+  @@unique([serviceId, petType, size, ageBand])
+  @@index([petType, accepted, serviceId])
+}
+
+model ServiceOfferingV2 {
+  id          String    @id @default(cuid())
+  serviceId   String
+  service     ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  category    String
+  label       String
+  description String?
+
+  @@index([category, serviceId])
+}
+
+model ServicePriceRuleV2 {
+  id          String      @id @default(cuid())
+  serviceId   String
+  service     ServiceV2   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  label       String
+  unit        PriceUnitV2
+  amountMinor BigInt
+}
+
+model ServiceDiscountRuleV2 {
+  id        String         @id @default(cuid())
+  serviceId String
+  service   ServiceV2      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  label     String
+  kind      DiscountKindV2
+  value     Int
+  condition String?
+}
+
+model ServiceV2Attachment {
+  serviceId    String
+  service      ServiceV2           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment          @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  purpose      V2AttachmentPurpose @default(GENERAL)
+  order        Int                 @default(0)
+
+  @@id([serviceId, attachmentId])
+  @@index([attachmentId])
+}
+
 model Application {
-  id        String  @id @default(cuid())
-  needId    String
-  need      Need    @relation(fields: [needId], references: [id])
+  id     String @id @default(cuid())
+  needId String
+  need   Need   @relation(fields: [needId], references: [id])
 
-  sitterId  String
-  sitter    User    @relation(fields: [sitterId], references: [id])
+  sitterId String
+  sitter   User   @relation(fields: [sitterId], references: [id])
 
-  message   String?
-  status    ApplicationStatus @default(PENDING)
-  price     Float    @default(0)
+  message String?
+  status  ApplicationStatus @default(PENDING)
+  price   Float             @default(0)
 
   createdAt DateTime @default(now())
 }
 
 model Booking {
-  id        String   @id @default(cuid())
+  id      String  @id @default(cuid())
   // 可选：从一个需求帖发起, 可选：从一个服务帖发起
-  needId    String?
-  need      Need?    @relation(fields: [needId], references: [id])
+  needId  String?
+  need    Need?   @relation(fields: [needId], references: [id])
   // 双方用户
-  ownerId   String
-  owner     User     @relation("OwnerBookings", fields: [ownerId], references: [id])
-  
-  sitterId  String
-  sitter    User     @relation("SitterBookings", fields: [sitterId], references: [id])
+  ownerId String
+  owner   User    @relation("OwnerBookings", fields: [ownerId], references: [id])
+
+  sitterId String
+  sitter   User   @relation("SitterBookings", fields: [sitterId], references: [id])
 
   startDate DateTime
   endDate   DateTime
-  price     Float    @default(0)
+  price     Float         @default(0)
   status    BookingStatus @default(CONFIRMED)
 
   createdAt DateTime @default(now())
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  fromId    String
-  from      User     @relation("MessagesFromUser", fields: [fromId], references: [id])
+  id     String @id @default(cuid())
+  fromId String
+  from   User   @relation("MessagesFromUser", fields: [fromId], references: [id])
 
-  toId      String
-  to        User     @relation("MessagesToUser", fields: [toId], references: [id])
+  toId String
+  to   User   @relation("MessagesToUser", fields: [toId], references: [id])
 
   content   String
   createdAt DateTime @default(now())
