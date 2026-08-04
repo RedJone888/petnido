@@ -24,6 +24,7 @@ export default defineConfig({
     env: {
       ...process.env,
       FEATURE_VERTICAL_SLICE: "true",
+      FEATURE_PROFILE_E2E: "true",
       VALIDATION_DATABASE_URL: "file:./validation.e2e.db",
       VALIDATION_TEST_TOKEN: "petnido-local-e2e-token",
       RUST_LOG: "debug",

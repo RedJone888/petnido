@@ -24,4 +24,13 @@ export default function globalSetup() {
     env: environment,
   });
   if (trigger.status !== 0) throw new Error("Failed to install validation constraints");
+
+  const seedProfile = spawnSync(
+    process.execPath,
+    ["scripts/seed-validation-profile.mjs"],
+    { stdio: "inherit", env: environment },
+  );
+  if (seedProfile.status !== 0) {
+    throw new Error("Failed to seed profile settings validation data");
+  }
 }
