@@ -1,0 +1,26 @@
+name: quality
+
+on:
+  pull_request:
+  push:
+    branches: [main, "codex/**"]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/petnido_validation
+      NEXTAUTH_SECRET: ci-only-not-a-real-secret-ci-only
+      NEXTAUTH_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.1
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run quality
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

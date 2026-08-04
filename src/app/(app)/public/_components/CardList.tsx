@@ -58,7 +58,7 @@ export default async function CardList({
     <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {items.map((item) =>
         type === "needs" ? (
-          <div>111</div>
+          <div key={item.id}>111</div>
         ) : (
           // <NeedCard key={item.id} need={item} />
           <SitterCard key={item.id} sitter={item} />

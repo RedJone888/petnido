@@ -143,7 +143,7 @@ export default function NeedCard({
         </div>
         {/* 第五行：描述 */}
         <p className="text-slate-500 text-[11px] line-clamp-2 leading-relaxed italic pl-2 border-l-2 border-slate-100">
-          "{requirement}"
+          &quot;{requirement}&quot;
         </p>
 
         {/* 第三行：频次、距离偏好、接送方式 (标签流) */}

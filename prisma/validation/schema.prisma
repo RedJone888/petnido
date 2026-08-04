@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../.generated/validation-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("VALIDATION_DATABASE_URL")
+}
+
+model ValidationUser {
+  id              String              @id @default(cuid())
+  email           String              @unique
+  pets            ValidationPet[]
+  defaultLocation ValidationLocation?
+  needs           ValidationNeed[]
+}
+
+model ValidationPet {
+  id        String                   @id @default(cuid())
+  ownerId   String
+  owner     ValidationUser           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  petType   String
+  careNotes String?
+  snapshots ValidationPetSnapshot[]
+  @@index([ownerId])
+}
+
+model ValidationLocation {
+  id               String         @id @default(cuid())
+  userId           String         @unique
+  user             ValidationUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lat              Float
+  lon              Float
+  regionLabel      String?
+  displayPrecision String
+  updatedAt        DateTime       @updatedAt
+}
+
+model ValidationNeed {
+  id             String                   @id @default(cuid())
+  ownerId        String
+  owner          ValidationUser           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  idempotencyKey String                   @unique
+  mode           String
+  state          String                   @default("OPEN")
+  title          String
+  startsAt       DateTime
+  endsAt         DateTime
+  timeZone       String
+  lat            Float
+  lon            Float
+  regionLabel    String?
+  budgetKind     String
+  minAmountMinor Int?
+  maxAmountMinor Int?
+  currency       String
+  pets           ValidationPetSnapshot[]
+  tasks          ValidationNeedTask[]
+  createdAt      DateTime                 @default(now())
+  @@index([state, endsAt, createdAt])
+}
+
+model ValidationPetSnapshot {
+  id        String         @id @default(cuid())
+  needId    String
+  need      ValidationNeed @relation(fields: [needId], references: [id], onDelete: Cascade)
+  petId     String?
+  pet       ValidationPet? @relation(fields: [petId], references: [id], onDelete: SetNull)
+  name      String
+  petType   String
+  careNotes String?
+  @@unique([needId, petId])
+}
+
+model ValidationNeedTask {
+  id           String         @id @default(cuid())
+  needId       String
+  need         ValidationNeed @relation(fields: [needId], references: [id], onDelete: Cascade)
+  scheduledAt  DateTime
+  petRef       String
+  category     String
+  instructions String
+  @@index([needId, scheduledAt])
+}
+
+model ValidationService {
+  id              String                     @id @default(cuid())
+  mode            String
+  state           String                     @default("ACTIVE")
+  maxPetCapacity  Int?
+  capacityBuckets ValidationCapacityBucket[]
+  bookings        ValidationBooking[]
+}
+
+model ValidationCapacityBucket {
+  id             String            @id @default(cuid())
+  serviceId      String
+  service        ValidationService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  dateKey        String
+  maxPetCapacity Int
+  bookedPetCount Int               @default(0)
+  @@unique([serviceId, dateKey])
+}
+
+model ValidationBooking {
+  id             String            @id @default(cuid())
+  serviceId      String
+  service        ValidationService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  idempotencyKey String            @unique
+  state          String            @default("PENDING")
+  startsAt       DateTime
+  endsAt         DateTime
+  dateKey        String
+  petCount       Int
+  createdAt      DateTime          @default(now())
+  @@index([serviceId, startsAt, endsAt, state])
+}

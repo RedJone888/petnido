@@ -5,15 +5,6 @@ import { MessageCircle } from "lucide-react";
 import EmptyState from "../_components/EmptyState";
 export default function MessagesPage() {
   const hasMessage = true;
-  if (!hasMessage) {
-    return (
-      <EmptyState
-        icon={<MessageCircle className="w-10 h-10" />}
-        title="まだメッセージはありません"
-        description="依頼が成立すると、ここにシッターさんや飼い主さんとのメッセージが表示されます。"
-      />
-    );
-  }
   // ---------- MOCK CONVERSATIONS ----------
   const conversations = [
     {
@@ -48,6 +39,16 @@ export default function MessagesPage() {
   // 输入框状态
   const [input, setInput] = useState("");
 
+  if (!hasMessage) {
+    return (
+      <EmptyState
+        icon={<MessageCircle className="w-10 h-10" />}
+        title="まだメッセージはありません"
+        description="依頼が成立すると、ここにシッターさんや飼い主さんとのメッセージが表示されます。"
+      />
+    );
+  }
+
   function handleSend() {
     if (!input.trim()) return;
 
@@ -79,7 +80,7 @@ export default function MessagesPage() {
                 <div
                   key={conv.id}
                   onClick={() => setActiveId(conv.id)}
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b 
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b
                   ${
                     active
                       ? "bg-white shadow-inner"

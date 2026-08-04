@@ -1,8 +1,14 @@
 node_modules
 .next
 .env*
+!.env.example
 *storybook.log
 storybook-static
+coverage/
+playwright-report/
+test-results/
+.generated/
+prisma/validation/*.db*
 
 # Local OS and compiler artifacts
 .DS_Store
