@@ -13,12 +13,15 @@ model User {
   email     String   @unique
   name      String?
   image     String?
+  avatarAttachmentId String? @unique
+  avatarAttachment   Attachment? @relation("UserAvatar", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
   password  String?
   profile   Profile?
   pets      Pet[]
   locations UserLocation[]
   serviceProfile ServiceProfile?
   notificationPreference NotificationPreference?
+  attachments Attachment[] @relation("AttachmentOwner")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -90,6 +93,18 @@ model NotificationPreference {
   emailInstant Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("AttachmentOwner", fields: [userId], references: [id], onDelete: Cascade)
+  avatarFor User?    @relation("UserAvatar")
+  url       String
+  fileKey   String
+  signature String
+  status    Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 model EmailVerificationChallenge {

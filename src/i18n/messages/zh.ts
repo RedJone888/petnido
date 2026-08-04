@@ -249,6 +249,29 @@ export const zh = {
       terms: "服务条款", // 对应利用規約/Terms of Service
     },
   },
+  settings: {
+    eyebrow: "账号与档案",
+    title: "设置",
+    description: "管理个人资料、宠物档案、地图位置、服务档案和通知方式。",
+    nav: {
+      account: "个人资料",
+      pets: "宠物档案",
+      locations: "常用位置",
+      provider: "服务设置",
+      notifications: "通知设置",
+    },
+    notifications: {
+      title: "通知设置",
+      description: "绑定邮箱后，可选择是否立即接收新消息邮件提醒。",
+      emailTitle: "有新消息时发送邮件",
+      emailDescription: "当前阶段只保存通知偏好，业务邮件会在通知阶段启用。",
+      save: "保存通知设置",
+      saving: "保存中……",
+      success: "通知设置已保存",
+      error: "无法保存通知设置",
+      loading: "加载中……",
+    },
+  },
   errors: {
     authRequired: "请先登录后继续。",
     resourceNotFound: "该内容不存在，或你没有访问权限。",

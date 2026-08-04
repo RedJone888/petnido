@@ -5,9 +5,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { trpc } from "@/utils/trpc";
+import { useLanguage } from "@/components/providers/language-provider";
 import { primaryButtonClass, SettingsCard } from "./settings-card";
 
 export function NotificationSettings() {
+  const { t } = useLanguage();
+  const copy = t.settings.notifications;
   const preference = trpc.notificationPreference.getMine.useQuery();
   const [emailInstant, setEmailInstant] = useState(false);
   useEffect(() => {
@@ -16,20 +19,20 @@ export function NotificationSettings() {
   const update = trpc.notificationPreference.updateMine.useMutation({
     onSuccess: async () => {
       await preference.refetch();
-      toast.success("通知設定を保存しました");
+      toast.success(copy.success);
     },
-    onError: () => toast.error("通知設定を保存できませんでした"),
+    onError: () => toast.error(copy.error),
   });
 
   return (
     <SettingsCard
       id="notifications"
       icon={Bell}
-      title="通知設定"
-      description="メールを登録している場合、新しいメッセージをすぐメールで知らせる設定です。"
+      title={copy.title}
+      description={copy.description}
     >
       {preference.isLoading ? (
-        <p className="text-sm text-slate-500">読み込み中...</p>
+        <p className="text-sm text-slate-500">{copy.loading}</p>
       ) : (
         <div className="space-y-5">
           <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -40,9 +43,9 @@ export function NotificationSettings() {
               className="mt-1 h-4 w-4 accent-primary"
             />
             <span>
-              <span className="block font-bold text-slate-900">新しいメッセージをメールで知らせる</span>
+              <span className="block font-bold text-slate-900">{copy.emailTitle}</span>
               <span className="mt-1 block text-sm leading-6 text-slate-500">
-                この段階では通知設定のみを保存します。実際の業務メール送信は通知段階で有効化します。
+                {copy.emailDescription}
               </span>
             </span>
           </label>
@@ -52,7 +55,7 @@ export function NotificationSettings() {
             onClick={() => update.mutate({ emailInstant })}
             className={primaryButtonClass}
           >
-            {update.isLoading ? "保存中..." : "通知設定を保存"}
+            {update.isLoading ? copy.saving : copy.save}
           </button>
         </div>
       )}

@@ -1,10 +1,11 @@
 "use client";
 
-import { UserRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Trash2, Upload, UserRound } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import UserAvatar from "@/components/shared/user-avatar";
+import { uploadSingleImage } from "@/domain/attachment/upload";
 import { trpc } from "@/utils/trpc";
 import {
   fieldClass,
@@ -16,6 +17,7 @@ import {
 export function AccountSettings() {
   const utils = trpc.useUtils();
   const profile = trpc.profile.getMine.useQuery();
+  const fileInput = useRef<HTMLInputElement>(null);
   const update = trpc.profile.updateMine.useMutation({
     onSuccess: async () => {
       await profile.refetch();
@@ -29,6 +31,9 @@ export function AccountSettings() {
   const [bio, setBio] = useState("");
   const [preferredLocale, setPreferredLocale] = useState<"ja" | "zh" | "en">("ja");
   const [timeZone, setTimeZone] = useState("Asia/Tokyo");
+  const setAvatar = trpc.profile.setAvatarAttachment.useMutation();
+  const removeAvatar = trpc.profile.removeAvatar.useMutation();
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (!profile.data) return;
@@ -52,6 +57,30 @@ export function AccountSettings() {
     });
   }
 
+  async function uploadAvatar(file: File) {
+    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+      toast.error("5MB以下の画像ファイルを選択してください");
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const attachment = await uploadSingleImage({
+        file,
+        folder: "avatars",
+        serviceKind: null,
+      });
+      await setAvatar.mutateAsync({ attachmentId: attachment.id });
+      setAvatarUrl(attachment.url);
+      await profile.refetch();
+      toast.success("アバターを更新しました");
+    } catch {
+      toast.error("アバターをアップロードできませんでした");
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
   return (
     <SettingsCard
       id="account"
@@ -70,19 +99,60 @@ export function AccountSettings() {
               name={nickname}
               email={profile.data?.email}
             />
-            <label className="min-w-0 flex-1 text-sm font-semibold text-slate-700">
-              アバター画像 URL
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-700">アバター画像</p>
               <input
-                type="url"
-                value={avatarUrl}
-                onChange={(event) => setAvatarUrl(event.target.value)}
-                placeholder="https://..."
-                className={fieldClass}
+                ref={fileInput}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadAvatar(file);
+                }}
               />
-              <span className="mt-1 block text-xs font-normal text-slate-500">
-                画像アップロードは後続のメディア統合で追加します。現在は画像 URL を保存できます。
-              </span>
-            </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={uploadingAvatar}
+                  onClick={() => fileInput.current?.click()}
+                  className="inline-flex min-h-10 items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-primary/40 hover:text-primary disabled:opacity-50"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {uploadingAvatar ? "アップロード中..." : "画像をアップロード"}
+                </button>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    disabled={removeAvatar.isLoading}
+                    onClick={async () => {
+                      try {
+                        await removeAvatar.mutateAsync();
+                        setAvatarUrl("");
+                        await profile.refetch();
+                        toast.success("アバターを削除しました");
+                      } catch {
+                        toast.error("アバターを削除できませんでした");
+                      }
+                    }}
+                    className="inline-flex min-h-10 items-center rounded-xl px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    削除
+                  </button>
+                )}
+              </div>
+              <details className="mt-3 text-xs text-slate-500">
+                <summary className="cursor-pointer">外部画像 URL を使用</summary>
+                <input
+                  type="url"
+                  value={avatarUrl}
+                  onChange={(event) => setAvatarUrl(event.target.value)}
+                  placeholder="https://..."
+                  className={fieldClass}
+                />
+              </details>
+            </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="text-sm font-semibold text-slate-700">

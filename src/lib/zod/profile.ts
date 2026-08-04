@@ -23,3 +23,7 @@ export const onboardingProfileSchema = profileUpdateSchema.pick({
 export const onboardingIntentInputSchema = z
   .object({ intent: onboardingIntentSchema })
   .strict();
+
+export const avatarAttachmentSchema = z
+  .object({ attachmentId: z.string().cuid() })
+  .strict();

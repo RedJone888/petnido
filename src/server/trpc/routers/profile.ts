@@ -4,6 +4,7 @@ import {
   onboardingIntentInputSchema,
   onboardingProfileSchema,
   profileUpdateSchema,
+  avatarAttachmentSchema,
 } from "@/lib/zod/profile";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
 
@@ -12,6 +13,7 @@ const mineSelect = {
   email: true,
   name: true,
   image: true,
+  avatarAttachmentId: true,
   profile: {
     select: {
       bio: true,
@@ -38,9 +40,31 @@ export const profileRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
+        const current = await tx.user.findUnique({
+          where: { id: userId },
+          select: { image: true, avatarAttachmentId: true },
+        });
+        if (!current) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
+        const clearOwnedAvatar =
+          Boolean(current.avatarAttachmentId) && input.avatarUrl !== current.image;
+        if (clearOwnedAvatar && current.avatarAttachmentId) {
+          await tx.attachment.updateMany({
+            where: { id: current.avatarAttachmentId, userId },
+            data: { status: 2 },
+          });
+        }
         const user = await tx.user.updateMany({
           where: { id: userId },
-          data: { name: input.nickname, image: input.avatarUrl },
+          data: {
+            name: input.nickname,
+            image: input.avatarUrl,
+            ...(clearOwnedAvatar ? { avatarAttachmentId: null } : {}),
+          },
         });
         const profile = await tx.profile.updateMany({
           where: { userId },
@@ -62,6 +86,91 @@ export const profileRouter = router({
         });
       });
     }),
+
+  setAvatarAttachment: protectedProcedure
+    .input(avatarAttachmentSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      return ctx.prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: { avatarAttachmentId: true },
+        });
+        if (!user) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
+        const attachment = await tx.attachment.findFirst({
+          where: {
+            id: input.attachmentId,
+            userId,
+            OR: [
+              { status: 0 },
+              ...(user.avatarAttachmentId === input.attachmentId
+                ? [{ status: 1 }]
+                : []),
+            ],
+          },
+          select: { id: true, url: true },
+        });
+        if (!attachment) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
+        if (
+          user.avatarAttachmentId &&
+          user.avatarAttachmentId !== attachment.id
+        ) {
+          await tx.attachment.updateMany({
+            where: { id: user.avatarAttachmentId, userId },
+            data: { status: 2 },
+          });
+        }
+        await tx.attachment.update({
+          where: { id: attachment.id },
+          data: { status: 1 },
+        });
+        return tx.user.update({
+          where: { id: userId },
+          data: {
+            image: attachment.url,
+            avatarAttachmentId: attachment.id,
+          },
+          select: mineSelect,
+        });
+      });
+    }),
+
+  removeAvatar: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    return ctx.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { avatarAttachmentId: true },
+      });
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "RESOURCE_NOT_FOUND",
+        });
+      }
+      if (user.avatarAttachmentId) {
+        await tx.attachment.updateMany({
+          where: { id: user.avatarAttachmentId, userId },
+          data: { status: 2 },
+        });
+      }
+      return tx.user.update({
+        where: { id: userId },
+        data: { image: null, avatarAttachmentId: null },
+        select: mineSelect,
+      });
+    });
+  }),
 
   completeOnboardingProfile: protectedProcedure
     .input(onboardingProfileSchema)

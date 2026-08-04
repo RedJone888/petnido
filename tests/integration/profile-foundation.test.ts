@@ -24,6 +24,7 @@ async function reset() {
   await prisma.userLocation.deleteMany();
   await prisma.pet.deleteMany();
   await prisma.profile.deleteMany();
+  await prisma.attachment.deleteMany();
   await prisma.user.deleteMany();
 }
 
@@ -232,6 +233,54 @@ describe("profile foundation", () => {
     });
     await expect(otherCaller.getMine()).resolves.toMatchObject({
       emailInstant: false,
+    });
+  });
+
+  it("only promotes owned temporary attachments to the current avatar", async () => {
+    const user = await createUser("avatar@example.com");
+    const other = await createUser("avatar-other@example.com");
+    const ownAttachment = await prisma.attachment.create({
+      data: {
+        userId: user.id,
+        url: "https://cdn.example/avatar-one.jpg",
+        fileKey: "avatar-one",
+        signature: "avatar-one",
+      },
+    });
+    const replacement = await prisma.attachment.create({
+      data: {
+        userId: user.id,
+        url: "https://cdn.example/avatar-two.jpg",
+        fileKey: "avatar-two",
+        signature: "avatar-two",
+      },
+    });
+    const otherAttachment = await prisma.attachment.create({
+      data: {
+        userId: other.id,
+        url: "https://cdn.example/not-owned.jpg",
+        fileKey: "not-owned",
+        signature: "not-owned",
+      },
+    });
+    const caller = profileRouter.createCaller(context(user.id));
+
+    await expect(
+      caller.setAvatarAttachment({ attachmentId: otherAttachment.id }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await caller.setAvatarAttachment({ attachmentId: ownAttachment.id });
+    await caller.setAvatarAttachment({ attachmentId: replacement.id });
+
+    expect(await prisma.attachment.findUniqueOrThrow({ where: { id: ownAttachment.id } })).toMatchObject({ status: 2 });
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).toMatchObject({
+      image: replacement.url,
+      avatarAttachmentId: replacement.id,
+    });
+    await caller.removeAvatar();
+    expect(await prisma.attachment.findUniqueOrThrow({ where: { id: replacement.id } })).toMatchObject({ status: 2 });
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).toMatchObject({
+      image: null,
+      avatarAttachmentId: null,
     });
   });
 });

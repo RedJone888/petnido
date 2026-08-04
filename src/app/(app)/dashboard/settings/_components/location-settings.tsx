@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, MapPin, Pencil, Plus, Star, Trash2, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -11,6 +12,11 @@ import {
   secondaryButtonClass,
   SettingsCard,
 } from "./settings-card";
+
+const MapLibreMap = dynamic(
+  () => import("@/components/location/MapLibreMap"),
+  { ssr: false },
+);
 
 type Precision = "CITY" | "DISTRICT" | "NEIGHBORHOOD" | "MAP_POINT";
 
@@ -38,6 +44,16 @@ export function LocationSettings() {
   const setDefault = trpc.savedLocation.setDefault.useMutation({ onSuccess: refresh });
   const archive = trpc.savedLocation.archive.useMutation({ onSuccess: refresh });
   const busy = create.isLoading || update.isLoading;
+  const mapAvailable = Boolean(process.env.NEXT_PUBLIC_MAPTILER_KEY);
+  const mapLat = Number(form.lat);
+  const mapLon = Number(form.lon);
+  const validMapPoint =
+    Number.isFinite(mapLat) &&
+    Number.isFinite(mapLon) &&
+    mapLat >= -90 &&
+    mapLat <= 90 &&
+    mapLon >= -180 &&
+    mapLon <= 180;
 
   function resetForm() {
     setForm(emptyLocation);
@@ -129,6 +145,32 @@ export function LocationSettings() {
                 </label>
               )}
             </div>
+            {mapAvailable && validMapPoint && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-semibold text-slate-700">
+                  地図をクリックするか、マーカーを動かして位置を選択
+                </p>
+                <div className="h-72 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                  <MapLibreMap
+                    lat={mapLat}
+                    lon={mapLon}
+                    editable
+                    onLocationChange={(lat, lon) =>
+                      setForm({
+                        ...form,
+                        lat: lat.toFixed(6),
+                        lon: lon.toFixed(6),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+            {!mapAvailable && (
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                地図キーが設定されていない環境では、緯度と経度を直接入力できます。
+              </p>
+            )}
             <button type="submit" disabled={busy || !form.lat || !form.lon} className={`${primaryButtonClass} mt-4`}>
               {busy ? "保存中..." : "保存"}
             </button>
