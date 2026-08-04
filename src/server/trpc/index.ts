@@ -6,6 +6,9 @@ import { serviceProfileRouter } from "@/server/trpc/routers/serviceProfile";
 import { serviceRouter } from "@/server/trpc/routers/service";
 import { locationRouter } from "@/server/trpc/routers/location";
 import { attachmentRouter } from "@/server/trpc/routers/attachment";
+import { profileRouter } from "@/server/trpc/routers/profile";
+import { petRouter } from "@/server/trpc/routers/pet";
+import { savedLocationRouter } from "@/server/trpc/routers/savedLocation";
 export const appRouter = router({
   auth: authRouter,
   need: needRouter,
@@ -13,5 +16,8 @@ export const appRouter = router({
   service: serviceRouter,
   location: locationRouter,
   attachment: attachmentRouter,
+  profile: profileRouter,
+  pet: petRouter,
+  savedLocation: savedLocationRouter,
 });
 export type AppRouter = typeof appRouter;

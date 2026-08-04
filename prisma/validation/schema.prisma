@@ -12,8 +12,11 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  image     String?
   password  String?
   profile   Profile?
+  pets      Pet[]
+  locations UserLocation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -24,6 +27,43 @@ model Profile {
   user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   isOwner  Boolean @default(true)
   isSitter Boolean @default(false)
+  bio              String?
+  onboardingStep   String  @default("PROFILE")
+  initialIntent    String?
+  preferredLocale  String  @default("ja")
+  timeZone         String  @default("Asia/Tokyo")
+}
+
+model Pet {
+  id         String    @id @default(cuid())
+  ownerId    String
+  owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name       String?
+  type       String
+  breed      String?
+  age        Int?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+  @@index([ownerId, archivedAt])
+}
+
+model UserLocation {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label            String?
+  lat              Float
+  lon              Float
+  regionLabel      String?
+  displayPrecision String    @default("MAP_POINT")
+  isDefault        Boolean   @default(false)
+  archivedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@index([userId, isDefault])
+  @@index([userId, archivedAt])
 }
 
 model EmailVerificationChallenge {

@@ -99,6 +99,8 @@ model User {
   pets      Pet[]
   needs     Need[]
   serviceProfile  ServiceProfile?
+  locations       UserLocation[]
+  notificationPreference NotificationPreference?
   attachment      Attachment[]
   applications    Application[]
   sittings        Booking[] @relation("SitterBookings")
@@ -121,6 +123,10 @@ model Profile {
   bio           String?
   isSitter      Boolean @default(false)
   isOwner       Boolean @default(true)
+  onboardingStep String @default("PROFILE")
+  initialIntent  String?
+  preferredLocale String @default("ja")
+  timeZone       String @default("Asia/Tokyo")
 }
 
 model ServiceProfile {
@@ -133,6 +139,8 @@ model ServiceProfile {
   baseLat       Float?
   baseLon       Float?
   baseCurrency  Currency?
+  defaultLocationId String?
+  defaultLocation   UserLocation? @relation(fields: [defaultLocationId], references: [id], onDelete: SetNull)
   
   introduction      String?
   monthsExperience   Int?
@@ -306,6 +314,36 @@ model Pet {
   notes     String?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  archivedAt DateTime?
+}
+
+model UserLocation {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label            String?
+  lat              Decimal  @db.Decimal(9, 6)
+  lon              Decimal  @db.Decimal(9, 6)
+  regionLabel      String?
+  displayPrecision String   @default("MAP_POINT")
+  isDefault        Boolean  @default(false)
+  archivedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  providerDefaults ServiceProfile[]
+
+  @@index([userId, isDefault])
+  @@index([userId, archivedAt])
+}
+
+model NotificationPreference {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailInstant Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Application {
