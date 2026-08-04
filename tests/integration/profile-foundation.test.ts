@@ -5,6 +5,7 @@ import { petRouter } from "../../src/server/trpc/routers/pet";
 import { profileRouter } from "../../src/server/trpc/routers/profile";
 import { savedLocationRouter } from "../../src/server/trpc/routers/savedLocation";
 import { serviceProfileRouter } from "../../src/server/trpc/routers/serviceProfile";
+import { notificationPreferenceRouter } from "../../src/server/trpc/routers/notificationPreference";
 
 const prisma = new PrismaClient();
 
@@ -18,6 +19,7 @@ function context(userId: string) {
 }
 
 async function reset() {
+  await prisma.notificationPreference.deleteMany();
   await prisma.serviceProfile.deleteMany();
   await prisma.userLocation.deleteMany();
   await prisma.pet.deleteMany();
@@ -84,6 +86,9 @@ describe("profile foundation", () => {
     expect(
       await prisma.profile.findUniqueOrThrow({ where: { userId: user.id } }),
     ).toMatchObject({ onboardingStep: "COMPLETE", isSitter: true });
+    expect(
+      await prisma.serviceProfile.findUniqueOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({ isAccepting: true });
   });
 
   it("isolates pet updates and archives instead of deleting", async () => {
@@ -146,5 +151,87 @@ describe("profile foundation", () => {
         makeDefault: false,
       }),
     ).rejects.toThrow();
+  });
+
+  it("promotes a replacement when the default location is archived", async () => {
+    const user = await createUser("replacement@example.com");
+    const locationCaller = savedLocationRouter.createCaller(context(user.id));
+    const first = await locationCaller.create({
+      label: "Primary",
+      lat: 35.68,
+      lon: 139.76,
+      regionLabel: "Tokyo",
+      displayPrecision: "MAP_POINT",
+      makeDefault: true,
+    });
+    const second = await locationCaller.create({
+      label: "Secondary",
+      lat: 34.69,
+      lon: 135.5,
+      regionLabel: "Osaka",
+      displayPrecision: "DISTRICT",
+      makeDefault: false,
+    });
+    await prisma.serviceProfile.create({
+      data: { userId: user.id, defaultLocationId: first.id },
+    });
+
+    await expect(locationCaller.archive({ id: first.id })).resolves.toEqual({
+      success: true,
+      defaultLocationId: second.id,
+    });
+    expect(await locationCaller.listMine()).toEqual([
+      expect.objectContaining({ id: second.id, isDefault: true }),
+    ]);
+    expect(
+      await prisma.serviceProfile.findUniqueOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({ defaultLocationId: second.id });
+  });
+
+  it("keeps provider defaults owned and persists the global accepting switch", async () => {
+    const provider = await createUser("settings-provider@example.com");
+    const other = await createUser("settings-other@example.com");
+    await prisma.profile.update({
+      where: { userId: provider.id },
+      data: { onboardingStep: "COMPLETE" },
+    });
+    const otherLocation = await savedLocationRouter
+      .createCaller(context(other.id))
+      .create({
+        label: "Other",
+        lat: 35.1,
+        lon: 139.1,
+        regionLabel: "Other area",
+        displayPrecision: "DISTRICT",
+        makeDefault: true,
+      });
+    const caller = serviceProfileRouter.createCaller(context(provider.id));
+    await caller.enableOffering();
+    await expect(
+      caller.updateSettings({
+        introduction: "Care experience",
+        monthsExperience: 24,
+        defaultLocationId: otherLocation.id,
+        baseCurrency: "JPY",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(caller.setAccepting({ active: false })).resolves.toMatchObject({
+      isAccepting: false,
+    });
+  });
+
+  it("persists email notification preference per user", async () => {
+    const user = await createUser("notify@example.com");
+    const other = await createUser("notify-other@example.com");
+    const caller = notificationPreferenceRouter.createCaller(context(user.id));
+    const otherCaller = notificationPreferenceRouter.createCaller(context(other.id));
+
+    await expect(caller.getMine()).resolves.toMatchObject({ emailInstant: false });
+    await expect(caller.updateMine({ emailInstant: true })).resolves.toMatchObject({
+      emailInstant: true,
+    });
+    await expect(otherCaller.getMine()).resolves.toMatchObject({
+      emailInstant: false,
+    });
   });
 });

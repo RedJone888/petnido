@@ -108,20 +108,40 @@ export const savedLocationRouter = router({
   archive: protectedProcedure
     .input(savedLocationIdSchema)
     .mutation(async ({ ctx, input }) => {
-      const updated = await ctx.prisma.userLocation.updateMany({
-        where: {
-          id: input.id,
-          userId: ctx.session.user.id,
-          archivedAt: null,
-        },
-        data: { archivedAt: new Date(), isDefault: false },
-      });
-      if (updated.count !== 1) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "RESOURCE_NOT_FOUND",
+      const userId = ctx.session.user.id;
+      return ctx.prisma.$transaction(async (tx) => {
+        const target = await tx.userLocation.findFirst({
+          where: { id: input.id, userId, archivedAt: null },
+          select: { id: true, isDefault: true },
         });
-      }
-      return { success: true };
+        if (!target) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
+        await tx.userLocation.update({
+          where: { id: target.id },
+          data: { archivedAt: new Date(), isDefault: false },
+        });
+        const replacement = target.isDefault
+          ? await tx.userLocation.findFirst({
+              where: { userId, archivedAt: null },
+              orderBy: { createdAt: "asc" },
+              select: { id: true },
+            })
+          : null;
+        if (replacement) {
+          await tx.userLocation.update({
+            where: { id: replacement.id },
+            data: { isDefault: true },
+          });
+        }
+        await tx.serviceProfile.updateMany({
+          where: { userId, defaultLocationId: target.id },
+          data: { defaultLocationId: replacement?.id ?? null },
+        });
+        return { success: true, defaultLocationId: replacement?.id ?? null };
+      });
     }),
 });

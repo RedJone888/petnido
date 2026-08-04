@@ -1,11 +1,10 @@
 import { router, protectedProcedure } from "@/server/trpc/trpc";
 import {
-  baseInfoSchema,
+  acceptingStatusSchema,
   onboardingProviderProfileSchema,
+  serviceProfileSettingsSchema,
 } from "@/lib/zod/serviceProfile";
-import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { requireOwnedServiceProfile } from "@/server/domains/resource-ownership";
 
 export const serviceProfileRouter = router({
   completeOnboarding: protectedProcedure
@@ -25,8 +24,8 @@ export const serviceProfileRouter = router({
         }
         await tx.serviceProfile.upsert({
           where: { userId },
-          update: input,
-          create: { userId, ...input },
+          update: { ...input, isAccepting: true },
+          create: { userId, ...input, isAccepting: true },
         });
         return { nextStep: "COMPLETE" as const };
       });
@@ -39,6 +38,16 @@ export const serviceProfileRouter = router({
       ctx.prisma.serviceProfile.findUnique({
         where: { userId },
         include: {
+          defaultLocation: {
+            select: {
+              id: true,
+              label: true,
+              regionLabel: true,
+              displayPrecision: true,
+              lat: true,
+              lon: true,
+            },
+          },
           services: {
             where: { archivedAt: null },
             include: {
@@ -60,32 +69,106 @@ export const serviceProfileRouter = router({
     }
     return { profile, serviceProfile };
   }),
-  getLocationAndCurrency: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session.user?.id;
-    const serviceProfile = await ctx.prisma.serviceProfile.findUnique({
-      where: { userId },
-      select: {
-        baseAreaRaw: true,
-        baseLat: true,
-        baseLon: true,
-        baseCurrency: true,
-      },
-    });
-
-    // if (!serviceProfile) {
-    //   throw new Error({ code: "NOT_FOUND", message: "ServiceProfileが存在しません" });
-    // }
-    return serviceProfile;
+  getSettings: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    const [profile, serviceProfile] = await Promise.all([
+      ctx.prisma.profile.findUnique({
+        where: { userId },
+        select: { isSitter: true },
+      }),
+      ctx.prisma.serviceProfile.findUnique({
+        where: { userId },
+        select: {
+          id: true,
+          introduction: true,
+          monthsExperience: true,
+          baseCurrency: true,
+          defaultLocationId: true,
+          isAccepting: true,
+        },
+      }),
+    ]);
+    if (!profile) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "RESOURCE_NOT_FOUND",
+      });
+    }
+    return { isProvider: profile.isSitter, serviceProfile };
   }),
-  toggleSitterStatus: protectedProcedure
-    .input(z.object({ active: z.boolean() }))
+  enableOffering: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    return ctx.prisma.$transaction(async (tx) => {
+      const profile = await tx.profile.updateMany({
+        where: { userId, onboardingStep: "COMPLETE" },
+        data: { isSitter: true },
+      });
+      if (profile.count !== 1) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "CONFLICTING_UPDATE",
+        });
+      }
+      return tx.serviceProfile.upsert({
+        where: { userId },
+        update: { isAccepting: true },
+        create: { userId, isAccepting: true },
+        select: { id: true, isAccepting: true },
+      });
+    });
+  }),
+  updateSettings: protectedProcedure
+    .input(serviceProfileSettingsSchema)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user?.id!;
-      // 1. isSitter = true
-      return await ctx.prisma.$transaction(async (tx) => {
-        const updated = await tx.profile.updateMany({
+      const userId = ctx.session.user.id;
+      return ctx.prisma.$transaction(async (tx) => {
+        if (input.defaultLocationId) {
+          const location = await tx.userLocation.findFirst({
+            where: {
+              id: input.defaultLocationId,
+              userId,
+              archivedAt: null,
+            },
+            select: { id: true },
+          });
+          if (!location) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "RESOURCE_NOT_FOUND",
+            });
+          }
+        }
+        const updated = await tx.serviceProfile.updateMany({
           where: { userId },
-          data: { isSitter: input.active },
+          data: input,
+        });
+        if (updated.count !== 1) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
+        return tx.serviceProfile.findUniqueOrThrow({
+          where: { userId },
+          select: {
+            id: true,
+            introduction: true,
+            monthsExperience: true,
+            baseCurrency: true,
+            defaultLocationId: true,
+            isAccepting: true,
+          },
+        });
+      });
+    }),
+  setAccepting: protectedProcedure
+    .input(acceptingStatusSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      return ctx.prisma.$transaction(async (tx) => {
+        const updated = await tx.serviceProfile.updateMany({
+          where: { userId },
+          data: { isAccepting: input.active },
         });
         if (updated.count !== 1) {
           throw new TRPCError({
@@ -94,32 +177,65 @@ export const serviceProfileRouter = router({
           });
         }
         if (input.active) {
-          await tx.serviceProfile.upsert({
+          await tx.profile.updateMany({
             where: { userId },
-            update: {},
-            create: { userId },
+            data: { isSitter: true },
           });
         }
-        return tx.profile.findUniqueOrThrow({ where: { userId } });
+        return tx.serviceProfile.findUniqueOrThrow({
+          where: { userId },
+          select: { id: true, isAccepting: true },
+        });
       });
     }),
-  updateInfo: protectedProcedure
-    .input(baseInfoSchema)
-    .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session!.user!.id;
-      await requireOwnedServiceProfile(ctx.prisma, userId);
-      const profile = await ctx.prisma.serviceProfile.update({
-        where: { userId },
-        data: {
-          baseAreaRaw: input.baseAreaRaw,
-          baseLat: input.baseLat,
-          baseLon: input.baseLon,
-          baseCurrency: input.baseCurrency,
-          introduction: input.introduction,
-          monthsExperience: input.monthsExperience,
+  getLocationAndCurrency: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    const serviceProfile = await ctx.prisma.serviceProfile.findUnique({
+      where: { userId },
+      select: {
+        baseAreaRaw: true,
+        baseLat: true,
+        baseLon: true,
+        baseCurrency: true,
+        defaultLocation: {
+          select: { lat: true, lon: true, regionLabel: true },
         },
+      },
+    });
+    if (!serviceProfile) return null;
+    return {
+      baseAreaRaw:
+        serviceProfile.defaultLocation?.regionLabel ?? serviceProfile.baseAreaRaw,
+      baseLat: serviceProfile.defaultLocation
+        ? Number(serviceProfile.defaultLocation.lat)
+        : serviceProfile.baseLat,
+      baseLon: serviceProfile.defaultLocation
+        ? Number(serviceProfile.defaultLocation.lon)
+        : serviceProfile.baseLon,
+      baseCurrency: serviceProfile.baseCurrency,
+    };
+  }),
+  toggleSitterStatus: protectedProcedure
+    .input(acceptingStatusSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      return ctx.prisma.$transaction(async (tx) => {
+        const serviceProfile = await tx.serviceProfile.upsert({
+          where: { userId },
+          update: { isAccepting: input.active },
+          create: { userId, isAccepting: input.active },
+        });
+        const profile = await tx.profile.updateMany({
+          where: { userId },
+          data: { isSitter: true },
+        });
+        if (profile.count !== 1) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
+        return serviceProfile;
       });
-
-      return profile;
     }),
 });

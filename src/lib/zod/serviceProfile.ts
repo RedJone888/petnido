@@ -22,5 +22,18 @@ export const onboardingProviderProfileSchema = z
   })
   .strict();
 
+export const serviceProfileSettingsSchema = z
+  .object({
+    introduction: z.string().trim().max(2000).nullable(),
+    monthsExperience: z.number().int().min(0).max(1200).nullable(),
+    defaultLocationId: z.string().cuid().nullable(),
+    baseCurrency: z.nativeEnum(Currency).nullable(),
+  })
+  .strict();
+
+export const acceptingStatusSchema = z
+  .object({ active: z.boolean() })
+  .strict();
+
 export type BaseLocation = z.infer<typeof baseLocationSchema>;
 export type BaseInfo = z.infer<typeof baseInfoSchema>;

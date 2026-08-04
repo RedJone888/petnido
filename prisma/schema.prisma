@@ -141,6 +141,7 @@ model ServiceProfile {
   baseCurrency  Currency?
   defaultLocationId String?
   defaultLocation   UserLocation? @relation(fields: [defaultLocationId], references: [id], onDelete: SetNull)
+  isAccepting       Boolean @default(true)
   
   introduction      String?
   monthsExperience   Int?

@@ -18,6 +18,7 @@ model User {
   pets      Pet[]
   locations UserLocation[]
   serviceProfile ServiceProfile?
+  notificationPreference NotificationPreference?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -63,6 +64,7 @@ model UserLocation {
   archivedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  providerDefaults ServiceProfile[]
   @@index([userId, isDefault])
   @@index([userId, archivedAt])
 }
@@ -73,8 +75,21 @@ model ServiceProfile {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   introduction     String?
   monthsExperience Int?
+  baseCurrency     String?
+  defaultLocationId String?
+  defaultLocation  UserLocation? @relation(fields: [defaultLocationId], references: [id], onDelete: SetNull)
+  isAccepting      Boolean @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model NotificationPreference {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailInstant Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model EmailVerificationChallenge {

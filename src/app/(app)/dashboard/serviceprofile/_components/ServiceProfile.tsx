@@ -1,13 +1,11 @@
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ProfileHeader from "./ProfileHeader";
-import BaseInfoModal from "./BaseInfoModal";
 import ServiceCard from "./ServiceCard";
 import ConfusedDog from "/public/images/ConfusedDog.svg";
 import type { ServiceProfileApi, ProfileApi } from "@/domain/service/api.types";
 type Props = { serviceProfile: ServiceProfileApi; profile: ProfileApi };
-export default function ServiceProfile({ serviceProfile, profile }: Props) {
-  const [openModal, setOpenModal] = useState(false);
-  const { isSitter } = profile;
+export default function ServiceProfile({ serviceProfile }: Props) {
+  const router = useRouter();
   const {
     rating,
     reviewCount,
@@ -17,40 +15,28 @@ export default function ServiceProfile({ serviceProfile, profile }: Props) {
     baseCurrency,
     baseLat,
     baseLon,
+    defaultLocation,
+    isAccepting,
     services,
   } = serviceProfile;
 
   return (
     <div className="mx-auto space-y-1 h-full flex flex-col px-6 py-8">
       <ProfileHeader
-        isSitter={isSitter}
+        isSitter={isAccepting}
         profileInfo={{
           rating,
           reviewCount,
           introduction,
           monthsExperience,
-          baseAreaRaw,
-          baseLat,
-          baseLon,
+          baseAreaRaw:
+            defaultLocation?.regionLabel ?? defaultLocation?.label ?? baseAreaRaw,
+          baseLat: defaultLocation ? Number(defaultLocation.lat) : baseLat,
+          baseLon: defaultLocation ? Number(defaultLocation.lon) : baseLon,
           baseCurrency,
         }}
-        onEditBaseInfo={() => setOpenModal(true)}
+        onEditBaseInfo={() => router.push("/dashboard/settings#provider")}
       />
-
-      {openModal && (
-        <BaseInfoModal
-          isSitter={isSitter}
-          initialValue={{
-            introduction,
-            monthsExperience,
-            baseAreaRaw,
-            baseLat,
-            baseLon,
-            baseCurrency,
-          }}
-          onClose={() => setOpenModal(false)}
-        />
-      )}
       <div className="overflow-y-auto flex-1 w-full p-4 bg-[#f6f7fb] shadow-inner rounded-xl">
         {services.length === 0 ? (
           <div className="w-full h-full pt-8 px-10">
@@ -71,7 +57,7 @@ export default function ServiceProfile({ serviceProfile, profile }: Props) {
               <ServiceCard
                 key={service.id}
                 service={service}
-                isSitter={isSitter}
+                isSitter={isAccepting}
               />
             ))}
           </div>

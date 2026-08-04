@@ -9,6 +9,7 @@ import { attachmentRouter } from "@/server/trpc/routers/attachment";
 import { profileRouter } from "@/server/trpc/routers/profile";
 import { petRouter } from "@/server/trpc/routers/pet";
 import { savedLocationRouter } from "@/server/trpc/routers/savedLocation";
+import { notificationPreferenceRouter } from "@/server/trpc/routers/notificationPreference";
 export const appRouter = router({
   auth: authRouter,
   need: needRouter,
@@ -19,5 +20,6 @@ export const appRouter = router({
   profile: profileRouter,
   pet: petRouter,
   savedLocation: savedLocationRouter,
+  notificationPreference: notificationPreferenceRouter,
 });
 export type AppRouter = typeof appRouter;

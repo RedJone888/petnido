@@ -29,3 +29,8 @@ export function authContinuationUrl(returnTo?: string | null): string {
   const safe = sanitizeReturnTo(returnTo);
   return `/auth/continue?returnTo=${encodeURIComponent(safe)}`;
 }
+
+export function authSignInUrl(returnTo?: string | null): string {
+  const safe = sanitizeReturnTo(returnTo);
+  return `/auth/sign-in?returnTo=${encodeURIComponent(safe)}`;
+}

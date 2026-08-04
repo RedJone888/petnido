@@ -7,12 +7,12 @@ import Line from "next-auth/providers/line";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { decodeJwt } from "jose";
+import { edgeAuthConfig } from "@/lib/auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...edgeAuthConfig,
   adapter: PrismaAdapter(prisma),
-  trustHost: true,
   // secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt" },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
@@ -159,8 +159,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return true;
     },
-  },
-  pages: {
-    signIn: "/",
   },
 });

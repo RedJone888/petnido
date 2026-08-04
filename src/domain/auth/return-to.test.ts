@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { authContinuationUrl, sanitizeReturnTo } from "./return-to";
+import {
+  authContinuationUrl,
+  authSignInUrl,
+  sanitizeReturnTo,
+} from "./return-to";
 
 describe("authentication return paths", () => {
   it("keeps local paths with query parameters", () => {
@@ -19,6 +23,12 @@ describe("authentication return paths", () => {
   it("builds an encoded continuation URL", () => {
     expect(authContinuationUrl("/needs/abc?apply=1")).toBe(
       "/auth/continue?returnTo=%2Fneeds%2Fabc%3Fapply%3D1",
+    );
+  });
+
+  it("preserves a safe dashboard subpath for sign-in", () => {
+    expect(authSignInUrl("/dashboard/settings?tab=profile")).toBe(
+      "/auth/sign-in?returnTo=%2Fdashboard%2Fsettings%3Ftab%3Dprofile",
     );
   });
 });
