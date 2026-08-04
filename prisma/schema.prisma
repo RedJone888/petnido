@@ -181,6 +181,7 @@ model Service {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  archivedAt DateTime?
 }
 model PriceRule {
   id          String     @id @default(cuid())
@@ -275,6 +276,7 @@ model Need {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  archivedAt  DateTime?
   applications  Application[]
   bookings      Booking[]
 }
@@ -392,4 +394,37 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// Petnido signup verification. Kept separate from NextAuth's VerificationToken.
+model EmailVerificationChallenge {
+  id              String    @id @default(cuid())
+  identifier      String
+  purpose         String
+  codeHash        String
+  expiresAt       DateTime
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(5)
+  windowStartedAt DateTime
+  sendCount       Int       @default(1)
+  lastSentAt      DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([identifier, purpose])
+  @@index([expiresAt])
+}
+
+// Persistent fixed-window counters for public authentication endpoints.
+model AuthRateLimitBucket {
+  keyHash         String   @id
+  action          String
+  count           Int      @default(1)
+  windowStartedAt DateTime
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([action, expiresAt])
 }

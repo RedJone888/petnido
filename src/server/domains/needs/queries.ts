@@ -21,7 +21,11 @@ export function getNeedById(id: string) {
 export function listBrowseNeeds(options?: { limit?: number }) {
   const limit = options?.limit ?? 50;
   return prisma.need.findMany({
-    where: { status: "OPEN", endDate: { gt: new Date() } },
+    where: {
+      status: "OPEN",
+      archivedAt: null,
+      endDate: { gt: new Date() },
+    },
     include: {
       owner: {
         select: {
@@ -50,7 +54,7 @@ export function listBrowseNeeds(options?: { limit?: number }) {
 
 export function listUserNeeds(userId: string) {
   return prisma.need.findMany({
-    where: { ownerId: userId },
+    where: { ownerId: userId, archivedAt: null },
     select: {
       id: true,
       title: true,

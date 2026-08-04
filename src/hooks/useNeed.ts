@@ -50,14 +50,18 @@ export function useNeed(id?: string) {
     },
     // ... onError
   });
-  const updateStatus = trpc.need.updateStatus.useMutation({
+  const executeCommand = trpc.need.executeCommand.useMutation({
     onMutate: async (variables) => {
       await utils.need.listMine.cancel();
       const previousData = utils.need.listMine.getData();
       utils.need.listMine.setData(undefined, (old) => {
         return old?.map((need) =>
           need.id === variables.id
-            ? { ...need, status: variables.status }
+            ? {
+                ...need,
+                status:
+                  variables.command === "CLOSE" ? "CLOSED" : "CANCELLED",
+              }
             : need,
         );
       });
@@ -92,7 +96,7 @@ export function useNeed(id?: string) {
     setPagination,
     getNeedById,
     updateNeed,
-    updateStatus,
+    executeCommand,
     deleteNeed,
   };
 }

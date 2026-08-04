@@ -39,7 +39,7 @@ import { useConfirmStore } from "@/store/useConfirmStore";
 import { getNeedDisplayKey } from "@/domain/need/getNeedDisplayKey";
 import { Button } from "@/components/ui/button";
 export default function NeedCard({ need }: { need: MyNeedApi }) {
-  const { updateStatus, deleteNeed } = useNeed();
+  const { executeCommand, deleteNeed } = useNeed();
   const confirm = useConfirm();
   const setIsDeleting = useConfirmStore((s) => s.setIsDeleting);
   const closeConfirm = useConfirmStore((s) => s.close);
@@ -128,7 +128,7 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
       )}
     >
       {/* 加载遮罩 */}
-      {updateStatus.isLoading && (
+      {executeCommand.isLoading && (
         <div className="text-sm absolute inset-0 flex items-center justify-center rounded-2xl z-50">
           <LoadingPage title="更新中..." size="w-6 h-6" />
         </div>
@@ -291,34 +291,11 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
                 <div className="px-2 p-1.5 text-center text-slate-400 uppercase tracking-wider">
                   ステータス変更
                 </div>
-                {status !== NeedStatus.OPEN && (
+                {(status === NeedStatus.OPEN ||
+                  status === NeedStatus.MATCHED) && (
                   <DropdownMenuItem
                     onClick={() =>
-                      updateStatus.mutate({ id, status: NeedStatus.OPEN })
-                    }
-                    className="cursor-pointer flex items-center gap-2 px-2 py-1 hover:bg-purple-50"
-                  >
-                    <span className="w-3 h-3 border-2 border-white rounded-full bg-green-500" />{" "}
-                    募集中に戻す
-                  </DropdownMenuItem>
-                )}
-
-                {status !== NeedStatus.MATCHED && (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      updateStatus.mutate({ id, status: NeedStatus.MATCHED })
-                    }
-                    className="cursor-pointer flex items-center gap-2 px-2 py-1 hover:bg-purple-50"
-                  >
-                    <span className="w-3 h-3 border-2 border-white rounded-full bg-purple-500" />{" "}
-                    成約済みにする{/* マッチング済み */}
-                  </DropdownMenuItem>
-                )}
-
-                {status !== NeedStatus.CLOSED && (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      updateStatus.mutate({ id, status: NeedStatus.CLOSED })
+                      executeCommand.mutate({ id, command: "CLOSE" })
                     }
                     className="cursor-pointer flex items-center gap-2 px-2 py-1 hover:bg-purple-50"
                   >
@@ -327,12 +304,13 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                {status !== NeedStatus.CANCELLED && (
+                {(status === NeedStatus.OPEN ||
+                  status === NeedStatus.MATCHED) && (
                   <DropdownMenuItem
                     onClick={() =>
-                      updateStatus.mutate({
+                      executeCommand.mutate({
                         id,
-                        status: NeedStatus.CANCELLED,
+                        command: "CANCEL",
                       })
                     }
                     className="cursor-pointer flex items-center text-red-500 gap-2 px-2 py-1 hover:bg-purple-50"

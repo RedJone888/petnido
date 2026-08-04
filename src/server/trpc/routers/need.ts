@@ -7,11 +7,15 @@ import { needCreateSchema, needUpdateSchema } from "@/lib/zod/needs";
 import { linkPhotos, syncPhotos } from "@/server/lib/photos";
 import { z } from "zod";
 import { NeedStatus, PetType } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import {
-  getNeedById,
   listUserNeeds,
   listBrowseNeeds,
 } from "@/server/domains/needs/queries";
+import { legacyNeedCommandSchema } from "@/lib/zod/resource-commands";
+import { transitionNeed } from "@/domain/need/state-machine";
+import { DomainTransitionError } from "@/domain/shared/state-machine";
+import { requireOwnedNeed } from "@/server/domains/resource-ownership";
 
 export const needRouter = router({
   listMine: protectedProcedure.query(async ({ ctx }) => {
@@ -98,8 +102,25 @@ export const needRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      // if(!ctx.session) throw new Error("UNAUTHORIZED");
-      return getNeedById(input.id);
+      const userId = ctx.session.user.id;
+      await requireOwnedNeed(ctx.prisma, input.id, userId);
+      return ctx.prisma.need.findUnique({
+        where: { id: input.id },
+        include: {
+          photos: {
+            where: { status: 1 },
+            orderBy: { order: "asc" },
+          },
+          needPets: {
+            include: {
+              photos: {
+                where: { status: 1 },
+                orderBy: { order: "asc" },
+              },
+            },
+          },
+        },
+      });
     }),
   createNeed: protectedProcedure
     .input(needCreateSchema)
@@ -119,6 +140,7 @@ export const needRouter = router({
         // --- 第二步：认领 Need 主表的图片 ---
         await linkPhotos({
           tx,
+          userId,
           photoIds,
           needId: newNeed.id,
         });
@@ -136,29 +158,44 @@ export const needRouter = router({
               },
             });
             // b. 立即认领该宠物对应的图片
-            await linkPhotos({ tx, photoIds, needPetId: newNeedPet.id });
+            await linkPhotos({
+              tx,
+              userId,
+              photoIds,
+              needPetId: newNeedPet.id,
+            });
           }),
         );
+        return newNeed;
       });
     }),
   updateNeed: protectedProcedure
     .input(needUpdateSchema)
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       const { id, photoIds, needPets, startDate, endDate, ...needData } = input;
 
       return ctx.prisma.$transaction(async (tx) => {
+        await requireOwnedNeed(tx, id, userId);
         // 第一步：更新 Need 本体 (不含 Photos和 NeedPets)
-        const updatedNeed = await tx.need.update({
-          where: { id },
+        const updateResult = await tx.need.updateMany({
+          where: { id, ownerId: userId, archivedAt: null },
           data: {
             ...needData,
             startDate: startDate ? new Date(startDate) : undefined,
             endDate: endDate ? new Date(endDate) : undefined,
           },
         });
+        if (updateResult.count !== 1) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
         // 第二步：同步图片
         await syncPhotos({
           tx,
+          userId,
           photoIds: photoIds ?? [],
           needId: id,
         });
@@ -195,11 +232,17 @@ export const needRouter = router({
               let finalNeedPetId: string;
               if (needPetId) {
                 // 修改已有宠物
-                const updatedNeedPet = await tx.needPet.update({
-                  where: { id: needPetId },
+                const updatedNeedPet = await tx.needPet.updateMany({
+                  where: { id: needPetId, needId: id },
                   data: { petCategory: petCategory as PetType, ...rest },
                 });
-                finalNeedPetId = updatedNeedPet.id;
+                if (updatedNeedPet.count !== 1) {
+                  throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "RESOURCE_NOT_FOUND",
+                  });
+                }
+                finalNeedPetId = needPetId;
               } else {
                 // 新增宠物
                 const newNeedPet = await tx.needPet.create({
@@ -214,13 +257,14 @@ export const needRouter = router({
               // 同步该宠物的关联图片
               await syncPhotos({
                 tx,
+                userId,
                 photoIds: needPetPhotoIds ?? [],
                 needPetId: finalNeedPetId,
               });
             }),
           );
         }
-        return updatedNeed;
+        return tx.need.findUniqueOrThrow({ where: { id } });
       });
     }),
   // stats: protectedProcedure.query(async ({ ctx }) => {
@@ -236,71 +280,68 @@ export const needRouter = router({
   //     reviewCount,
   //   };
   // }),
-  updateStatus: protectedProcedure
-    .input(z.object({ id: z.string(), status: z.nativeEnum(NeedStatus) }))
+  executeCommand: protectedProcedure
+    .input(legacyNeedCommandSchema)
     .mutation(async ({ ctx, input }) => {
-      const { id, status } = input;
-      const userId = ctx.session.user?.id;
-      // 1. 首先确认这个 Need 是否属于当前用户
-      const existingNeed = await ctx.prisma.need.findUnique({
-        where: { id },
-        select: { ownerId: true, status: true },
-      });
-      if (!existingNeed) {
-        // throw new TRPCError({
-        //   code: "NOT_FOUND",
-        //   message: "指定された依頼が見つかりません。",
-        // });
-      }
-      if (existingNeed?.ownerId !== userId) {
-        // throw new TRPCError({
-        //   code: "FORBIDDEN",
-        //   message: "この操作を行う権限がありません。",
-        // });
-      }
-      // 2. 执行更新
-      const updatedNeed = await ctx.prisma.need.update({
-        where: { id },
-        data: {
-          status,
-        },
-      });
+      const userId = ctx.session.user.id;
+      return ctx.prisma.$transaction(async (tx) => {
+        const existingNeed = await requireOwnedNeed(tx, input.id, userId);
+        let nextStatus;
+        try {
+          nextStatus = transitionNeed(existingNeed.status, input.command);
+        } catch (error) {
+          if (error instanceof DomainTransitionError) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: error.code,
+              cause: error,
+            });
+          }
+          throw error;
+        }
+        if (nextStatus === "DRAFT") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "INVALID_STATE_TRANSITION",
+          });
+        }
 
-      return updatedNeed;
+        const updated = await tx.need.updateMany({
+          where: {
+            id: input.id,
+            ownerId: userId,
+            archivedAt: null,
+            status: existingNeed.status,
+          },
+          data: { status: NeedStatus[nextStatus] },
+        });
+        if (updated.count !== 1) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "CONFLICTING_UPDATE",
+          });
+        }
+        return tx.need.findUniqueOrThrow({ where: { id: input.id } });
+      });
     }),
 
   deleteNeed: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { id } = input;
-      const userId = ctx.session.user?.id;
-      const need = await ctx.prisma.need.findUnique({
-        where: { id },
-        select: { ownerId: true },
-      });
-      if (!need || need.ownerId !== userId) {
-        throw new Error("FORBIDDEN");
-      }
+      const userId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
-        // 第一步：处理关联图片
-        await tx.attachment.updateMany({
-          where: { needId: id },
-          data: {
-            status: 2,
-            needId: null,
-          },
+        await requireOwnedNeed(tx, id, userId);
+        const archived = await tx.need.updateMany({
+          where: { id, ownerId: userId, archivedAt: null },
+          data: { archivedAt: new Date() },
         });
-        // 第二步：处理关联needPet的图片
-        await tx.attachment.updateMany({
-          where: {
-            needPet: { needId: id },
-          },
-          data: { status: 2, needPetId: null },
-        });
-        // 第三步：物理删除子表
-        await tx.needPet.deleteMany({ where: { needId: id } });
-        // 第三步：物理删除主表
-        await tx.need.delete({ where: { id } });
+        if (archived.count !== 1) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
         return { success: true };
       });
     }),

@@ -8,6 +8,53 @@ datasource db {
   url      = env("VALIDATION_DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  profile   Profile?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Profile {
+  id       String  @id @default(cuid())
+  userId   String  @unique
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isOwner  Boolean @default(true)
+  isSitter Boolean @default(false)
+}
+
+model EmailVerificationChallenge {
+  id              String    @id @default(cuid())
+  identifier      String
+  purpose         String
+  codeHash        String
+  expiresAt       DateTime
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(5)
+  windowStartedAt DateTime
+  sendCount       Int       @default(1)
+  lastSentAt      DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  @@unique([identifier, purpose])
+  @@index([expiresAt])
+}
+
+model AuthRateLimitBucket {
+  keyHash         String   @id
+  action          String
+  count           Int      @default(1)
+  windowStartedAt DateTime
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([action, expiresAt])
+}
+
 model ValidationUser {
   id              String              @id @default(cuid())
   email           String              @unique

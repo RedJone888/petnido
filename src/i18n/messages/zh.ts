@@ -249,4 +249,18 @@ export const zh = {
       terms: "服务条款", // 对应利用規約/Terms of Service
     },
   },
+  errors: {
+    authRequired: "请先登录后继续。",
+    resourceNotFound: "该内容不存在，或你没有访问权限。",
+    forbiddenAction: "你不能执行此操作。",
+    invalidStateTransition: "当前状态下不能执行此操作。",
+    conflictingUpdate: "内容已在其他地方发生变化，请刷新后重试。",
+    rateLimited: "尝试次数过多，请稍后重试。",
+    invalidCode: "验证码不正确。",
+    codeExpired: "验证码已过期，请重新获取。",
+    tooManyCodeAttempts: "验证码错误次数过多，请重新获取。",
+    emailAlreadyRegistered: "该邮箱已经注册。",
+    dependencyUnavailable: "所需服务暂时不可用。",
+    unexpected: "发生错误，请稍后重试。",
+  },
 };

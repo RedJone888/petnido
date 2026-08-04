@@ -25,9 +25,10 @@ export function useService(id?: string) {
       toast.success("サービスを更新しました 🐾");
     },
   });
-  const toggleActive = trpc.service.toggleActive.useMutation({
+  const executeCommand = trpc.service.executeCommand.useMutation({
     // 1. 在调用接口的一瞬间触发
-    onMutate: async ({ serviceId, isActive }) => {
+    onMutate: async ({ id: serviceId, command }) => {
+      const isActive = command === "RESUME";
       // 撤销正在进行的刷新，防止覆盖我们的乐观更新
       await utils.serviceProfile.getMine.cancel();
       // 保存当前缓存的快照，以便失败时回滚
@@ -72,7 +73,7 @@ export function useService(id?: string) {
   return {
     createService,
     updateService,
-    toggleActive,
+    executeCommand,
     deleteService,
     getServiceById,
   };

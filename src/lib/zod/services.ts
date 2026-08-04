@@ -96,10 +96,6 @@ export const serviceUpdateSchema = serviceApiSchema.partial().extend({
 });
 export type ServiceCreateInput = z.infer<typeof serviceCreateSchema>;
 
-export const serviceToggleSchema = z.object({
-  serviceId: z.string(),
-  isActive: z.boolean(),
-});
 export const serviceDeleteSchema = z.object({
   serviceId: z.string(),
 });

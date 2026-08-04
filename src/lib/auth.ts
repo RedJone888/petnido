@@ -46,7 +46,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
         // 如果用户不存在，抛出特定错误
         if (!user || !user.password) return null;
-        if (password === "MAGIC_LINK") return user;
         const isValid = await bcrypt.compare(password, user.password);
         // 如果密码错误，抛出特定错误
         if (!isValid) return null;

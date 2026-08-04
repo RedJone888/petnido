@@ -13,7 +13,6 @@ import {
   DistanceRange,
   FrequencyType,
   ServiceCategory,
-  NeedStatus,
   TransportMethod,
   Currency,
 } from "@prisma/client";
@@ -80,7 +79,6 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
     requirement: "",
     photos: [] as ImageItem[],
     needPets: [DEFAULT_NEED_PET()],
-    status: NeedStatus.OPEN,
     priceAmount: "0",
     totalPrice: "0",
   };

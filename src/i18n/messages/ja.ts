@@ -259,4 +259,18 @@ export const ja = {
       terms: "利用規約",
     },
   },
+  errors: {
+    authRequired: "続行するにはログインしてください。",
+    resourceNotFound: "対象が見つからないか、アクセス権限がありません。",
+    forbiddenAction: "この操作を実行する権限がありません。",
+    invalidStateTransition: "現在の状態ではこの操作を実行できません。",
+    conflictingUpdate: "別の場所で内容が更新されました。再読み込みしてください。",
+    rateLimited: "試行回数が多すぎます。しばらく待ってから再試行してください。",
+    invalidCode: "認証コードが正しくありません。",
+    codeExpired: "認証コードの有効期限が切れました。再送してください。",
+    tooManyCodeAttempts: "認証コードの入力上限に達しました。再送してください。",
+    emailAlreadyRegistered: "このメールアドレスはすでに登録されています。",
+    dependencyUnavailable: "必要なサービスを一時的に利用できません。",
+    unexpected: "エラーが発生しました。もう一度お試しください。",
+  },
 };

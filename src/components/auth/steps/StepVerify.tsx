@@ -32,7 +32,7 @@ export default function StepVerify({
       await verifyCode.mutateAsync({ email, password, username, code });
       const result = await signIn("credentials", {
         email,
-        password: "MAGIC_LINK",
+        password,
         redirect: false,
       });
       if (result.error) {
@@ -48,6 +48,14 @@ export default function StepVerify({
       if (error instanceof TRPCClientError) {
         if (error.message === "INVALID_CODE") {
           setApiError("認証コードが正しくありません");
+        } else if (error.message === "CODE_EXPIRED") {
+          setApiError("認証コードの有効期限が切れています。再送してください。");
+        } else if (error.message === "TOO_MANY_CODE_ATTEMPTS") {
+          setApiError("入力回数の上限に達しました。コードを再送してください。");
+        } else if (error.message === "RATE_LIMITED") {
+          setApiError("試行回数が多すぎます。しばらく待ってから再試行してください。");
+        } else if (error.message === "EMAIL_ALREADY_REGISTERED") {
+          setApiError("このメールアドレスはすでに登録されています。");
         } else if (error.message === "USER_CREATE_FAILED") {
           setApiError("ユーザーの作成に失敗しました。");
         }

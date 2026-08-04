@@ -3,7 +3,6 @@ import {
   DistanceRange,
   FrequencyType,
   ServiceCategory,
-  NeedStatus,
   PetType,
   TransportMethod,
   Currency,
@@ -89,7 +88,6 @@ const commonFields = z.object({
   addressLon: z.number(),
   requirement: z.string().min(1, "请输入需求说明"),
   currency: z.nativeEnum(Currency),
-  status: z.nativeEnum(NeedStatus),
 });
 
 // 封装一个工厂函数，避免前后端 Schema 重复写 discriminatedUnion 逻辑

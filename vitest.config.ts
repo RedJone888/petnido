@@ -34,6 +34,7 @@ export default defineConfig({
           name: 'integration',
           environment: 'node',
           include: ['tests/integration/**/*.test.ts'],
+          fileParallelism: false,
           sequence: { concurrent: false },
         },
       },

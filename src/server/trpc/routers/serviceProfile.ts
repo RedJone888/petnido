@@ -1,7 +1,8 @@
 import { router, protectedProcedure } from "@/server/trpc/trpc";
 import { baseInfoSchema } from "@/lib/zod/serviceProfile";
-import { useId } from "react";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { requireOwnedServiceProfile } from "@/server/domains/resource-ownership";
 
 export const serviceProfileRouter = router({
   // 当前用户的 profile + services 一起取回
@@ -13,6 +14,7 @@ export const serviceProfileRouter = router({
         where: { userId },
         include: {
           services: {
+            where: { archivedAt: null },
             include: {
               priceRules: true,
               photos: {
@@ -55,10 +57,16 @@ export const serviceProfileRouter = router({
       const userId = ctx.session.user?.id!;
       // 1. isSitter = true
       return await ctx.prisma.$transaction(async (tx) => {
-        const profile = await tx.profile.update({
+        const updated = await tx.profile.updateMany({
           where: { userId },
           data: { isSitter: input.active },
         });
+        if (updated.count !== 1) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
         if (input.active) {
           await tx.serviceProfile.upsert({
             where: { userId },
@@ -66,20 +74,14 @@ export const serviceProfileRouter = router({
             create: { userId },
           });
         }
-        return profile;
+        return tx.profile.findUniqueOrThrow({ where: { userId } });
       });
     }),
   updateInfo: protectedProcedure
     .input(baseInfoSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session!.user!.id;
-      const serviceProfile = await ctx.prisma.serviceProfile.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-      if (!serviceProfile) {
-        throw new Error("ServiceProfileが存在しません");
-      }
+      await requireOwnedServiceProfile(ctx.prisma, userId);
       const profile = await ctx.prisma.serviceProfile.update({
         where: { userId },
         data: {

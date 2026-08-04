@@ -30,7 +30,7 @@ export default function ServiceCard({
   isSitter: boolean;
 }) {
   const router = useRouter();
-  const { toggleActive, deleteService } = useService();
+  const { executeCommand, deleteService } = useService();
   const confirm = useConfirm();
   const setIsDeleting = useConfirmStore((s) => s.setIsDeleting);
   const closeConfirm = useConfirmStore((s) => s.close);
@@ -68,11 +68,11 @@ export default function ServiceCard({
     (p) => p.serviceKind === ServicePhotoKind.HOME,
   );
   const fallbackImage = PET_META[petTypes[0]].placeImg;
-  const isLoading = toggleActive.isLoading;
+  const isLoading = executeCommand.isLoading;
   const handleToggle = async (checked: boolean) => {
-    toggleActive.mutate({
-      serviceId: service.id,
-      isActive: checked,
+    executeCommand.mutate({
+      id: service.id,
+      command: checked ? "RESUME" : "PAUSE",
     });
   };
   const handleDelete = async () => {

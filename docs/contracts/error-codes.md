@@ -19,9 +19,14 @@
 | `IDEMPOTENCY_CONFLICT` | CONFLICT | 否 | `errors.idempotencyConflict` | 同 key 不同载荷 |
 | `CONFLICTING_UPDATE` | CONFLICT | 是 | `errors.conflictingUpdate` | 乐观锁/并发变化 |
 | `RATE_LIMITED` | TOO_MANY_REQUESTS | 是 | `errors.rateLimited` | 验证码、消息、搜索限流 |
+| `INVALID_CODE` | BAD_REQUEST | 是 | `errors.invalidCode` | 验证码不正确 |
+| `CODE_EXPIRED` | BAD_REQUEST | 是 | `errors.codeExpired` | 验证码已过期 |
+| `TOO_MANY_CODE_ATTEMPTS` | BAD_REQUEST | 是 | `errors.tooManyCodeAttempts` | 验证码错误次数达到上限 |
+| `EMAIL_ALREADY_REGISTERED` | CONFLICT | 否 | `errors.emailAlreadyRegistered` | 注册邮箱已经存在 |
 | `DEPENDENCY_UNAVAILABLE` | INTERNAL_SERVER_ERROR | 是 | `errors.dependencyUnavailable` | 地图、邮件、上传依赖失败 |
+| `UNEXPECTED_ERROR` | INTERNAL_SERVER_ERROR | 是 | `errors.unexpected` | 未知异常的安全外部表示 |
 
-错误响应固定为 `{code, messageKey, retryable, correlationId, fieldErrors?}`。`messageKey` 只用于 UI 映射；服务端日志不写请求正文、位置、消息或健康内容。未知异常对外映射 `UNEXPECTED_ERROR`，内部用 correlationId 追踪。
+错误信息位于 tRPC 响应 `data.appError`，固定为 `{code, messageKey, retryable, correlationId}`；Zod 字段错误继续位于 `data.zodError`。顶层 `message` 只返回稳定 `code`，不返回 Prisma、数据库或依赖异常正文。`messageKey` 只用于 UI 映射；服务端日志不写请求正文、位置、消息或健康内容。未知异常对外映射 `UNEXPECTED_ERROR`，内部用 correlationId 追踪。
 
 ## 自验收
 

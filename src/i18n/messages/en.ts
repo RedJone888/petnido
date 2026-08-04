@@ -254,4 +254,18 @@ export const en = {
       terms: "Terms of Service",
     },
   },
+  errors: {
+    authRequired: "Please sign in to continue.",
+    resourceNotFound: "This item is unavailable or you do not have access.",
+    forbiddenAction: "You cannot perform this action.",
+    invalidStateTransition: "This action is not available in the current state.",
+    conflictingUpdate: "This item changed elsewhere. Refresh and try again.",
+    rateLimited: "Too many attempts. Please wait and try again.",
+    invalidCode: "The verification code is incorrect.",
+    codeExpired: "The verification code has expired. Request a new one.",
+    tooManyCodeAttempts: "Too many incorrect codes. Request a new one.",
+    emailAlreadyRegistered: "This email address is already registered.",
+    dependencyUnavailable: "A required service is temporarily unavailable.",
+    unexpected: "Something went wrong. Please try again.",
+  },
 };

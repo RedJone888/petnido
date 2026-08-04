@@ -3,7 +3,8 @@ const email = z
   .string()
   .trim()
   .min(1, "メールアドレスを入力してください")
-  .email("正しいメールアドレスを入力してください");
+  .email("正しいメールアドレスを入力してください")
+  .transform((value) => value.toLowerCase());
 const password = z
   .string()
   .trim()
