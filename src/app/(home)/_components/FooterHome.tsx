@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Bird, Cat, Dog, Rabbit } from "lucide-react";
 
 import { useLanguage } from "@/components/providers/language-provider";
@@ -18,6 +19,7 @@ const copy = {
     how: "How care works",
     postNeed: "How to post a need",
     postService: "How to publish a service",
+    knowledge: "Care knowledge",
     dashboard: "Dashboard",
     publish: "Post a need",
     rights: "All rights reserved.",
@@ -33,6 +35,7 @@ const copy = {
     how: "照护如何进行",
     postNeed: "如何发布需求",
     postService: "如何发布服务",
+    knowledge: "照护知识",
     dashboard: "个人中心",
     publish: "发布需求",
     rights: "保留所有权利。",
@@ -48,6 +51,7 @@ const copy = {
     how: "お世話の流れ",
     postNeed: "依頼の投稿方法",
     postService: "サービスの公開方法",
+    knowledge: "ケア知識",
     dashboard: "マイページ",
     publish: "依頼を投稿",
     rights: "All rights reserved.",
@@ -57,6 +61,9 @@ const copy = {
 export default function FooterHome() {
   const { lang } = useLanguage();
   const text = copy[lang];
+  const pathname = usePathname();
+  const routeLanguage = pathname.match(/^\/(en|zh|ja)(?=\/|$)/)?.[1];
+  const publicPrefix = routeLanguage ? `/${routeLanguage}` : "";
 
   return (
     <footer className="border-t border-[#ded6e1] bg-[#302537] text-white">
@@ -71,21 +78,22 @@ export default function FooterHome() {
             <div className="mt-6 flex items-center gap-3 text-white/38">
               <Dog size={20} /><Cat size={20} /><Rabbit size={20} /><Bird size={20} />
             </div>
-            <Link href="/needs/create" className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-[#5d3a86]">
+            <Link href="/needs/create" className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-[var(--primary)]">
               {text.publish}<ArrowRight size={16} />
             </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-9 sm:grid-cols-3">
             <FooterGroup title={text.explore} links={[
-              [text.need, "/public/needs"],
-              [text.sitter, "/public/sitters"],
-              [text.care, "/care-types"],
+              [text.need, "/needs"],
+              [text.sitter, "/providers"],
+              [text.care, `${publicPrefix}/care-types`],
             ]} />
             <FooterGroup title={text.learn} links={[
-              [text.how, "/how-it-works"],
-              [text.postNeed, "/how-it-works/needs"],
-              [text.postService, "/how-it-works/services"],
+              [text.how, `${publicPrefix}/how-it-works`],
+              [text.postNeed, `${publicPrefix}/how-it-works/needs`],
+              [text.postService, `${publicPrefix}/how-it-works/services`],
+              [text.knowledge, `${publicPrefix}/knowledge`],
             ]} />
             <FooterGroup title={text.account} links={[
               [text.dashboard, "/dashboard"],

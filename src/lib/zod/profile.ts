@@ -1,7 +1,8 @@
 import { z } from "zod";
+export { emailChangeConfirmSchema, emailChangeRequestSchema } from "@/modules/auth/schemas";
 
 export const localeSchema = z.enum(["zh", "en", "ja"]);
-export const onboardingIntentSchema = z.enum(["POST_NEED", "OFFER_SERVICE"]);
+export const onboardingIntentSchema = z.enum(["POST_NEED", "OFFER_SERVICE", "BROWSE"]);
 
 export const profileUpdateSchema = z
   .object({
@@ -22,6 +23,24 @@ export const onboardingProfileSchema = profileUpdateSchema.pick({
 
 export const onboardingIntentInputSchema = z
   .object({ intent: onboardingIntentSchema })
+  .strict();
+
+export const preferredLocaleUpdateSchema = z
+  .object({ preferredLocale: localeSchema })
+  .strict();
+
+export const preferredCurrencyUpdateSchema = z
+  .object({
+    preferredCurrency: z.enum([
+      "JPY",
+      "USD",
+      "EUR",
+      "CNY",
+      "TWD",
+      "KRW",
+      "GBP",
+    ]),
+  })
   .strict();
 
 export const avatarAttachmentSchema = z

@@ -7,8 +7,10 @@ import { getInitialLocation } from "@/lib/location/initial";
 import { Currency } from "@prisma/client";
 import type { LocationSource } from "@/domain/location/types";
 import { COUNTRY_TO_CURRENCY } from "@/domain/location/constants";
+import { useLanguage } from "@/components/providers/language-provider";
 export type Location = {
   label: string;
+  regionLabel?: string | null;
   lat: number;
   lon: number;
 };
@@ -17,12 +19,15 @@ export function useLocationController(initial: {
   location?: Location;
   currency?: Currency;
 }) {
+  const { lang } = useLanguage();
   const initializedRef = useRef(false);
+  const userInteractedRef = useRef(false);
   const [location, setLocation] = useState<Location>(
     initial.location ?? { label: "", lat: 0, lon: 0 },
   );
   const [queryLabel, setQueryLabel] = useState(location.label);
   const [source, setSource] = useState<LocationSource>("search");
+  const sourceRef = useRef<LocationSource>("search");
   const [country, setCountry] = useState<string | null>(null);
   const [currency, setCurrency] = useState<Currency | null>(
     initial.currency ?? null,
@@ -32,14 +37,14 @@ export function useLocationController(initial: {
   );
   const debounced = useDebounce(queryLabel, 300);
   const searchQuery = trpc.location.search.useQuery(
-    { q: debounced, limit: 8, countrycodes: "jp" },
+    { q: debounced, limit: 8, language: lang },
     {
       enabled: debounced.length > 0 && source === "search",
       refetchOnWindowFocus: false,
     },
   );
   const reverseQuery = trpc.location.reverse.useQuery(
-    { lat: location.lat, lon: location.lon },
+    { lat: location.lat, lon: location.lon, language: lang },
     {
       enabled:
         (source === "reverse" || source === "map") &&
@@ -65,6 +70,7 @@ export function useLocationController(initial: {
           lat: initial.location.lat,
           lon: initial.location.lon,
         });
+        sourceRef.current = "database";
         setSource("database");
         setQueryLabel(initial.location.label);
         return;
@@ -72,11 +78,13 @@ export function useLocationController(initial: {
 
       // fallback：IP / browser location
       const loc = await getInitialLocation();
+      if (userInteractedRef.current) return;
       setLocation({
         label: "",
         lat: loc.lat,
         lon: loc.lon,
       });
+      sourceRef.current = "reverse";
       setSource("reverse");
       setQueryLabel("");
     }
@@ -86,17 +94,20 @@ export function useLocationController(initial: {
 
   /* ---------------- reverse geocode ---------------- */
   useEffect(() => {
+    if (sourceRef.current !== "reverse" && sourceRef.current !== "map") return;
+    if (reverseQuery.isFetching) return;
     if (!reverseQuery.data?.length) return;
     const r = reverseQuery.data[0];
     setLocation((prev) => ({
       ...prev,
       label: r.label,
+      regionLabel: r.regionLabel,
     }));
     setQueryLabel(r.label);
     if (r.countryCode) {
       setCountry(r.countryCode);
     }
-  }, [reverseQuery.data]);
+  }, [reverseQuery.data, reverseQuery.isFetching, source]);
   useEffect(() => {
     if (!country) return;
     if (currencyTouched) return;
@@ -110,6 +121,8 @@ export function useLocationController(initial: {
 
   /** 搜索框选中 */
   function setBySearch(next: Location) {
+    userInteractedRef.current = true;
+    sourceRef.current = null;
     setSource(null);
     setLocation(next);
     setQueryLabel(next.label);
@@ -117,17 +130,22 @@ export function useLocationController(initial: {
 
   /** 地图点击 / marker 拖拽 */
   function setByMap(lat: number, lon: number) {
+    userInteractedRef.current = true;
+    sourceRef.current = "map";
     setSource("map");
-    setLocation((prev) => ({
-      ...prev,
+    setLocation({
+      label: "",
+      regionLabel: null,
       lat,
       lon,
-    }));
-    setQueryLabel("検索中...");
+    });
+    setQueryLabel("");
   }
 
   /** 仅修改 label（输入中） */
   function onInputChange(text: string) {
+    userInteractedRef.current = true;
+    sourceRef.current = "search";
     setSource("search");
     setQueryLabel(text);
   }

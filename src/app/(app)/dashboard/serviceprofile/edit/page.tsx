@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2, PawPrint, ExternalLink } from "lucide-react";
+import { AppImage } from "@/components/ui/app-image";
 
 // 快速选择用的选项
 const petOptions = ["犬", "猫", "うさぎ", "ハムスター", "フェレット", "小動物"];
@@ -134,9 +135,10 @@ export default function EditProfilePage() {
   // }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between mb-6">
+    <main className="h-full overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900 mb-1">
             サービスプロフィールを編集する
@@ -184,7 +186,7 @@ export default function EditProfilePage() {
             placeholder="例：子どもの頃からずっとうさぎと暮らしてきました。繊細な子でも安心して過ごせるよう、静かな環境づくりとゆっくりしたコミュニケーションを大切にしています。"
           />
           {/* {errors.bio && (
-            <p className="text-xs text-red-500 mt-1">{errors.bio.message}</p>
+            <p className="text-xs text-danger-text mt-1">{errors.bio.message}</p>
           )} */}
         </section>
 
@@ -224,7 +226,7 @@ export default function EditProfilePage() {
               })}
             </div>
             {/* {errors.petTypes && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-xs text-danger-text mt-1">
                 {errors.petTypes.message as string}
               </p>
             )} */}
@@ -264,7 +266,7 @@ export default function EditProfilePage() {
               })}
             </div>
             {/* {errors.services && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-xs text-danger-text mt-1">
                 {errors.services.message as string}
               </p>
             )} */}
@@ -290,7 +292,7 @@ export default function EditProfilePage() {
               <span className="text-xs text-neutral-600">円</span>
             </div>
             {/* {errors.price && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-xs text-danger-text mt-1">
                 {errors.price.message}
               </p>
             )} */}
@@ -309,7 +311,7 @@ export default function EditProfilePage() {
               placeholder="例：大阪市内（此花区・北区周辺）"
             />
             {/* {errors.area && (
-              <p className="text-xs text-red-500 mt-1">{errors.area.message}</p>
+              <p className="text-xs text-danger-text mt-1">{errors.area.message}</p>
             )} */}
           </div>
 
@@ -326,7 +328,7 @@ export default function EditProfilePage() {
               placeholder="例：平日19時以降 / 土日祝は終日OK"
             />
             {/* {errors.availability && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-xs text-danger-text mt-1">
                 {errors.availability.message}
               </p>
             )} */}
@@ -362,7 +364,7 @@ export default function EditProfilePage() {
             </label>
             {previewUrls.map((url, idx) => (
               <div key={url} className="relative">
-                <img
+                <AppImage
                   src={url}
                   alt={`preview-${idx}`}
                   className="w-28 h-28 object-cover rounded-2xl border"
@@ -398,6 +400,7 @@ export default function EditProfilePage() {
           </Button>
         </div>
       </form>
-    </div>
+      </div>
+    </main>
   );
 }

@@ -1,61 +1,79 @@
 "use client";
 
-import { Bell, MapPin, PawPrint, Settings2, UserRound } from "lucide-react";
+import { PawPrint, SlidersHorizontal, UserRound } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { AccountSettings } from "./_components/account-settings";
-import { LocationSettings } from "./_components/location-settings";
-import { NotificationSettings } from "./_components/notification-settings";
+import { PreferencesSettings } from "./_components/notification-settings";
 import { PetSettings } from "./_components/pet-settings";
-import { ProviderSettings } from "./_components/provider-settings";
 import { useLanguage } from "@/components/providers/language-provider";
 
 export default function SettingsPage() {
   const { t } = useLanguage();
+  type SettingsTab = "account" | "pets" | "preferences";
+  const [activeTab, setActiveTab] = useState<SettingsTab>("account");
   const sections = [
-    { href: "#account", label: t.settings.nav.account, icon: UserRound },
-    { href: "#pets", label: t.settings.nav.pets, icon: PawPrint },
-    { href: "#locations", label: t.settings.nav.locations, icon: MapPin },
-    { href: "#provider", label: t.settings.nav.provider, icon: Settings2 },
+    { id: "account" as const, href: "#account", label: t.settings.nav.account, icon: UserRound },
+    { id: "pets" as const, href: "#pets", label: t.settings.nav.pets, icon: PawPrint },
     {
-      href: "#notifications",
-      label: t.settings.nav.notifications,
-      icon: Bell,
+      id: "preferences" as const,
+      href: "#preferences",
+      label: t.settings.nav.preferences,
+      icon: SlidersHorizontal,
     },
   ];
+
+  useEffect(() => {
+    const syncHash = () => {
+      const value = window.location.hash.slice(1);
+      if (value === "notifications") {
+        window.history.replaceState(null, "", "#preferences");
+        setActiveTab("preferences");
+        return;
+      }
+      setActiveTab(value === "pets" || value === "preferences" ? value : "account");
+    };
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, []);
+
   return (
-    <div className="h-full overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl space-y-6 pb-16">
-        <header>
-          <p className="text-sm font-bold uppercase text-primary">
-            {t.settings.eyebrow}
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
+    <main className="w-full h-full flex flex-col overflow-hidden">
+      <div className="mx-auto max-w-5xl w-full h-full flex flex-col overflow-hidden">
+        {/* Top Header: Title + Tab Navigation */}
+        <header className="shrink-0 pb-1">
+          <h1 className="text-2xl font-bold text-slate-900">
             {t.settings.title}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            {t.settings.description}
-          </p>
+
+          <nav
+            aria-label={t.settings.title}
+            className="mt-4 flex gap-2 overflow-x-auto border-b border-slate-200"
+          >
+            {sections.map(({ id, href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={activeTab === id ? "page" : undefined}
+                onClick={() => setActiveTab(id)}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-t-xl border-b-2 px-4 text-sm font-bold transition ${activeTab === id ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            ))}
+          </nav>
         </header>
 
-        <nav aria-label="設定セクション" className="flex gap-2 overflow-x-auto pb-1">
-          {sections.map(({ href, label, icon: Icon }) => (
-            <a
-              key={href}
-              href={href}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-primary/40 hover:text-primary"
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </a>
-          ))}
-        </nav>
-
-        <AccountSettings />
-        <PetSettings />
-        <LocationSettings />
-        <ProviderSettings />
-        <NotificationSettings />
+        {/* Lower Scrollable Content */}
+        <div className="flex-1 overflow-y-auto py-5 pr-1 pb-10">
+          {activeTab === "account" ? <AccountSettings /> : null}
+          {activeTab === "pets" ? <PetSettings /> : null}
+          {activeTab === "preferences" ? <PreferencesSettings /> : null}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

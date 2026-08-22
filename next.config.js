@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(process.env.NEXT_DIST_DIR
+    ? { distDir: process.env.NEXT_DIST_DIR }
+    : {}),
   images: {
     remotePatterns: [
       {
@@ -22,6 +25,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "profile.line-scdn.net",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
       },
     ],
   },

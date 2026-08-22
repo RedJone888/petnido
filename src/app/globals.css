@@ -2,6 +2,67 @@
 @import "react-day-picker/dist/style.css";
 @import "leaflet/dist/leaflet.css";
 
+:root {
+  --font-plus-jakarta: "Plus Jakarta Sans", "Avenir Next", "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+  --font-inter: Inter, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-kosugi: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP",
+    sans-serif;
+  --font-kiwi: "Hiragino Maru Gothic ProN", "Yu Rounded", "Noto Sans JP",
+    sans-serif;
+}
+
+.font-local-plus-jakarta {
+  --font-plus-jakarta: "Plus Jakarta Sans", "Avenir Next", "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+}
+
+.font-local-inter {
+  font-family: var(--font-inter);
+}
+
+.font-local-kosugi {
+  font-family: var(--font-kosugi);
+}
+
+.font-local-kiwi {
+  font-family: var(--font-kiwi);
+}
+
+html {
+  text-size-adjust: 100%;
+}
+
+*:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.pet-weight-control:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
+.money-input:focus-visible,
+.time-picker-input:focus-visible,
+.borderless-input:focus,
+.borderless-input:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* 覆盖浏览器默认的 autofill 背景色 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
@@ -126,9 +187,12 @@ input:-webkit-autofill:focus {
   --color-warning-border: #ffe58f;
 
   /* 危险 (キャンセル/削除) */
-  --color-danger-bg: #fef2f2;
-  --color-danger-text: #991b1b;
-  --color-danger-border: #fecaca;
+  --color-danger-bg: #fff1f3;
+  --color-danger-text: #c2354d;
+  --color-danger-border: #f2b3be;
+  --color-danger-action: #e23b57;
+  --color-danger-hover: #c92d47;
+  --color-danger-ring: #ffd9df;
 
   /* 信息 (寄养/接送等) */
   --color-info-bg: #f0f9ff;
@@ -142,13 +206,13 @@ input:-webkit-autofill:focus {
   --color-slate-600: #475569;
   --color-slate-800: #1e293b;
 
-  /* --color-primary: #7c3aed; #7a2cff; #8200db;*/
+  /* --color-primary: var(--primary-container); #7a2cff; #8200db;*/
   /* --color-secondary: #a855f7; #a85cff #f6f2ff*/
 
   --color-bg: #f5f5f5;
   --color-success: #67c23a;
   --color-warning: #e6a23c;
-  --color-danger: #f56c6c;
+  --color-danger: var(--color-danger-text);
 
   /* 文字颜色建议也加上 color 前缀，这样 Tailwind 才会生成 text- 和 bg- 类 */
   --color-text-main: #333333;
@@ -177,7 +241,7 @@ input:-webkit-autofill:focus {
 
   --color-border: #c0c0c0;
   --input: #e5e7eb;
-  --ring: #8b2cf5;
+  --ring: #7047d7;
 
   --color-btn: #fff;
   --color-btn-fore: #364153;
@@ -188,12 +252,18 @@ input:-webkit-autofill:focus {
   --background: #f8f9ff;
   --on-background: #121c28;
   --outline-variant: #ccc3d8;
-  --primary: #630ed4;
+  --primary: #7047d7;
   --on-primary: #ffffff;
-  --primary-fixed: #eaddff;
-  --on-primary-fixed-variant: #5a00c6;
-  --primary-container: #7c3aed;
-  --on-primary-container: #ede0ff;
+  --primary-hover: #5d35be;
+  --primary-strong: #4f269f;
+  --primary-muted: #8062bd;
+  --primary-border: #a18bd6;
+  --primary-border-strong: #8465c4;
+  --primary-subtle: #faf8ff;
+  --primary-fixed: #eee8ff;
+  --on-primary-fixed-variant: #5732b6;
+  --primary-container: #7047d7;
+  --on-primary-container: #ffffff;
   --secondary: #855300;
   --secondary-fixed: #ffddb8;
   --secondary-container: #fea619;
@@ -208,6 +278,46 @@ input:-webkit-autofill:focus {
   --surface-container: #e5eeff;
   --tertiary-container: #a15100;
   --outline: #7b7487;
+}
+
+/* Primary actions use quiet, neutral elevation. Keep this class on action
+   buttons only; the primary token is also used by selected states and step
+   indicators. */
+.button-primary-raised {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow:
+    0 2px 4px rgba(31, 20, 48, 0.12),
+    0 8px 18px -8px rgba(31, 20, 48, 0.22);
+  transform: translateY(0);
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.button-primary-raised:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 94%, white);
+  transform: translateY(-1px);
+  box-shadow:
+    0 3px 6px rgba(31, 20, 48, 0.12),
+    0 11px 22px -9px rgba(31, 20, 48, 0.25);
+}
+
+.button-primary-raised:active:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(31, 20, 48, 0.16);
+}
+
+.button-primary-raised:disabled {
+  border-color: #c9c1cb;
+  background: #d7cfd9;
+  color: #857d88;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .dark {
@@ -235,12 +345,6 @@ input:-webkit-autofill:focus {
    src/app/(home)/page.tsx intentionally keeps the original global tokens. */
 .home-premium {
   --background: #fbfaf8;
-  --primary: #5d3a86;
-  --on-primary: #ffffff;
-  --primary-fixed: #eee8f4;
-  --on-primary-fixed-variant: #5d3a86;
-  --primary-container: #5d3a86;
-  --on-primary-container: #ffffff;
   --secondary: #9a6a3e;
   --secondary-fixed: #f2e6d9;
   --secondary-container: #c7925b;
@@ -254,7 +358,7 @@ input:-webkit-autofill:focus {
   --surface-container: #eeeaf0;
   --outline: #e6e0e8;
   --outline-variant: #e6e0e8;
-  --tertiary-container: #5d3a86;
+  --tertiary-container: var(--primary);
 }
 
 .home-premium .hero-gradient {
@@ -264,18 +368,18 @@ input:-webkit-autofill:focus {
 .home-premium .service-tone-primary,
 .home-premium .service-tone-secondary,
 .home-premium .service-tone-tertiary {
-  background: #eee8f4;
-  color: #5d3a86;
+  background: var(--primary-fixed);
+  color: var(--primary);
 }
 
 .home-premium .journey-icon-primary,
 .home-premium .journey-index-0-primary {
-  background: #eee8f4;
-  color: #5d3a86;
+  background: var(--primary-fixed);
+  color: var(--primary);
 }
 
 .home-premium .journey-btn-0-primary {
-  background: #5d3a86;
+  background: var(--primary);
   color: #ffffff;
 }
 
@@ -293,10 +397,10 @@ input:-webkit-autofill:focus {
 
 /* === Home V2 design draft: scoped tokens and utilities === */
 .home-v2 {
-  --hv2-primary: #630ed4;
-  --hv2-primary-container: #7c3aed;
-  --hv2-primary-fixed: #eaddff;
-  --hv2-on-primary-fixed-variant: #5a00c6;
+  --hv2-primary: var(--primary);
+  --hv2-primary-container: var(--primary-container);
+  --hv2-primary-fixed: var(--primary-fixed);
+  --hv2-on-primary-fixed-variant: var(--on-primary-fixed-variant);
   --hv2-secondary: #855300;
   --hv2-secondary-container: #fea619;
   --hv2-on-secondary-container: #684000;
@@ -324,12 +428,18 @@ input:-webkit-autofill:focus {
   width: 100%;
   max-width: 1480px;
   margin-inline: auto;
-  padding-inline: 20px;
+  padding-inline: 16px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .site-shell {
-    padding-inline: 40px;
+    padding-inline: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-shell {
+    padding-inline: 32px;
   }
 }
 
@@ -784,6 +894,84 @@ input:-webkit-autofill:focus {
 
 .needs-marquee:hover .needs-marquee-track {
   animation-play-state: paused;
+}
+
+/* Keep the native time input interaction while matching the publishing flow. */
+.time-picker-input {
+  accent-color: var(--primary);
+  color-scheme: light;
+}
+
+.time-picker-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+  filter: invert(31%) sepia(18%) saturate(1840%) hue-rotate(230deg)
+    brightness(86%) contrast(91%);
+}
+
+.time-picker-input::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+.time-picker-input::-webkit-datetime-edit-text {
+  color: #817a85;
+}
+
+.time-picker-input::-webkit-datetime-edit-hour-field,
+.time-picker-input::-webkit-datetime-edit-minute-field,
+.time-picker-input::-webkit-datetime-edit-ampm-field {
+  border-radius: 6px;
+  padding-inline: 2px;
+}
+
+.time-picker-input::-webkit-datetime-edit-hour-field:focus,
+.time-picker-input::-webkit-datetime-edit-minute-field:focus,
+.time-picker-input::-webkit-datetime-edit-ampm-field:focus {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+/* Keep the seven date columns inside the trigger-width calendar popover. */
+.date-picker-calendar {
+  --rdp-day-width: 28px;
+  --rdp-day-height: 34px;
+  --rdp-day_button-width: 28px;
+  --rdp-day_button-height: 28px;
+  --rdp-weekday-padding: 0.25rem 0;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.date-picker-calendar .rdp-months,
+.date-picker-calendar .rdp-month {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.date-picker-calendar .rdp-month_grid,
+.date-picker-calendar .rdp-weekdays,
+.date-picker-calendar .rdp-weeks {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+}
+
+.date-picker-calendar .rdp-weekday,
+.date-picker-calendar .rdp-day {
+  width: 14.285714% !important;
+  min-width: 0 !important;
+  max-width: 14.285714% !important;
+  padding-inline: 0 !important;
+}
+
+.date-picker-calendar .rdp-day_button {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  font-size: 0.75rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

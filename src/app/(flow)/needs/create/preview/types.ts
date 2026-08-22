@@ -88,6 +88,7 @@ export type NeedPreviewSnapshot = {
     supplies: {
       owner: PreviewSupplyItem[];
       sitter: PreviewSupplyItem[];
+      notes: string;
     };
     transportLabel: string;
   };
@@ -95,5 +96,6 @@ export type NeedPreviewSnapshot = {
     tasks: PreviewTask[];
     requirements: string[];
     cautions: string[];
+    timePreferenceLabel?: string;
   };
 };

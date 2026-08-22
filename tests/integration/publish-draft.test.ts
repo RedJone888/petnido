@@ -16,6 +16,9 @@ function context(userId: string) {
 
 async function reset() {
   process.env.FEATURE_PUBLISHING_V2 = "true";
+  await prisma.serviceV2.deleteMany();
+  await prisma.needV2.deleteMany();
+  await prisma.locationSnapshotV2.deleteMany();
   await prisma.publishDraftV2.deleteMany();
   await prisma.user.deleteMany();
 }
@@ -140,5 +143,106 @@ describe("versioned publish drafts", () => {
         payload: {},
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("returns the confirmed publish state, deferred matching, and email prompt", async () => {
+    const userId = "publish-route-owner";
+    const needId = "published-need-1";
+    const draftId = "66666666-6666-4666-8666-666666666666";
+    const transactionClient = {
+      publishDraftV2: {
+        findFirst: async () => ({
+          id: draftId,
+          kind: "NEED",
+          mode: "CUSTOM",
+          schemaVersion: 1,
+          revision: 3,
+          status: "PUBLISHED",
+          publishedNeedId: needId,
+        }),
+      },
+    };
+    const caller = publishDraftRouter.createCaller({
+      ...context(userId),
+      prisma: {
+        $transaction: async (operation: (tx: unknown) => unknown) =>
+          operation(transactionClient),
+        notificationPreference: {
+          findUnique: async () => null,
+          create: async () => ({ id: "notification-preference-1" }),
+        },
+        user: {
+          findUnique: async () => ({ email: `${userId}@example.com`, emailVerified: new Date("2026-08-04T00:00:00.000Z") }),
+        },
+      },
+    } as any);
+
+    await expect(
+      caller.publishNeed({
+        schemaVersion: 1,
+        draftId,
+        revision: 3,
+        idempotencyKey: "77777777-7777-4777-8777-777777777777",
+        mode: "CUSTOM",
+        title: "Help Mochi",
+        description: null,
+        startsAt: "2026-08-10T00:00:00+09:00",
+        endsAt: "2026-08-11T00:00:00+09:00",
+        timeZone: "Asia/Tokyo",
+        pets: [
+          {
+            clientPetKey: "pet-1",
+            sourcePetId: null,
+            quantity: 1,
+            name: "Mochi",
+            petType: "CAT",
+            breed: null,
+            birthDate: null,
+            weightGrams: null,
+            sex: "UNKNOWN",
+            neutered: "UNKNOWN",
+            careNotes: null,
+          },
+        ],
+        location: {
+          lat: 35.681236,
+          lon: 139.767125,
+          regionLabel: "Chiyoda, Tokyo",
+          displayPrecision: "DISTRICT",
+        },
+        budget: {
+          kind: "OPEN",
+          minAmountMinor: null,
+          maxAmountMinor: null,
+          currency: "JPY",
+          negotiable: true,
+        },
+        additionalCosts: [],
+        attachmentIds: [],
+        custom: {
+          tasks: [
+            {
+              clientTaskKey: "task-1",
+              category: "TRANSPORT",
+              label: "Vet transport",
+              instructions: null,
+              priority: "MUST",
+              petKeys: ["pet-1"],
+              scheduleKind: "DAILY",
+              visitNumbers: [],
+              order: 0,
+            },
+          ],
+          requirements: [],
+        },
+      }),
+    ).resolves.toEqual({
+      needId,
+      replayed: true,
+      edited: false,
+      state: "OPEN",
+      recommendation: { status: "DEFERRED" },
+      notificationPrompt: { shouldPrompt: false, emailEligible: true },
+    });
   });
 });

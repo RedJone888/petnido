@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import cn from "@/lib/cn";
+import { AppImage } from "@/components/ui/app-image";
 interface Props {
   src: string;
   alt?: string;
@@ -31,9 +32,11 @@ export default function BlurBackImage({
         style={{ backgroundImage: `url(${imgSrc})` }}
       ></div>
       <div className="absolute inset-0 bg-white/60 z-5"></div>
-      <img
+      <AppImage
         src={imgSrc}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         className="relative bottom-0 z-10 w-full h-[75%] object-contain"
       />
     </div>

@@ -14,6 +14,7 @@ describe("domain state machines", () => {
     ["OPEN", "SELECT_PROVIDER", "MATCHED"],
     ["MATCHED", "REMOVE_PROVIDER", "OPEN"],
     ["MATCHED", "CLOSE", "CLOSED"],
+    ["CLOSED", "REOPEN", "OPEN"],
   ] as const)("transitions Need %s via %s to %s", (from, command, expected) => {
     expect(transitionNeed(from, command)).toBe(expected);
   });

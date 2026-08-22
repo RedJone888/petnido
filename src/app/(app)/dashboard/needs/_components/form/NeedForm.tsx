@@ -41,6 +41,30 @@ import { needFormToApi } from "@/domain/need/mapper";
 import { Button } from "@/components/ui/button";
 import { useNeed } from "@/hooks/useNeed";
 type SaveStatus = "IDLE" | "SAVING" | "SAVED" | "ERROR";
+const VISIT_FREQUENCIES: Record<
+  string,
+  { cDaysStr: string; cTimesStr: string }
+> = {
+  ONCE_A_DAY: { cDaysStr: "1", cTimesStr: "1" },
+  TWICE_A_DAY: { cDaysStr: "1", cTimesStr: "2" },
+  EVERY_2_DAYS: { cDaysStr: "2", cTimesStr: "1" },
+  EVERY_3_DAYS: { cDaysStr: "3", cTimesStr: "1" },
+};
+
+function calculateActualTimes(
+  days: number,
+  cDaysStr: string | null,
+  cTimesStr: string | null,
+): number {
+  const cDays = Number(cDaysStr) || 1;
+  const cTimes = Number(cTimesStr) || 1;
+  if (days <= 0 || cDays <= 0 || cTimes <= 0) return 0;
+  const fullCycleCount = Math.floor(days / cDays) * cTimes;
+  const remainingDays = days % cDays;
+  const extraCount = Math.min(cTimes, remainingDays);
+  return fullCycleCount + extraCount;
+}
+
 type Props = {
   initialData?: NeedForm & { id?: string };
   onSubmit?: (data: NeedCreateInput) => Promise<void>;
@@ -163,7 +187,7 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
       subscription.unsubscribe();
       if (timer) clearTimeout(timer);
     };
-  }, [form.watch, isWaitingForDecision]);
+  }, [form, isWaitingForDecision]);
   // 地图以及同步地图数据到form
   const locController = useLocationController({
     location: {
@@ -179,11 +203,11 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
     });
     form.setValue("addressLat", locController.location.lat);
     form.setValue("addressLon", locController.location.lon);
-  }, [locController.location, form.setValue]);
+  }, [form, locController.location]);
   useEffect(() => {
     if (!locController.currency) return;
     form.setValue("currency", locController.currency, { shouldValidate: true });
-  }, [locController.currency, form.setValue]);
+  }, [form, locController.currency]);
   // 左侧导航和右侧表单区域
   const [activeStep, setActiveStep] = useState("type");
   // 滚动表单，切换左侧导航
@@ -235,25 +259,6 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
           differenceInDays(parseISO(endDate), parseISO(startDate)) + 1,
         )
       : 0;
-  const freqMap: Record<string, { cDaysStr: string; cTimesStr: string }> = {
-    ONCE_A_DAY: { cDaysStr: "1", cTimesStr: "1" },
-    TWICE_A_DAY: { cDaysStr: "1", cTimesStr: "2" },
-    EVERY_2_DAYS: { cDaysStr: "2", cTimesStr: "1" },
-    EVERY_3_DAYS: { cDaysStr: "3", cTimesStr: "1" },
-  };
-  const calculateActualTimes = (
-    days: number,
-    cDaysStr: string | null,
-    cTimesStr: string | null,
-  ): number => {
-    const cDays = Number(cDaysStr) || 1;
-    const cTimes = Number(cTimesStr) || 1;
-    if (days <= 0 || cDays <= 0 || cTimes <= 0) return 0;
-    const fullCycleCount = Math.floor(days / cDays) * cTimes;
-    const remainingDays = days % cDays;
-    const extraCount = Math.min(cTimes, remainingDays);
-    return fullCycleCount + extraCount;
-  };
   // 自动计算总价的逻辑
   useEffect(() => {
     let total = 0;
@@ -265,7 +270,7 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
           actualTimes = calculateActualTimes(days, customDays, customTimes);
         } else {
           if (frequencyType !== null) {
-            const currFreq = freqMap[frequencyType];
+            const currFreq = VISIT_FREQUENCIES[frequencyType];
             actualTimes = calculateActualTimes(
               days,
               currFreq.cDaysStr,
@@ -284,13 +289,12 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
     form.setValue("totalPrice", String(total));
   }, [
     category,
-    startDate,
-    endDate,
+    days,
     frequencyType,
     customDays,
     customTimes,
     priceAmount,
-    form.setValue,
+    form,
   ]);
   const onErrors = (errors: any) => {
     console.log("❌ 校验失败详情:", errors);
@@ -432,7 +436,7 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
                 <h2 className="text-xl font-bold tracking-wide">
                   3. ペットの情報
                 </h2>
-                <button className="text-red-500">
+                <button className="text-danger-text">
                   登録済みのペットから選択
                 </button>
                 <div className="space-y-4">
@@ -502,7 +506,7 @@ export function NeedForm({ initialData, onSubmit, isLoading }: Props) {
                 <span>下書き保存済み {lastSavedTime}</span>
               )}
               {saveStatus === "ERROR" && (
-                <span className="text-red-400">保存に失敗しました</span>
+                <span className="text-danger-text">保存に失敗しました</span>
               )}
               {saveStatus === "IDLE" && lastSavedTime && (
                 <span>下書き保存済み {lastSavedTime}</span>

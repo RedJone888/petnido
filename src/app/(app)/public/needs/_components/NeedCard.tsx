@@ -5,6 +5,7 @@ import { PET_META } from "@/domain/pet/constant";
 import { format } from "date-fns";
 import { AllNeedApi } from "@/domain/need/api.types";
 import UserAvatar from "@/components/shared/user-avatar";
+import { AppImage } from "@/components/ui/app-image";
 import cn from "@/lib/cn";
 import {
   DISTANCE_RANGE_JA,
@@ -181,7 +182,9 @@ export default function NeedCard({
                 key={idx}
                 className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary/5 text-primary border border-secondary/12"
               >
-                <img
+                <AppImage
+                  width={20}
+                  height={20}
                   src={PET_META[petCategory].headImg}
                   alt={PET_META[petCategory].label.ja.name}
                   className="h-3 w-3"

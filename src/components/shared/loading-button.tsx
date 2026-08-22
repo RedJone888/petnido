@@ -7,7 +7,7 @@ type loadingButtonProps = ButtonProps & {
 };
 export function LoadingButton({
   loading,
-  loadingText = "処理中...",
+  loadingText,
   children,
   className,
   disabled,
@@ -23,7 +23,7 @@ export function LoadingButton({
       {loading ? (
         <div className="flex justify-center items-center gap-2">
           <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-          <span>{loadingText}</span>
+          <span>{loadingText ?? children}</span>
         </div>
       ) : (
         <span>{disabled && disabledText ? disabledText : children}</span>

@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { useLanguage } from "@/components/providers/language-provider";
+import { usePageLanguage } from "@/components/providers/language-provider";
 
 type Lang = "en" | "zh" | "ja";
 export type CareMode = "home-visits" | "boarding" | "custom";
@@ -283,8 +283,8 @@ const modes: Record<CareMode, Mode> = {
   },
 };
 
-export function CareTypesHub() {
-  const { lang } = useLanguage();
+export function CareTypesHub({ language }: { language?: Lang } = {}) {
+  const lang = usePageLanguage(language);
   const t = common[lang];
   const hubOrder: CareMode[] = ["home-visits", "boarding", "custom"];
 
@@ -298,7 +298,7 @@ export function CareTypesHub() {
 
         <section aria-label={t.recurring} className="mt-12 space-y-8 md:mt-14 md:space-y-10">
           {hubOrder.map((modeKey, index) => (
-            <CareTypeStory key={modeKey} modeKey={modeKey} lang={lang} reverse={index % 2 === 1} />
+            <CareTypeStory key={modeKey} modeKey={modeKey} lang={lang} routeLanguage={language} reverse={index % 2 === 1} />
           ))}
         </section>
       </div>
@@ -306,7 +306,7 @@ export function CareTypesHub() {
   );
 }
 
-function CareTypeStory({ modeKey, lang, reverse }: { modeKey: CareMode; lang: Lang; reverse: boolean }) {
+function CareTypeStory({ modeKey, lang, routeLanguage, reverse }: { modeKey: CareMode; lang: Lang; routeLanguage?: Lang; reverse: boolean }) {
   const mode = modes[modeKey];
 
   return (
@@ -317,11 +317,11 @@ function CareTypeStory({ modeKey, lang, reverse }: { modeKey: CareMode; lang: La
         </div>
         <div className="flex flex-col justify-center p-7 md:p-10 lg:p-11">
           <h2 className="text-3xl font-bold tracking-[-.04em] text-[#392847] md:text-4xl">{mode.title[lang]}</h2>
-          <p className="mt-3 text-base font-semibold text-[#5d3a86]">{mode.short[lang]}</p>
+          <p className="mt-3 text-base font-semibold text-[var(--primary)]">{mode.short[lang]}</p>
           <p className="mt-5 text-sm leading-7 text-[#706a78] md:text-base md:leading-8">
             <HighlightedScenario modeKey={modeKey} lang={lang} />
           </p>
-          <RoleActions modeKey={modeKey} lang={lang} className="mt-7" showArrow={false} />
+          <RoleActions modeKey={modeKey} lang={lang} routeLanguage={routeLanguage} className="mt-7" showArrow={false} />
         </div>
       </div>
     </article>
@@ -335,7 +335,7 @@ function HighlightedScenario({ modeKey, lang }: { modeKey: CareMode; lang: Lang 
 
   return text.split(pattern).map((part, index) =>
     highlights.includes(part) ? (
-      <strong key={`${part}-${index}`} className="rounded-md bg-[#f0e8f4] px-1.5 py-0.5 font-bold text-[#5d3a86] box-decoration-clone">
+      <strong key={`${part}-${index}`} className="rounded-md bg-[#f0e8f4] px-1.5 py-0.5 font-bold text-[var(--primary)] box-decoration-clone">
         {part}
       </strong>
     ) : (
@@ -364,19 +364,20 @@ function DecisionSummary({ mode, lang, compact = false, showIcons = true }: { mo
   );
 }
 
-function RoleActions({ modeKey, lang, className = "", showArrow = true }: { modeKey: CareMode; lang: Lang; className?: string; showArrow?: boolean }) {
+function RoleActions({ modeKey, lang, routeLanguage, className = "", showArrow = true }: { modeKey: CareMode; lang: Lang; routeLanguage?: Lang; className?: string; showArrow?: boolean }) {
   const t = common[lang];
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
-      <Link href={`/care-types/${modeKey}`} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5d3a86] px-5 text-sm font-bold text-white">{t.read}{showArrow && <ArrowRight size={15} />}</Link>
-      <Link href="/needs/create" className="inline-flex h-11 items-center rounded-xl border border-[#c7b9cd] bg-white px-5 text-sm font-bold text-[#5d3a86]">{t.need}</Link>
-      <Link href="/dashboard/serviceprofile/services/new" className="inline-flex h-11 items-center rounded-xl border border-[#c7b9cd] bg-white px-5 text-sm font-bold text-[#5d3a86]">{t.offer}</Link>
+      <Link href={`${routeLanguage ? `/${routeLanguage}` : ""}/care-types/${modeKey}`} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-bold text-white">{t.read}{showArrow && <ArrowRight size={15} />}</Link>
+      <Link href="/needs/create" className="inline-flex h-11 items-center rounded-xl border border-[#c7b9cd] bg-white px-5 text-sm font-bold text-[var(--primary)]">{t.need}</Link>
+      <Link href="/dashboard/serviceprofile/services/new" className="inline-flex h-11 items-center rounded-xl border border-[#c7b9cd] bg-white px-5 text-sm font-bold text-[var(--primary)]">{t.offer}</Link>
     </div>
   );
 }
 
-export function CareTypeDetail({ modeKey }: { modeKey: CareMode }) {
-  const { lang } = useLanguage();
+export function CareTypeDetail({ modeKey, language }: { modeKey: CareMode; language?: Lang }) {
+  const lang = usePageLanguage(language);
+  const routePrefix = language ? `/${language}` : "";
   const t = common[lang];
   const mode = modes[modeKey];
   const Icon = mode.icon;
@@ -389,17 +390,17 @@ export function CareTypeDetail({ modeKey }: { modeKey: CareMode }) {
           <span className="text-xs font-bold uppercase tracking-[.13em] text-[#8a5d34]">{t.other}</span>
           <div className="flex flex-wrap gap-2">
             {alternatives.map((key) => (
-              <Link key={key} href={`/care-types/${key}`} className="inline-flex items-center gap-2 rounded-full border border-[#d8cbdc] bg-white px-4 py-2 text-sm font-bold text-[#5d3a86]">{modes[key].title[lang]}<ArrowRight size={14} /></Link>
+              <Link key={key} href={`${routePrefix}/care-types/${key}`} className="inline-flex items-center gap-2 rounded-full border border-[#d8cbdc] bg-white px-4 py-2 text-sm font-bold text-[var(--primary)]">{modes[key].title[lang]}<ArrowRight size={14} /></Link>
             ))}
           </div>
         </nav>
 
         <section className="grid gap-8 py-12 lg:grid-cols-[.82fr_1.18fr] lg:items-center lg:py-18">
           <div>
-            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl text-[#5d3a86] ${mode.tone}`}><Icon size={24} /></span>
+            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl text-[var(--primary)] ${mode.tone}`}><Icon size={24} /></span>
             <p className="mt-6 text-xs font-bold uppercase tracking-[.16em] text-[#8a5d34]">PetNido care guide</p>
             <h1 className="mt-4 text-[clamp(3rem,6vw,5.8rem)] font-bold leading-[.92] tracking-[-.06em] text-[#392847]">{mode.title[lang]}</h1>
-            <p className="mt-5 text-xl font-semibold text-[#5d3a86]">{mode.short[lang]}</p>
+            <p className="mt-5 text-xl font-semibold text-[var(--primary)]">{mode.short[lang]}</p>
             <p className="mt-5 max-w-xl text-base leading-8 text-[#706a78]">{mode.intro[lang]}</p>
           </div>
           <div className="relative min-h-[360px] overflow-hidden rounded-[28px] md:min-h-[540px]">
@@ -439,8 +440,8 @@ export function CareTypeDetail({ modeKey }: { modeKey: CareMode }) {
             <div className="rounded-[22px] border border-white/80 bg-white/75 p-6">
               <p className="text-sm font-bold text-[#392847]">{lang === "zh" ? "这种方式适合你吗？" : lang === "ja" ? "この方法に決めますか？" : "Does this care type fit?"}</p>
               <div className="mt-5 grid gap-3">
-                <Link href="/needs/create" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#5d3a86] px-6 text-sm font-bold text-white">{t.need}<ArrowRight size={16} /></Link>
-                <Link href="/care-types" className="inline-flex h-12 items-center justify-center rounded-xl border border-[#c7b9cd] bg-white px-6 text-sm font-bold text-[#5d3a86]">{lang === "zh" ? "再比较三种方式" : lang === "ja" ? "3つの方法を比較" : "Compare all three"}</Link>
+                <Link href="/needs/create" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-6 text-sm font-bold text-white">{t.need}<ArrowRight size={16} /></Link>
+                <Link href={`${routePrefix}/care-types`} className="inline-flex h-12 items-center justify-center rounded-xl border border-[#c7b9cd] bg-white px-6 text-sm font-bold text-[var(--primary)]">{lang === "zh" ? "再比较三种方式" : lang === "ja" ? "3つの方法を比較" : "Compare all three"}</Link>
               </div>
             </div>
           </div>
@@ -456,8 +457,8 @@ export function CareTypeDetail({ modeKey }: { modeKey: CareMode }) {
               <StoryPanel title={t.trust} text={mode.sitterTrust[lang]} />
             </div>
             <div className="mt-10 flex flex-wrap gap-3">
-              <Link href="/dashboard/serviceprofile/services/new" className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#5d3a86] px-6 text-sm font-bold text-white">{t.offer}<ArrowRight size={16} /></Link>
-              <Link href="/how-it-works/services" className="inline-flex h-12 items-center rounded-xl border border-[#bfaec8] px-6 text-sm font-bold text-[#5d3a86]">{lang === "zh" ? "了解如何发布服务" : lang === "ja" ? "サービス公開の流れ" : "How to publish a service"}</Link>
+              <Link href="/dashboard/serviceprofile/services/new" className="inline-flex h-12 items-center gap-2 rounded-xl bg-[var(--primary)] px-6 text-sm font-bold text-white">{t.offer}<ArrowRight size={16} /></Link>
+              <Link href={`${routePrefix}/how-it-works/services`} className="inline-flex h-12 items-center rounded-xl border border-[#bfaec8] px-6 text-sm font-bold text-[var(--primary)]">{lang === "zh" ? "了解如何发布服务" : lang === "ja" ? "サービス公開の流れ" : "How to publish a service"}</Link>
             </div>
           </div>
         </section>
@@ -467,5 +468,5 @@ export function CareTypeDetail({ modeKey }: { modeKey: CareMode }) {
 }
 
 function StoryPanel({ title, text }: { title: string; text: string }) {
-  return <article className="rounded-[20px] border border-[#ded6e1] bg-white p-6"><div className="flex items-center gap-2 text-[#5d3a86]"><PawPrint size={17} /><h3 className="text-lg font-bold text-[#392847]">{title}</h3></div><p className="mt-3 text-sm leading-7 text-[#706a78]">{text}</p></article>;
+  return <article className="rounded-[20px] border border-[#ded6e1] bg-white p-6"><div className="flex items-center gap-2 text-[var(--primary)]"><PawPrint size={17} /><h3 className="text-lg font-bold text-[#392847]">{title}</h3></div><p className="mt-3 text-sm leading-7 text-[#706a78]">{text}</p></article>;
 }

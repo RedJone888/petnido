@@ -1,7 +1,8 @@
 "use client";
 import { useLanguage } from "@/components/providers/language-provider";
+import { AppImage } from "@/components/ui/app-image";
 import { Button } from "@/components/ui/button";
-import { useAuthModal } from "@/components/providers/AuthModalProvider";
+import { useAuthModal } from "@/modules/auth/client/auth-modal-provider";
 import cn from "@/lib/cn";
 import { BadgePlus, ClipboardPlus } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -103,7 +104,7 @@ export function HeroSection() {
       </div>
       <div className="absolute inset-0 z-0 md:relative md:inset-auto">
         <div className="relative h-full overflow-hidden md:aspect-[16/10] md:rounded-[24px] md:border md:border-white/80 md:shadow-[0_24px_70px_-38px_rgba(42,29,50,0.45)]">
-          <img
+          <AppImage
             src={heroImage}
             alt="Woman with rabbits and guinea pigs"
             className="w-full h-full object-cover"

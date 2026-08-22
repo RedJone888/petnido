@@ -3,6 +3,7 @@ import { SectionHeader } from "./section-header";
 import { Button } from "@/components/ui/button";
 import { MapPin } from "lucide-react";
 import { useLanguage } from "@/components/providers/language-provider";
+import { AppImage } from "@/components/ui/app-image";
 import cn from "@/lib/cn";
 const needs = [
   {
@@ -62,7 +63,7 @@ export function NearbyNeeds() {
             )}
           >
             <div className="relative h-40 overflow-hidden md:h-36">
-              <img
+              <AppImage
                 src={need.image}
                 alt={need.alt}
                 className="w-full h-full object-cover"

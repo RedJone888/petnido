@@ -1,20 +1,19 @@
 import { redirect } from "next/navigation";
 
-import { sanitizeReturnTo } from "@/domain/auth/return-to";
-import { auth } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { OnboardingShell } from "../_components/onboarding-shell";
-import { OnboardingProfileForm } from "./profile-form";
+import { sanitizeReturnTo } from "@/modules/auth/return-to";
+import { OnboardingProfileForm } from "@/modules/onboarding/client/profile-form";
+import { OnboardingShell } from "@/modules/onboarding/client/onboarding-shell";
+import { getServerUserContext } from "@/server/validation/server-user-context";
 
 export default async function OnboardingProfilePage({
   searchParams,
 }: {
   searchParams: { returnTo?: string };
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/");
+  const { userId, prisma } = await getServerUserContext();
+  if (!userId) redirect("/");
   const user = await prisma.user.findUniqueOrThrow({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: { name: true, image: true, profile: { select: { onboardingStep: true } } },
   });
   const safeReturnTo = sanitizeReturnTo(searchParams.returnTo);
@@ -23,11 +22,7 @@ export default async function OnboardingProfilePage({
   }
 
   return (
-    <OnboardingShell
-      eyebrow="Step 1 of 2"
-      title="まず、あなたのことを教えてください"
-      description="ニックネームとアバターは、相談や予約の相手に表示されます。あとから変更できます。"
-    >
+    <OnboardingShell step="PROFILE">
       <OnboardingProfileForm
         initialNickname={user.name ?? ""}
         initialAvatar={user.image}

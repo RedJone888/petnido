@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AppImage } from "@/components/ui/app-image";
 import {
   ArrowRight,
   Globe,
@@ -189,7 +190,7 @@ export default function HomeV2Page() {
           <div className="relative">
             <div className="hv2-glow" />
             <div className="hv2-hero-image">
-              <img src={heroImage} alt="Woman with rabbits and guinea pigs" />
+              <AppImage src={heroImage} alt="Woman with rabbits and guinea pigs" />
             </div>
           </div>
         </div>
@@ -200,7 +201,7 @@ export default function HomeV2Page() {
           <div className="flex flex-col items-center gap-16 md:flex-row">
             <div className="grid gap-4 md:w-1/2 md:grid-cols-2">
               {trustImages.map((image, index) => (
-                <img
+                <AppImage
                   key={image}
                   src={image}
                   alt={
@@ -333,7 +334,7 @@ export default function HomeV2Page() {
           {needs.map((need) => (
             <article key={need.title} className="hv2-need-card">
               <div className="relative h-36 overflow-hidden">
-                <img src={need.image} alt={need.title} />
+                <AppImage src={need.image} alt={need.title} />
                 <span className="hv2-card-tag">{need.tag}</span>
               </div>
               <div className="p-6">
@@ -373,7 +374,7 @@ export default function HomeV2Page() {
           <div className="grid gap-6 md:grid-cols-4">
             {sitters.map((sitter) => (
               <article key={sitter.name} className="hv2-sitter-card">
-                <img src={sitter.image} alt={sitter.name} />
+                <AppImage src={sitter.image} alt={sitter.name} />
                 <h3 className="mb-1 text-lg font-bold">{sitter.name}</h3>
                 <div className="mb-3 flex items-center justify-center gap-1 text-[var(--hv2-secondary)]">
                   <Star size={16} fill="currentColor" />
@@ -409,16 +410,13 @@ export default function HomeV2Page() {
             love for animals, PetNido is where neighbors become family.
           </p>
           <div className="relative z-10 flex flex-col justify-center gap-4 sm:flex-row">
-            {/* <Link href="/dashboard/needs/new" className="hv2-cta-light">
-              Post Your Need
-            </Link> */}
             <Button
               variant="primary"
               size="lg"
               shape="pill"
               className="bg-white text-primary"
             >
-              Post Your Need
+              Post a Care Request
             </Button>
             <Button
               variant="secondary"
@@ -428,12 +426,6 @@ export default function HomeV2Page() {
             >
               Become a Sitter
             </Button>
-            {/* <Link
-              href="/dashboard/serviceprofile/services/new"
-              className="hv2-cta-dark"
-            >
-              Become a Sitter
-            </Link> */}
           </div>
         </div>
       </section>
@@ -442,7 +434,7 @@ export default function HomeV2Page() {
         <div className="hv2-container flex flex-col items-start justify-between gap-12 py-16 md:flex-row">
           <div>
             <div className="mb-6 flex items-center gap-2">
-              <img
+              <AppImage
                 src="/favicon.svg"
                 alt="PetNido Logo"
                 className="h-8 w-8 rounded-lg"
@@ -454,17 +446,14 @@ export default function HomeV2Page() {
             <p className="hv2-body-md mb-8 max-w-xs">
               Connecting neighbors for a safer, happier pet community.
             </p>
-            {/* <Link href="/dashboard/needs/new" className="hv2-footer-button">
-              Post Your Need
-            </Link> */}
             <Button variant="primary" size="md" shape="pill">
-              Post Your Need
+              Post a Care Request
             </Button>
           </div>
           <div className="flex flex-wrap gap-12 md:gap-24">
             <FooterLinks
               title="Platform"
-              links={["View All Needs", "View All Sitters", "Safety Measures"]}
+              links={["Care Requests", "Find Sitters", "Safety Measures"]}
             />
             <FooterLinks
               title="Support"

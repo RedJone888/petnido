@@ -5,6 +5,8 @@ import { GlobalConfirm } from "@/components/GlobalConfirm";
 import { Metadata } from "next";
 import { Providers } from "@/components/providers/Providers";
 import { inter, kiwiMaru, plusJakarta } from "@/components/fonts";
+import { cookies } from "next/headers";
+import { validationProfileCookie, validationProfileEnabled } from "@/server/validation/profile-session";
 export const metadata: Metadata = {
   title: "PetNido",
   description: "ペットシッターのマッチングサービス",
@@ -23,6 +25,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const validationCookie = cookies().get(validationProfileCookie)?.value;
+  const validationProfileSession = validationProfileEnabled() && validationCookie === process.env.VALIDATION_TEST_TOKEN;
   // const [openAuth, setOpenAuth] = useState(false);
   // const handleCloseAuth = () => {
   //   localStorage.removeItem("authRedirect");
@@ -34,7 +38,7 @@ export default function RootLayout({
         // ${kiwiMaru.className}
         className={`bg-background text-on-background overflow-x-hidden flex flex-col ${plusJakarta.variable} font-sans antialiased min-h-screen`}
       >
-        <Providers>
+        <Providers validationProfileSession={validationProfileSession}>
           <SiteChrome>{children}</SiteChrome>
           {/* 全局层组件 */}
           <GlobalConfirm />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import type {
   PublishDraftCreateInput,
@@ -11,6 +11,7 @@ import type { DraftSaveState } from "./publishing-flow-shell";
 
 export function usePublishDraft() {
   const [revision, setRevision] = useState<number | null>(null);
+  const revisionRef = useRef<number | null>(null);
   const [saveState, setSaveState] = useState<DraftSaveState>("idle");
   const createMutation = trpc.publishDraft.create.useMutation();
   const saveMutation = trpc.publishDraft.save.useMutation();
@@ -20,6 +21,7 @@ export function usePublishDraft() {
       setSaveState("saving");
       try {
         const draft = await createMutation.mutateAsync(input);
+        revisionRef.current = draft.revision;
         setRevision(draft.revision);
         setSaveState("saved");
         return draft;
@@ -32,14 +34,18 @@ export function usePublishDraft() {
   );
 
   const saveDraft = useCallback(
-    async (input: Omit<PublishDraftSaveInput, "expectedRevision">) => {
-      if (revision === null) throw new Error("DRAFT_NOT_CREATED");
+    async (
+      input: Omit<PublishDraftSaveInput, "expectedRevision">,
+      expectedRevision = revisionRef.current,
+    ) => {
+      if (expectedRevision === null) throw new Error("DRAFT_NOT_CREATED");
       setSaveState("saving");
       try {
         const draft = await saveMutation.mutateAsync({
           ...input,
-          expectedRevision: revision,
+          expectedRevision,
         } as PublishDraftSaveInput);
+        revisionRef.current = draft.revision;
         setRevision(draft.revision);
         setSaveState("saved");
         return draft;
@@ -49,13 +55,15 @@ export function usePublishDraft() {
         throw error;
       }
     },
-    [revision, saveMutation],
+    [saveMutation],
   );
 
   const adoptRevision = useCallback((nextRevision: number) => {
+    revisionRef.current = nextRevision;
     setRevision(nextRevision);
     setSaveState("saved");
   }, []);
+  const getRevision = useCallback(() => revisionRef.current, []);
 
   return {
     revision,
@@ -63,6 +71,7 @@ export function usePublishDraft() {
     createDraft,
     saveDraft,
     adoptRevision,
+    getRevision,
     isPending: createMutation.isLoading || saveMutation.isLoading,
   };
 }

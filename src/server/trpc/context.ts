@@ -1,12 +1,22 @@
 //负责createContext(session+db)
-import { auth } from "@/lib/auth";
+import { auth } from "@/modules/auth";
 import prisma from "@/lib/prisma";
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import { randomUUID } from "crypto";
 import {
   hasValidProfileValidationToken,
+  validationFailureCookie,
   validationProfileUserId,
 } from "@/server/validation/profile-session";
+
+function requestCookie(req: Request | undefined, name: string) {
+  return req?.headers
+    .get("cookie")
+    ?.split(";")
+    .map((value) => value.trim())
+    .find((value) => value.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
 
 function getRequestIp(req?: Request): string {
   if (!req) return "unknown";
@@ -15,18 +25,22 @@ function getRequestIp(req?: Request): string {
 }
 
 export async function createContext(options?: FetchCreateContextFnOptions) {
-  if (hasValidProfileValidationToken(options?.req)) {
+  const validationSession = hasValidProfileValidationToken(options?.req);
+  if (process.env.VALIDATION_DATABASE_URL) {
     const { getValidationPrisma } = await import("@/lib/validation-prisma");
     return {
-      session: {
-        user: {
-          id: validationProfileUserId,
-          email: "profile-e2e@petnido.invalid",
-          name: "Profile E2E",
-        },
-        expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      },
+      session: validationSession
+        ? {
+            user: {
+              id: validationProfileUserId,
+              email: "profile-e2e@petnido.invalid",
+              name: "Profile E2E",
+            },
+            expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          }
+        : null,
       prisma: getValidationPrisma() as unknown as typeof prisma,
+      validationFailure: requestCookie(options?.req, validationFailureCookie) ?? null,
       requestIp: getRequestIp(options?.req),
       requestId: randomUUID(),
     };
@@ -35,6 +49,7 @@ export async function createContext(options?: FetchCreateContextFnOptions) {
   return {
     session,
     prisma,
+    validationFailure: null,
     requestIp: getRequestIp(options?.req),
     requestId: randomUUID(),
   };

@@ -1,6 +1,6 @@
 import { useRouter } from "next/navigation";
 import { useService } from "@/hooks/useService";
-import { SERVICE_TYPE_JA, PRICE_UNIT_JA } from "@/domain/service/constant";
+import { SERVICE_TYPE_JA } from "@/domain/service/constant";
 import { CURRENCY_META } from "@/domain/location/constants";
 import { PET_META } from "@/domain/pet/constant";
 import { ServicePhotoKind, ServiceCategory } from "@prisma/client";
@@ -9,6 +9,7 @@ import { formatAvailabilityText } from "@/domain/service/formatAvailabilityText"
 import cn from "@/lib/cn";
 import Switch from "@/components/ui/switch";
 import LoadingPage from "@/components/shared/loading-page";
+import { AppImage } from "@/components/ui/app-image";
 import {
   CalendarCheck,
   Camera,
@@ -21,6 +22,7 @@ import BlurBackImage from "@/components/blur-back-img";
 import Link from "next/link";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
+import { useLanguage } from "@/components/providers/language-provider";
 
 export default function ServiceCard({
   service,
@@ -30,6 +32,9 @@ export default function ServiceCard({
   isSitter: boolean;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
+  const management = t.core.management.actions;
+  const providerCopy = t.settings.provider;
   const { executeCommand, deleteService } = useService();
   const confirm = useConfirm();
   const setIsDeleting = useConfirmStore((s) => s.setIsDeleting);
@@ -49,8 +54,15 @@ export default function ServiceCard({
     priceUnit,
     currency,
   } = service;
-  const { label: serviceTypeLabel, emo: serviceTypeEmo } =
-    SERVICE_TYPE_JA[serviceType];
+  const serviceTypeLabel =
+    t.core.modes[
+      (serviceType === ServiceCategory.VISIT
+        ? "HOME_VISIT"
+        : serviceType === ServiceCategory.FOSTER
+          ? "BOARDING"
+          : "CUSTOM") as keyof typeof t.core.modes
+    ];
+  const serviceTypeEmo = SERVICE_TYPE_JA[serviceType].emo;
   const customType =
     serviceType === ServiceCategory.OTHER ? service.customType : "";
   const { range, conditions } = formatAvailabilityText({
@@ -69,6 +81,7 @@ export default function ServiceCard({
   );
   const fallbackImage = PET_META[petTypes[0]].placeImg;
   const isLoading = executeCommand.isLoading;
+  const priceUnitLabel = priceUnit === "DAY" ? t.core.needPublishingAdvanced.preview.pricePerNight : priceUnit === "HOUR" ? t.core.servicePublishing.amount : t.core.needPublishingAdvanced.preview.pricePerVisit;
   const handleToggle = async (checked: boolean) => {
     executeCommand.mutate({
       id: service.id,
@@ -77,18 +90,18 @@ export default function ServiceCard({
   };
   const handleDelete = async () => {
     const ok = await confirm({
-      title: "サービスの削除",
+      title: management.archive,
       variant: "danger",
-      confirmText: "削除する",
+      confirmText: management.archive,
       content: (
         <div className="space-y-4">
           {/* 主描述文字：居中对齐 */}
           <div className="space-y-1">
             <p className="font-semibold text-slate-800">
-              このサービスを完全に削除してもよろしいですか？
+              {management.archive}
             </p>
             <p className="text-sm text-slate-400">
-              削除すると、これまでの実績や設定がすべて失われ、復元することはできません。
+              {management.archiveQuestion}
             </p>
           </div>
 
@@ -99,10 +112,10 @@ export default function ServiceCard({
             </div>
             <div className="text-[12px] leading-relaxed">
               <p className="font-bold text-purple-900 mb-0.5">
-                「非公開」にしませんか？
+                {management.pause}
               </p>
               <p className="text-primary/80">
-                カード右上のスイッチをオフにするだけで、データを保持したまま募集を一時停止できます。
+                {management.pause}
               </p>
             </div>
           </div>
@@ -124,7 +137,7 @@ export default function ServiceCard({
     <div className="relative overflow-hidden bg-white border border-slate-200 hover:border-slate-300 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col">
       {isLoading && (
         <div className="text-sm absolute inset-0 flex items-center justify-center bg-white rounded-2xl opacity-70 z-20">
-          <LoadingPage title="更新中..." size="w-6 h-6" />
+          <LoadingPage title={providerCopy.loading} size="w-6 h-6" />
         </div>
       )}
       {/* 1. 顶部封面与快捷操作 */}
@@ -154,7 +167,7 @@ export default function ServiceCard({
                   : "border border-amber-500",
               )}
             ></span>
-            <span>{isSitter && isActive ? "公開中" : "停止中"}</span>
+            <span>{isSitter && isActive ? providerCopy.resume : providerCopy.stopped}</span>
           </div>
 
           {/* 右上角开关 */}
@@ -163,6 +176,7 @@ export default function ServiceCard({
               checked={isSitter && isActive}
               onCheckedChange={handleToggle}
               disabled={!isSitter}
+              aria-label={isSitter && isActive ? providerCopy.stopQuestion : providerCopy.resume}
             />
           </div>
         </div>
@@ -190,12 +204,14 @@ export default function ServiceCard({
               key={pet}
               className="inline-flex items-center gap-1 bg-slate-50 text-slate-500 border border-slate-100 rounded-lg px-1.5 py-0.5 text-[10px] font-medium"
             >
-              <img
+              <AppImage
+                width={20}
+                height={20}
                 src={PET_META[pet].headImg}
-                alt={PET_META[pet].label.ja.name}
+                alt={t.core.pets[pet as keyof typeof t.core.pets] ?? pet}
                 className="h-3 w-3"
               />
-              {PET_META[pet].label.ja.name}
+              {t.core.pets[pet as keyof typeof t.core.pets] ?? pet}
             </div>
           ))}
         </div>
@@ -217,21 +233,20 @@ export default function ServiceCard({
                       <span className="font-bold text-[11px]">
                         {rule.price.toLocaleString()}
                       </span>{" "}
-                      {CURRENCY_META[currency].label.ja.short}{" "}
+                      {currency}{" "}
                     </span>
                     <span className="text-[9px] font-normal text-slate-400">
-                      / {PRICE_UNIT_JA[priceUnit]}
+                      / {priceUnitLabel}
                     </span>
                   </span>
                 </div>
               ))}
               {priceRules.length > 2 && (
                 <p className="text-[9px] text-slate-400 flex items-center justify-center gap-1">
-                  --- 他
+                  {t.core.servicePublishing.priceRules} ·
                   <span className="text-[10px] font-mono font-bold text-primary">
                     {priceRules.length - 2}
                   </span>
-                  件の料金設定があります ---
                 </p>
               )}
             </div>
@@ -262,13 +277,13 @@ export default function ServiceCard({
               <Camera className="h-3 w-3" />
               <span className="flex items-center gap-1">
                 <span className="flex items-center gap-0.5">
-                  経験 {experiencePhotos.length} 枚
+                  {t.core.serviceDashboard.serviceEvidence} {experiencePhotos.length}
                 </span>
                 {serviceType === ServiceCategory.FOSTER && (
                   <>
                     •
                     <span className="flex items-center gap-0.5">
-                      環境 {homePhotos.length} 枚
+                      {t.core.serviceDashboard.boardingEnvironment} {homePhotos.length}
                     </span>
                   </>
                 )}
@@ -279,7 +294,7 @@ export default function ServiceCard({
               href={`/services/${id}`} // 跳转到给饲主看的公开详情页
               className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors"
             >
-              プレビュー <ExternalLink className="h-3 w-3" />
+              {management.viewFullDetails} <ExternalLink className="h-3 w-3" />
             </Link>
           </div>
           {/* 第二行：主要操作区 */}
@@ -291,10 +306,10 @@ export default function ServiceCard({
               }
             >
               <Edit3 className="h-3 w-3" />
-              編集する
+              {management.edit}
             </button>
             <button
-              className="cursor-pointer p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-100 transition-all"
+              className="cursor-pointer p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-danger-text hover:border-danger-border transition-all"
               onClick={handleDelete}
             >
               <Trash2 className="w-4 h-4" />

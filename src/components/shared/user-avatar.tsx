@@ -1,6 +1,8 @@
 "use client";
-import Image from "next/image";
+
+import { AppImage } from "@/components/ui/app-image";
 import { stringToAvatarColors } from "@/lib/avatarColor";
+
 export default function UserAvatar({
   image,
   name,
@@ -18,12 +20,14 @@ export default function UserAvatar({
     name?.charAt(0).toUpperCase() || email?.charAt(0)?.toUpperCase() || "?";
   if (image) {
     return (
-      <Image
+      <AppImage
         src={image}
         alt="avatar"
         width={size}
         height={size}
-        className="rounded-full object-cover"
+        unoptimized
+        className="shrink-0 rounded-full object-cover"
+        style={{ width: size, height: size }}
       />
     );
   }

@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 
 import { NEED_ENTRY_STORAGE_KEY } from "@/app/(flow)/needs/create/preview/types";
 import Navbar from "./Navbar";
+import { useLanguage } from "@/components/providers/language-provider";
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const isNeedCreationFlow = pathname === "/needs/create" || pathname.startsWith("/needs/create/");
 
   useEffect(() => {
@@ -17,10 +19,19 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only z-[1000] rounded-md bg-white px-3 py-2 text-sm font-bold text-primary focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        {t.nav.skipToContent}
+      </a>
       {!isNeedCreationFlow && <Navbar />}
-      <main className={isNeedCreationFlow ? "flex min-h-screen flex-1 flex-col" : "flex flex-1 flex-col pt-16"}>
+      <div
+        id="main-content"
+        className={isNeedCreationFlow ? "flex min-h-screen flex-1 flex-col" : "flex flex-1 flex-col pt-16"}
+      >
         {children}
-      </main>
+      </div>
     </>
   );
 }

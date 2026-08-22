@@ -131,7 +131,7 @@ export function PublishingDraftDemo() {
           </p>
         </div>
         {draft.error ? (
-          <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-800">
+          <p role="alert" className="rounded-xl bg-danger-bg p-3 text-sm font-bold text-danger-text">
             Draft could not be loaded.
           </p>
         ) : null}

@@ -213,21 +213,21 @@ export function MarketplaceHome() {
               <button
                 type="button"
                 onClick={startNeed}
-                className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-[#5d3a86] px-7 text-sm font-bold text-white shadow-[0_16px_34px_-20px_rgba(93,58,134,.8)] transition hover:bg-[#4b2e6d]"
+                className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-7 text-sm font-bold text-white shadow-[0_16px_34px_-20px_rgba(93,58,134,.8)] transition hover:bg-[var(--primary-hover)]"
               >
                 {text.heroPost}
                 <ArrowRight size={18} />
               </button>
               <Link
                 href="/how-it-works/services"
-                className="inline-flex h-14 items-center justify-center gap-2 rounded-xl border border-[#b8a9c2] bg-white/75 px-7 text-sm font-bold text-[#5d3a86] backdrop-blur transition hover:bg-white"
+                className="inline-flex h-14 items-center justify-center gap-2 rounded-xl border border-[#b8a9c2] bg-white/75 px-7 text-sm font-bold text-[var(--primary)] backdrop-blur transition hover:bg-white"
               >
                 {text.earn}
               </Link>
             </div>
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold text-[#655d69]">
-              <span className="inline-flex items-center gap-2"><ShieldCheck size={16} className="text-[#5d3a86]" />Clear sitter profiles</span>
-              <span className="inline-flex items-center gap-2"><HeartHandshake size={16} className="text-[#5d3a86]" />Talk before deciding</span>
+              <span className="inline-flex items-center gap-2"><ShieldCheck size={16} className="text-[var(--primary)]" />Clear sitter profiles</span>
+              <span className="inline-flex items-center gap-2"><HeartHandshake size={16} className="text-[var(--primary)]" />Talk before deciding</span>
             </div>
           </div>
         </div>
@@ -242,7 +242,7 @@ export function MarketplaceHome() {
           </div>
           <div className="grid border-t border-[#bdd49c] sm:grid-cols-2 md:border-l md:border-t-0">
             <Link href="/public/sitters" className="group flex min-h-36 flex-col justify-between border-b border-[#bdd49c] p-6 transition hover:bg-white/25 sm:border-b-0 sm:border-r md:min-h-0">
-              <PawPrint className="text-[#5d3a86]" />
+              <PawPrint className="text-[var(--primary)]" />
               <span className="mt-8 flex items-center justify-between font-bold">{text.findSitter}<ArrowRight className="transition group-hover:translate-x-1" size={19} /></span>
             </Link>
             <Link href="/public/needs" className="group flex min-h-36 flex-col justify-between p-6 transition hover:bg-white/25 md:min-h-0">
@@ -261,12 +261,12 @@ export function MarketplaceHome() {
             <ol className="mt-8 space-y-4">
               {text.needSteps.map((step, index) => (
                 <li key={step} className="grid grid-cols-[32px_1fr] items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e9ddf0] text-xs font-bold text-[#5d3a86]">{index + 1}</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e9ddf0] text-xs font-bold text-[var(--primary)]">{index + 1}</span>
                   <p className="font-bold leading-6 text-[#392847]">{step}</p>
                 </li>
               ))}
             </ol>
-            <button onClick={startNeed} className="mt-9 inline-flex h-12 items-center gap-2 rounded-xl bg-[#5d3a86] px-6 text-sm font-bold text-white transition hover:bg-[#4b2e6d]">{text.post}<ArrowRight size={17} /></button>
+            <button onClick={startNeed} className="mt-9 inline-flex h-12 items-center gap-2 rounded-xl bg-[var(--primary)] px-6 text-sm font-bold text-white transition hover:bg-[var(--primary-hover)]">{text.post}<ArrowRight size={17} /></button>
           </div>
 
           <div>
@@ -291,7 +291,7 @@ export function MarketplaceHome() {
               </div>
             </div>
             <div className="mt-6 flex justify-center">
-              <Link href="/care-types" className="inline-flex items-center gap-2 text-sm font-bold text-[#5d3a86] transition hover:text-[#4b2e6d]">
+              <Link href="/care-types" className="inline-flex items-center gap-2 text-sm font-bold text-[var(--primary)] transition hover:text-[var(--primary-hover)]">
                 {text.compare}<ArrowRight size={17} />
               </Link>
             </div>
@@ -315,14 +315,14 @@ export function MarketplaceHome() {
                     return (
                       <Link key={`${need.title}-${duplicate}`} tabIndex={duplicate ? -1 : undefined} href="/public/needs" className="group w-[300px] shrink-0 rounded-[18px] border border-[#ded6e1] bg-white p-5 transition hover:border-[#bda9c9] hover:shadow-[0_18px_45px_-34px_rgba(49,38,58,.55)] sm:w-[340px]">
                         <div className="flex items-start justify-between gap-4">
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-[#eee7f3] text-[#5d3a86]"><Icon size={21} /></span>
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-[#eee7f3] text-[var(--primary)]"><Icon size={21} /></span>
                           <span className="rounded-full bg-[#f4f0f6] px-3 py-1.5 text-[11px] font-bold text-[#66566f]">{need.type}</span>
                         </div>
                         <h3 className="mt-5 line-clamp-2 text-base font-bold leading-6 text-[#392847]">{need.title}</h3>
                         <p className="mt-2 text-sm text-[#706a78]">{need.pet}</p>
                         <div className="mt-5 flex items-end justify-between gap-4 border-t border-[#ece6ee] pt-4">
                           <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#817a85]"><MapPin size={14} />{need.meta}</p>
-                          <span className="shrink-0 font-bold text-[#5d3a86]">{need.price}</span>
+                          <span className="shrink-0 font-bold text-[var(--primary)]">{need.price}</span>
                         </div>
                       </Link>
                     );
@@ -333,7 +333,7 @@ export function MarketplaceHome() {
           </div>
 
           <div className="mt-9 flex justify-center">
-            <button onClick={startNeed} className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#5d3a86] px-6 text-sm font-bold text-white transition hover:bg-[#4b2e6d]">
+            <button onClick={startNeed} className="inline-flex h-12 items-center gap-2 rounded-xl bg-[var(--primary)] px-6 text-sm font-bold text-white transition hover:bg-[var(--primary-hover)]">
               {text.heroPost}<ArrowRight size={17} />
             </button>
           </div>
@@ -348,7 +348,7 @@ export function MarketplaceHome() {
               <Link key={sitter.name} href="/public/sitters" className="group overflow-hidden rounded-[20px] border border-[#ddcfc1] bg-[#fffdf9]">
                 <div className="relative aspect-[16/9] overflow-hidden">
                   <Image src={sitter.image} alt={`${sitter.name}, ${sitter.role}`} fill sizes="(max-width:1024px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-[1.025]" />
-                  <span className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#5d3a86]"><BadgeCheck size={19} /></span>
+                  <span className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--primary)]"><BadgeCheck size={19} /></span>
                 </div>
                 <div className="p-5 md:p-6">
                   <div className="flex items-start justify-between gap-4">
@@ -365,12 +365,12 @@ export function MarketplaceHome() {
       </section>
 
       <section className="site-shell py-16 md:py-24">
-        <div className="relative overflow-hidden rounded-[26px] bg-[#5d3a86] px-6 py-14 text-white sm:px-10 md:px-16 md:py-20">
+        <div className="relative overflow-hidden rounded-[26px] bg-[var(--primary)] px-6 py-14 text-white sm:px-10 md:px-16 md:py-20">
           <div className="relative z-10 max-w-3xl">
             <h2 className="text-3xl font-bold tracking-[-0.04em] md:text-5xl">{text.finalTitle}</h2>
             <p className="mt-4 text-base text-white/72 md:text-lg">{text.finalText}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <button onClick={startNeed} className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-bold text-[#5d3a86]">{text.post}<ArrowRight size={17} /></button>
+              <button onClick={startNeed} className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-bold text-[var(--primary)]">{text.post}<ArrowRight size={17} /></button>
               <Link href="/how-it-works/services" className="inline-flex h-13 items-center justify-center gap-2 rounded-xl border border-white/35 px-6 text-sm font-bold">{text.howService}</Link>
             </div>
           </div>
@@ -401,7 +401,7 @@ function SectionHeading({
         <h2 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.04em] md:text-5xl">{title}</h2>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-[#706a78] md:text-base">{text}</p>
       </div>
-      {action && actionLabel && <Link href={action} className="inline-flex shrink-0 items-center gap-2 text-sm font-bold text-[#5d3a86]">{actionLabel}<ArrowRight size={17} /></Link>}
+      {action && actionLabel && <Link href={action} className="inline-flex shrink-0 items-center gap-2 text-sm font-bold text-[var(--primary)]">{actionLabel}<ArrowRight size={17} /></Link>}
     </div>
   );
 }

@@ -10,6 +10,7 @@ try {
     create: {
       id: userId,
       email: "profile-e2e@petnido.invalid",
+      emailVerified: new Date("2026-08-04T00:00:00.000Z"),
       name: "Mika",
       profile: {
         create: {

@@ -3,14 +3,17 @@ import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuthModal } from "@/components/providers/AuthModalProvider";
+import { useAuthModal } from "@/modules/auth/client/auth-modal-provider";
 import { useRouter } from "next/navigation";
 import { Session } from "next-auth";
+import { useLanguage } from "@/components/providers/language-provider";
+import { useAuthMessages } from "@/modules/auth/i18n/use-auth-messages";
 interface CreateButtonProps {
   initialSession: Session | null;
 }
 
 export function LoginButton() {
+  const copy = useAuthMessages().modal;
   const { openAuthModal } = useAuthModal();
   return (
     <Button
@@ -18,11 +21,12 @@ export function LoginButton() {
       variant="primary"
       onClick={() => openAuthModal()}
     >
-      ログイン
+      {copy.login}
     </Button>
   );
 }
 export function LogoutButton() {
+  const copy = useAuthMessages().modal;
   const pathname = usePathname();
 
   const handleLogout = async () => {
@@ -42,11 +46,12 @@ export function LogoutButton() {
       onClick={handleLogout}
     >
       <LogOut size={18} className="text-primary" />
-      ログアウト
+      {copy.signOut}
     </Button>
   );
 }
 export function CreateNeedButton({ initialSession }: CreateButtonProps) {
+  const { t } = useLanguage();
   const router = useRouter();
   const handleCreateNeed = () => router.push("/needs/create");
   return (
@@ -55,11 +60,12 @@ export function CreateNeedButton({ initialSession }: CreateButtonProps) {
       className="px-8 py-3 rounded-full w-[85%] md:w-auto text-lg"
       onClick={handleCreateNeed}
     >
-      お世話を依頼する
+      {t.home.postNeed}
     </Button>
   );
 }
 export function CreateServiceButton({ initialSession }: CreateButtonProps) {
+  const { t } = useLanguage();
   const { openAuthModal } = useAuthModal();
   const router = useRouter();
   const handleCreateService = () => {
@@ -77,7 +83,7 @@ export function CreateServiceButton({ initialSession }: CreateButtonProps) {
       className="px-8 py-3 rounded-full w-[85%] md:w-auto text-lg"
       onClick={handleCreateService}
     >
-      シッターに登録する
+      {t.home.becomeSitter}
     </Button>
   );
 }

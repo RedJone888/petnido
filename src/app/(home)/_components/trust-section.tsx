@@ -1,5 +1,6 @@
 "use client";
 import { useLanguage } from "@/components/providers/language-provider";
+import { AppImage } from "@/components/ui/app-image";
 import {
   ShieldCheck,
   // Heart,
@@ -18,7 +19,7 @@ export function TrustSection() {
     <div className="w-full max-w-container-max-width mx-auto px-margin-mobile flex flex-row items-center gap-16 md:px-margin-desktop">
       <div className="hidden md:grid md:gap-4 md:w-1/2 md:grid-cols-2">
         {trustImages.map((image, index) => (
-          <img
+          <AppImage
             key={image}
             src={image}
             alt={index === 0 ? "Person with small pet" : "Cat interaction"}
@@ -36,7 +37,7 @@ export function TrustSection() {
           {t.home.trust.title}
         </h2>
         <div className="md:hidden rounded-3xl overflow-hidden shadow-lg h-48 mb-6">
-          <img
+          <AppImage
             alt="Community trust"
             className="w-full h-full object-cover"
             src={trustImages[0]}

@@ -1,4 +1,5 @@
 import type { AddressLevel } from "@/domain/location/types";
+import type { Lang } from "@/domain/lang/types";
 import { getLevelMap } from "./getLevelMap";
 
 function isPOI(r: any) {
@@ -16,7 +17,7 @@ function normalizeAddress(address: any) {
   }
   return buckets;
 }
-export function formatJapaneseAddress(r: any) {
+export function formatJapaneseAddress(r: any, lang: Lang = "ja") {
   const a = r.address ?? {};
   const normalized = normalizeAddress(a);
   const subHierarchy = [
@@ -28,7 +29,15 @@ export function formatJapaneseAddress(r: any) {
     normalized.residential,
   ].filter(Boolean);
   let main = "";
-  if (r.type === "station") main = `${r.name}駅`;
+  if (r.type === "station") {
+    const stationSuffix =
+      lang === "ja" ? "駅" : lang === "zh" ? "站" : " Station";
+    const alreadyHasSuffix =
+      lang === "en"
+        ? /\bstation$/i.test(r.name)
+        : r.name.endsWith(stationSuffix);
+    main = alreadyHasSuffix ? r.name : `${r.name}${stationSuffix}`;
+  }
   else if (isPOI(r)) {
     if (r.name) {
       main = `${r.name}（${subHierarchy.slice(-2).join(" ")}）`;
@@ -37,7 +46,11 @@ export function formatJapaneseAddress(r: any) {
         normalized.residential ||
         normalized.neighbourhood ||
         normalized.district ||
-        "周辺施設";
+        (lang === "ja"
+          ? "周辺施設"
+          : lang === "zh"
+            ? "附近设施"
+            : "Nearby place");
     }
   } else
     main =
@@ -48,5 +61,10 @@ export function formatJapaneseAddress(r: any) {
       normalized.city;
 
   const sub = subHierarchy.filter((part) => !main.includes(part!)).join(" ");
-  return { main, sub };
+  const publicRegionParts = [normalized.city, normalized.district]
+    .filter((part, index, values): part is string => Boolean(part) && values.indexOf(part) === index);
+  const publicRegion = publicRegionParts
+    .join(lang === "en" ? ", " : "")
+    .replace(lang === "zh" ? /區/g : /$^/, "区");
+  return { main, sub, publicRegion };
 }

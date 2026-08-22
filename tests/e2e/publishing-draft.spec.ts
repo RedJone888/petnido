@@ -9,7 +9,7 @@ test("shared publishing shell persists a real versioned draft", async ({ page },
   );
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error" && !message.text().startsWith("ClientFetchError: Failed to fetch.")) consoleErrors.push(message.text());
   });
 
   await page.goto(

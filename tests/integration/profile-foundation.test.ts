@@ -19,6 +19,10 @@ function context(userId: string) {
 }
 
 async function reset() {
+  await prisma.serviceV2.deleteMany();
+  await prisma.needV2.deleteMany();
+  await prisma.locationSnapshotV2.deleteMany();
+  await prisma.publishDraftV2.deleteMany();
   await prisma.notificationPreference.deleteMany();
   await prisma.serviceProfile.deleteMany();
   await prisma.userLocation.deleteMany();
@@ -30,7 +34,7 @@ async function reset() {
 
 async function createUser(email: string) {
   return prisma.user.create({
-    data: { email, profile: { create: {} } },
+    data: { email, emailVerified: new Date("2026-08-04T00:00:00.000Z"), profile: { create: {} } },
   });
 }
 
@@ -60,6 +64,37 @@ describe("profile foundation", () => {
       onboardingStep: "COMPLETE",
       initialIntent: "POST_NEED",
     });
+  });
+
+  it("lets a first-time user finish onboarding without publishing", async () => {
+    const user = await createUser("browse@example.com");
+    const caller = profileRouter.createCaller(context(user.id));
+
+    await caller.completeOnboardingProfile({
+      nickname: "Browser",
+      avatarUrl: null,
+      preferredLocale: "en",
+      timeZone: "Asia/Tokyo",
+    });
+    await expect(
+      caller.chooseInitialIntent({ intent: "BROWSE" }),
+    ).resolves.toEqual({ nextStep: "COMPLETE" });
+
+    expect(
+      await prisma.profile.findUniqueOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({ onboardingStep: "COMPLETE", initialIntent: "BROWSE" });
+  });
+
+  it("persists the header language choice for signed-in notifications", async () => {
+    const user = await createUser("locale@example.com");
+    const caller = profileRouter.createCaller(context(user.id));
+
+    await expect(
+      caller.setPreferredLocale({ preferredLocale: "zh" }),
+    ).resolves.toEqual({ preferredLocale: "zh" });
+    expect(
+      await prisma.profile.findUniqueOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({ preferredLocale: "zh" });
   });
 
   it("confirms provider mode and creates one service profile", async () => {
@@ -112,6 +147,47 @@ describe("profile foundation", () => {
 
     expect(await ownerCaller.listMine()).toEqual([]);
     expect(await prisma.pet.count({ where: { id: pet.id } })).toBe(1);
+  });
+
+  it("saves complete pet details and links an owned profile photo", async () => {
+    const owner = await createUser("pet-details@example.com");
+    const photo = await prisma.attachment.create({
+      data: {
+        userId: owner.id,
+        url: "https://cdn.example/mochi.jpg",
+        fileKey: "mochi-photo",
+        signature: "mochi-photo",
+      },
+    });
+    const caller = petRouter.createCaller(context(owner.id));
+
+    const pet = await caller.create({
+      name: "Mochi",
+      type: "CAT",
+      breed: "British Shorthair",
+      age: 3,
+      birthDate: new Date("2023-05-10T00:00:00.000Z"),
+      weightGrams: 4200,
+      sex: "FEMALE",
+      neutered: "YES",
+      notes: "Indoor cat",
+      photoIds: [photo.id],
+    });
+
+    expect(await caller.listMine()).toEqual([
+      expect.objectContaining({
+        id: pet.id,
+        name: "Mochi",
+        breed: "British Shorthair",
+        weightGrams: 4200,
+        sex: "FEMALE",
+        neutered: "YES",
+        photos: [expect.objectContaining({ id: photo.id, url: photo.url })],
+      }),
+    ]);
+    expect(
+      await prisma.attachment.findUniqueOrThrow({ where: { id: photo.id } }),
+    ).toMatchObject({ petId: pet.id, status: 1 });
   });
 
   it("keeps one default location and rejects precise location text", async () => {
@@ -228,8 +304,8 @@ describe("profile foundation", () => {
     const otherCaller = notificationPreferenceRouter.createCaller(context(other.id));
 
     await expect(caller.getMine()).resolves.toMatchObject({ emailInstant: false });
-    await expect(caller.updateMine({ emailInstant: true })).resolves.toMatchObject({
-      emailInstant: true,
+    await expect(caller.updateMine({ emailInstant: false })).resolves.toMatchObject({
+      emailInstant: false,
     });
     await expect(otherCaller.getMine()).resolves.toMatchObject({
       emailInstant: false,

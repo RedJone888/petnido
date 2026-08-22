@@ -105,12 +105,12 @@ export default function TimeAndArea({ locController }: Props) {
                         className={cn(
                           "w-full rounded-xl bg-white px-3 py-2 text-sm outline-none ring-1 focus:ring-2",
                           errors.availableFrom
-                            ? "ring-red-500"
+                            ? "ring-danger-text"
                             : "ring-transparent focus:ring-purple-500",
                         )}
                       />
                       {errors.availableFrom && (
-                        <span className="absolute -top-1 -translate-y-full right-1 whitespace-nowrap text-[10px] text-red-500">
+                        <span className="absolute -top-1 -translate-y-full right-1 whitespace-nowrap text-[10px] text-danger-text">
                           {errors.availableFrom.message}
                         </span>
                       )}
@@ -129,12 +129,12 @@ export default function TimeAndArea({ locController }: Props) {
                           "w-full rounded-xl bg-white px-3 py-2 text-sm outline-none ring-1 focus:ring-2",
                           "focus:outline-none",
                           errors.availableTo
-                            ? "ring-red-500"
+                            ? "ring-danger-text"
                             : "ring-transparent focus:ring-purple-500",
                         )}
                       />
                       {errors.availableTo && (
-                        <span className="absolute -top-1 -translate-y-full right-1 whitespace-nowrap text-[10px] text-red-500">
+                        <span className="absolute -top-1 -translate-y-full right-1 whitespace-nowrap text-[10px] text-danger-text">
                           {errors.availableTo.message}
                         </span>
                       )}

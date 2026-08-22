@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 
 import { petCreateSchema, petIdSchema, petUpdateSchema } from "@/lib/zod/pet";
+import { linkPhotos, syncPhotos } from "@/server/lib/photos";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
 
 export const petRouter = router({
@@ -11,9 +12,21 @@ export const petRouter = router({
         id: true,
         name: true,
         type: true,
+        customType: true,
+        quantity: true,
         breed: true,
         age: true,
+        birthDate: true,
+        weightGrams: true,
+        sex: true,
+        neutered: true,
         notes: true,
+        photos: {
+          where: { status: 1 },
+          select: { id: true, url: true, fileKey: true, signature: true },
+          orderBy: { order: "asc" },
+          take: 1,
+        },
         createdAt: true,
         updatedAt: true,
       },
@@ -24,26 +37,46 @@ export const petRouter = router({
   create: protectedProcedure
     .input(petCreateSchema)
     .mutation(({ ctx, input }) =>
-      ctx.prisma.pet.create({
-        data: { ownerId: ctx.session.user.id, ...input },
+      ctx.prisma.$transaction(async (tx) => {
+        const { photoIds = [], ...data } = input;
+        const pet = await tx.pet.create({
+          data: { ownerId: ctx.session.user.id, ...data },
+        });
+        await linkPhotos({
+          tx,
+          userId: ctx.session.user.id,
+          photoIds,
+          petId: pet.id,
+        });
+        return pet;
       }),
     ),
 
   update: protectedProcedure
     .input(petUpdateSchema)
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
-      const updated = await ctx.prisma.pet.updateMany({
-        where: { id, ownerId: ctx.session.user.id, archivedAt: null },
-        data,
-      });
-      if (updated.count !== 1) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "RESOURCE_NOT_FOUND",
+      const { id, photoIds, ...data } = input;
+      return ctx.prisma.$transaction(async (tx) => {
+        const updated = await tx.pet.updateMany({
+          where: { id, ownerId: ctx.session.user.id, archivedAt: null },
+          data,
         });
-      }
-      return ctx.prisma.pet.findUniqueOrThrow({ where: { id } });
+        if (updated.count !== 1) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "RESOURCE_NOT_FOUND",
+          });
+        }
+        if (photoIds) {
+          await syncPhotos({
+            tx,
+            userId: ctx.session.user.id,
+            photoIds,
+            petId: id,
+          });
+        }
+        return tx.pet.findUniqueOrThrow({ where: { id } });
+      });
     }),
 
   archive: protectedProcedure

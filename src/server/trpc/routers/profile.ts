@@ -3,6 +3,8 @@ import { TRPCError } from "@trpc/server";
 import {
   onboardingIntentInputSchema,
   onboardingProfileSchema,
+  preferredLocaleUpdateSchema,
+  preferredCurrencyUpdateSchema,
   profileUpdateSchema,
   avatarAttachmentSchema,
 } from "@/lib/zod/profile";
@@ -11,6 +13,7 @@ import { protectedProcedure, router } from "@/server/trpc/trpc";
 const mineSelect = {
   id: true,
   email: true,
+  emailVerified: true,
   name: true,
   image: true,
   avatarAttachmentId: true,
@@ -34,6 +37,55 @@ export const profileRouter = router({
       select: mineSelect,
     }),
   ),
+
+  getPreferredCurrency: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const profile = await ctx.prisma.profile.findUniqueOrThrow({
+        where: { userId: ctx.session.user.id },
+        select: { preferredCurrency: true },
+      });
+      return profile.preferredCurrency;
+    } catch (error) {
+      const code =
+        typeof error === "object" && error && "code" in error
+          ? String(error.code)
+          : "";
+      if (code === "P2022") return "JPY" as const;
+      throw error;
+    }
+  }),
+
+  setPreferredLocale: protectedProcedure
+    .input(preferredLocaleUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.prisma.profile.updateMany({
+        where: { userId: ctx.session.user.id },
+        data: { preferredLocale: input.preferredLocale },
+      });
+      if (result.count !== 1) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "RESOURCE_NOT_FOUND",
+        });
+      }
+      return { preferredLocale: input.preferredLocale };
+    }),
+
+  setPreferredCurrency: protectedProcedure
+    .input(preferredCurrencyUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.prisma.profile.updateMany({
+        where: { userId: ctx.session.user.id },
+        data: { preferredCurrency: input.preferredCurrency },
+      });
+      if (result.count !== 1) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "RESOURCE_NOT_FOUND",
+        });
+      }
+      return { preferredCurrency: input.preferredCurrency };
+    }),
 
   updateMine: protectedProcedure
     .input(profileUpdateSchema)

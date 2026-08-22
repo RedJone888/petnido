@@ -19,6 +19,7 @@ import UserAvatar from "@/components/shared/user-avatar";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/providers/language-provider";
 type Props = {
   isSitter: boolean;
   profileInfo: { rating: number; reviewCount: number } & BaseInfo;
@@ -30,6 +31,9 @@ export default function ProfileHeader({
   onEditBaseInfo,
 }: Props) {
   const { data: session } = useSession();
+  const { t } = useLanguage();
+  const copy = t.settings.provider;
+  const management = t.core.management;
   const router = useRouter();
   const { toggleSitter } = useServiceProfile();
   const confirm = useConfirm();
@@ -58,19 +62,19 @@ export default function ProfileHeader({
   const handleSetSitter = async () => {
     if (isSitter) {
       const ok = await confirm({
-        title: "サービス受付の停止",
+        title: copy.stopQuestion,
         variant: "danger",
-        confirmText: "停止する",
+        confirmText: copy.stopped,
         content: (
           <div className="space-y-4">
             <div className="space-y-1">
               <p className="font-semibold text-slate-800">
-                サービスの受付を一時停止しますか？
+                {copy.stopQuestion}
               </p>
               <p className="text-sm text-slate-400">
-                受付を停止すると、あなたのプロフィールおよびすべてのサービスが検索結果から非公開になります。
+                {copy.acceptingDescription}
                 <span className="block mt-2 py-1 px-2 text-[11px]">
-                  ※ 確定済みの予約やチャットへの影響はありません。
+                  {copy.acceptingDescription}
                 </span>
               </p>
             </div>
@@ -110,7 +114,7 @@ export default function ProfileHeader({
           </div>
           <div className="text-[12px] font-light text-slate-700">
             <div className="flex gap-1 items-center justify-center">
-              <label className="text-[10px] text-slate-400">評価</label>
+              <label className="text-[10px] text-slate-400">{t.core.workflow.rating}</label>
               <div className="flex items-center gap-1">
                 <div className="flex">
                   <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-400" />
@@ -123,8 +127,8 @@ export default function ProfileHeader({
               </div>
             </div>
             <div className="flex gap-1 items-center justify-center mt-2">
-              <label className="text-[10px] text-slate-400">レビュー</label>
-              <span>{reviewCount}件</span>
+              <label className="text-[10px] text-slate-400">{t.core.common.reviewCount}</label>
+              <span>{reviewCount}</span>
             </div>
           </div>
         </div>
@@ -133,15 +137,15 @@ export default function ProfileHeader({
           {/* 标题 */}
           <div>
             <h1 className="-ml-3 text-xl font-bold text-slate-800">
-              <span className="text-primary">{user?.name ?? "ゲスト"}さん</span>
+              <span className="text-primary">{user?.name ?? t.core.common.providerFallback}</span>
               <span className="text-slate-400 ml-1 text-lg font-normal">
-                のサービスプロフィール
+                {copy.title}
               </span>
             </h1>
 
             {/* 核心介绍 */}
             <p className="mt-2 mb-3 text-sm text-slate-500 max-w-xs line-clamp-2">
-              {introduction || "まだ自己紹介がありません 🌱"}
+              {introduction || t.core.workflow.noIntroduction}
             </p>
           </div>
           {/* 核心信息条 */}
@@ -150,7 +154,7 @@ export default function ProfileHeader({
               <div className="flex items-center gap-1.5 text-sm text-slate-600">
                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
                 <span className="font-medium">
-                  {hasLocation ? baseAreaRaw : "対応エリア未設定"}
+                  {hasLocation ? baseAreaRaw : copy.notSet}
                 </span>
               </div>
               <div className="w-px h-4 bg-slate-200" />
@@ -159,7 +163,7 @@ export default function ProfileHeader({
                 {baseCurrency ? (
                   <CurrencyFlag currency={baseCurrency} />
                 ) : (
-                  "使用通貨未設定"
+                  copy.notSet
                 )}
               </div>
               <div className="w-px h-4 bg-slate-200" />
@@ -167,11 +171,11 @@ export default function ProfileHeader({
                 <Briefcase className="h-3.5 w-3.5 text-slate-400" />
                 {monthsExperience ? (
                   <span>
-                    お世話经验: {years > 0 ? `${years}年` : ""}
-                    {months}ヶ月
+                    {copy.experience}: {years > 0 ? `${years}y ` : ""}
+                    {months}m
                   </span>
                 ) : (
-                  "お世話経験未設定"
+                  copy.notSet
                 )}
               </div>
             </div>
@@ -187,38 +191,48 @@ export default function ProfileHeader({
         <div className="w-40 flex items-center justify-center">
           <div
             onClick={handleSetSitter}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSitter}
+            aria-label={isSitter ? copy.stopQuestion : copy.resume}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                void handleSetSitter();
+              }
+            }}
             className={cn(
               "w-full cursor-pointer group relative flex flex-col items-center justify-center px-4 py-3 rounded-2xl border-2 transition-all duration-200",
               isSitter
                 ? "bg-primary/5 border-primary/20 hover:border-primary/50 shadow-sm"
-                : "bg-red-50 border-red-200 hover:border-red-300",
+                : "bg-danger-bg border-danger-border hover:border-danger-border",
             )}
           >
             <div className="flex items-center gap-4">
               <span
                 className={cn(
                   "h-2 w-2 rounded-full animate-pulse",
-                  isSitter ? "bg-green-500" : "bg-red-400",
+                  isSitter ? "bg-green-500" : "bg-danger-text",
                 )}
               ></span>
               <span
                 className={cn(
                   "text-sm font-bold",
-                  isSitter ? "text-primary" : "text-red-500",
+                  isSitter ? "text-primary" : "text-danger-text",
                 )}
               >
-                {isSitter ? "受付中" : "停止中"}
+                {isSitter ? copy.resume : copy.stopped}
               </span>
             </div>
             <p className="text-[10px] text-center my-1 text-slate-400">
               {isSitter
-                ? "現在、検索結果に表示され\n依頼を受け付けています"
-                : "現在、すべてのサービスが\n検索結果から非公開です"}
+                ? copy.acceptingDescription
+                : copy.stopped}
             </p>
             <div
               className={cn(
                 "flex items-center gap-1 text-[10px] transition-colors",
-                isSitter ? "text-red-500" : "text-primary",
+                isSitter ? "text-danger-text" : "text-primary",
               )}
             >
               {toggleSitter.isLoading ? (
@@ -229,10 +243,10 @@ export default function ProfileHeader({
 
               <span>
                 {toggleSitter.isLoading
-                  ? "通信中..."
+                  ? copy.loading
                   : isSitter
-                    ? "クリックで停止"
-                    : "クリックで再開"}
+                    ? copy.stopQuestion
+                    : copy.resume}
               </span>
             </div>
           </div>
@@ -241,7 +255,7 @@ export default function ProfileHeader({
 
       <div className="flex justify-between items-end">
         <h2 className="text-md text-slate-500 tracking-tight">
-          提供しているサービス
+          {t.core.management.myServices}
         </h2>
         {/* 悬浮或显眼的新增按钮 */}
         {/* <button
@@ -249,14 +263,14 @@ export default function ProfileHeader({
           onClick={() => router.push("/dashboard/serviceprofile/services/new")}
         >
           <Plus className="h-4 w-4" strokeWidth={3} />
-          新しいサービスを追加する
+          {management.addService}
         </button> */}
         <Button
           onClick={() => router.push("/dashboard/serviceprofile/services/new")}
           className="shrink-0 inline-flex rounded-full text-sm border px-4 py-1.5 text-white font-bold bg-purple-600 hover:bg-purple-700 shadow-sm shadow-purple-100 items-center gap-2"
         >
           <Plus className="h-4 w-4" strokeWidth={3} />
-          新しいサービスを追加する
+          {management.addService}
         </Button>
       </div>
     </div>

@@ -18,7 +18,7 @@ import {
   UserRoundSearch,
 } from "lucide-react";
 
-import { useLanguage } from "@/components/providers/language-provider";
+import { usePageLanguage } from "@/components/providers/language-provider";
 
 type Lang = "en" | "zh" | "ja";
 
@@ -193,23 +193,25 @@ const careTypes = [
   },
 ];
 
-export function HowItWorksHub() {
-  const { lang } = useLanguage();
+export function HowItWorksHub({ language }: { language?: Lang } = {}) {
+  const lang = usePageLanguage(language);
+  const routePrefix = language ? `/${language}` : "";
   const text = labels[lang];
   return (
     <GuideFrame eyebrow="PetNido guide" title={text.hubTitle} text={text.hubText}>
       <div className="grid gap-5 md:grid-cols-3">
-        <PathCard icon={UserRoundSearch} title={text.ownerTitle} text={text.ownerText} href="/how-it-works/needs" image="/images/home/need-rabbit-care-doodle.png" />
-        <PathCard icon={PawPrint} title={text.sitterTitle} text={text.sitterText} href="/how-it-works/services" image="/images/home/sitter-dog-doodle.png" />
-        <PathCard icon={Search} title={text.compareTitle} text={text.compareText} href="/care-types" image="/images/home/care-home-visit-doodle.png" />
+        <PathCard icon={UserRoundSearch} title={text.ownerTitle} text={text.ownerText} href={`${routePrefix}/how-it-works/needs`} image="/images/home/need-rabbit-care-doodle.png" />
+        <PathCard icon={PawPrint} title={text.sitterTitle} text={text.sitterText} href={`${routePrefix}/how-it-works/services`} image="/images/home/sitter-dog-doodle.png" />
+        <PathCard icon={Search} title={text.compareTitle} text={text.compareText} href={`${routePrefix}/care-types`} image="/images/home/care-home-visit-doodle.png" />
       </div>
       <FlowStrip lang={lang} />
     </GuideFrame>
   );
 }
 
-export function PostingGuide({ kind }: { kind: "needs" | "services" }) {
-  const { lang } = useLanguage();
+export function PostingGuide({ kind, language }: { kind: "needs" | "services"; language?: Lang }) {
+  const lang = usePageLanguage(language);
+  const routePrefix = language ? `/${language}` : "";
   const text = labels[lang];
   const isNeed = kind === "needs";
   const steps = isNeed ? text.needSteps : text.serviceSteps;
@@ -218,12 +220,12 @@ export function PostingGuide({ kind }: { kind: "needs" | "services" }) {
       <section className="rounded-[24px] bg-[#f2edf4] p-5 md:p-8">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div><span className="text-xs font-bold uppercase tracking-[.14em] text-[#8a5d34]">Step 01</span><h2 className="mt-2 text-2xl font-bold">{text.chooseFirst}</h2></div>
-          <Link href="/care-types" className="inline-flex items-center gap-2 text-sm font-bold text-[#5d3a86]">{text.compare}<ArrowRight size={16} /></Link>
+          <Link href={`${routePrefix}/care-types`} className="inline-flex items-center gap-2 text-sm font-bold text-[var(--primary)]">{text.compare}<ArrowRight size={16} /></Link>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {careTypes.map((care) => {
             const Icon = care.icon;
-            return <Link key={care.id} href={`/care-types/${care.id}`} className="group rounded-[18px] border border-[#ddd3e1] bg-white p-5"><Icon className="text-[#5d3a86]" size={22} /><h3 className="mt-5 font-bold">{care.title[lang]}</h3><p className="mt-1 text-sm text-[#706a78]">{care.subtitle[lang]}</p><span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#5d3a86]">Details <ChevronRight size={14} /></span></Link>;
+            return <Link key={care.id} href={`${routePrefix}/care-types/${care.id}`} className="group rounded-[18px] border border-[#ddd3e1] bg-white p-5"><Icon className="text-[var(--primary)]" size={22} /><h3 className="mt-5 font-bold">{care.title[lang]}</h3><p className="mt-1 text-sm text-[#706a78]">{care.subtitle[lang]}</p><span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[var(--primary)]">Details <ChevronRight size={14} /></span></Link>;
           })}
         </div>
       </section>
@@ -239,21 +241,21 @@ export function PostingGuide({ kind }: { kind: "needs" | "services" }) {
         </div>
       </section>
       <section className="grid overflow-hidden rounded-[24px] bg-[#dff0c3] md:grid-cols-[1fr_auto] md:items-center">
-        <div className="p-7 md:p-10"><RefreshCw className="text-[#5d3a86]" /><h2 className="mt-5 text-2xl font-bold text-[#27331d]">{text.reuseTitle}</h2><p className="mt-3 max-w-2xl text-sm leading-7 text-[#526045]">{text.reuseText}</p></div>
-        <Link href={isNeed ? "/needs/create" : "/dashboard/serviceprofile/services/new"} className="m-7 mt-0 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#5d3a86] px-6 text-sm font-bold text-white md:m-10 md:ml-0">{isNeed ? text.postNeed : text.postService}<ArrowRight size={16} /></Link>
+        <div className="p-7 md:p-10"><RefreshCw className="text-[var(--primary)]" /><h2 className="mt-5 text-2xl font-bold text-[#27331d]">{text.reuseTitle}</h2><p className="mt-3 max-w-2xl text-sm leading-7 text-[#526045]">{text.reuseText}</p></div>
+        <Link href={isNeed ? "/needs/create" : "/dashboard/serviceprofile/services/new"} className="m-7 mt-0 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-6 text-sm font-bold text-white md:m-10 md:ml-0">{isNeed ? text.postNeed : text.postService}<ArrowRight size={16} /></Link>
       </section>
     </GuideFrame>
   );
 }
 
 export function CareTypesGuide() {
-  const { lang } = useLanguage();
+  const lang = usePageLanguage();
   const text = labels[lang];
   return (
     <GuideFrame eyebrow="Choose the right structure" title={text.careTitle} text={text.careText}>
       <nav className="sticky top-16 z-20 -mx-5 mb-10 overflow-x-auto border-y border-[#ded6e1] bg-[#fffdf9]/95 px-5 backdrop-blur md:-mx-10 md:px-10">
         <div className="mx-auto flex min-w-max max-w-[1400px]">
-          {careTypes.map((care) => <Link key={care.id} href={`#${care.id}`} className="px-5 py-4 text-sm font-bold text-[#5d3a86]">{care.title[lang]}</Link>)}
+          {careTypes.map((care) => <Link key={care.id} href={`#${care.id}`} className="px-5 py-4 text-sm font-bold text-[var(--primary)]">{care.title[lang]}</Link>)}
         </div>
       </nav>
       <div className="space-y-10">
@@ -266,7 +268,7 @@ export function CareTypesGuide() {
                   <Image src={care.image} alt={`${care.title[lang]} example`} fill priority={index === 0} sizes="(max-width:1024px) 100vw, 50vw" className="object-cover" />
                 </div>
                 <div className="p-6 md:p-10 lg:p-12">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eee7f3] text-[#5d3a86]"><Icon size={22} /></span>
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eee7f3] text-[var(--primary)]"><Icon size={22} /></span>
                   <h2 className="mt-5 text-3xl font-bold tracking-[-.035em]">{care.title[lang]}</h2>
                   <p className="mt-2 text-sm text-[#706a78]">{care.subtitle[lang]}</p>
                   <GuideList icon={Check} title={text.bestFor} items={care.best[lang]} tone="green" />
@@ -274,8 +276,8 @@ export function CareTypesGuide() {
                   <GuideList icon={CircleAlert} title={text.consider} items={care.limits[lang]} tone="sand" />
                   <div className="mt-7 rounded-xl bg-[#f5f1f6] p-4"><p className="text-xs font-bold uppercase tracking-[.12em] text-[#8a5d34]">{text.examples}</p><p className="mt-2 text-sm leading-6 text-[#625a67]">{care.examples[lang]}</p></div>
                   <div className="mt-7 flex flex-wrap gap-3">
-                    <Link href="/needs/create" className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5d3a86] px-5 text-sm font-bold text-white">{text.postNeed}<ArrowRight size={15} /></Link>
-                    <Link href="/how-it-works/services" className="inline-flex h-11 items-center rounded-xl border border-[#bfaec8] px-5 text-sm font-bold text-[#5d3a86]">{text.postService}</Link>
+                    <Link href="/needs/create" className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-sm font-bold text-white">{text.postNeed}<ArrowRight size={15} /></Link>
+                    <Link href="/how-it-works/services" className="inline-flex h-11 items-center rounded-xl border border-[#bfaec8] px-5 text-sm font-bold text-[var(--primary)]">{text.postService}</Link>
                   </div>
                 </div>
               </div>
@@ -306,7 +308,7 @@ function PathCard({ icon: Icon, title, text, href, image }: { icon: typeof PawPr
   return (
     <Link href={href} className="group overflow-hidden rounded-[22px] border border-[#ded6e1] bg-white">
       <div className="relative aspect-[16/9] overflow-hidden"><Image src={image} alt="" fill sizes="(max-width:768px) 100vw, 33vw" className="object-cover transition duration-500 group-hover:scale-[1.025]" /></div>
-      <div className="p-6"><Icon className="text-[#5d3a86]" /><h2 className="mt-5 text-xl font-bold">{title}</h2><p className="mt-2 text-sm leading-6 text-[#706a78]">{text}</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#5d3a86]">Explore <ArrowRight size={16} /></span></div>
+      <div className="p-6"><Icon className="text-[var(--primary)]" /><h2 className="mt-5 text-xl font-bold">{title}</h2><p className="mt-2 text-sm leading-6 text-[#706a78]">{text}</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[var(--primary)]">Explore <ArrowRight size={16} /></span></div>
     </Link>
   );
 }
@@ -318,10 +320,10 @@ function FlowStrip({ lang }: { lang: Lang }) {
     ja: [["選ぶ", "ケア形式を比較"], ["伝える", "実際の習慣を共有"], ["つながる", "決める前に相談"], ["再利用", "次回は日付を更新"]],
   }[lang];
   const icons = [Search, ClipboardList, MessageCircle, RefreshCw];
-  return <div className="mt-10 grid rounded-[22px] bg-[#f2edf4] p-5 sm:grid-cols-2 md:grid-cols-4 md:p-8">{items.map(([title, text], index) => { const Icon = icons[index]; return <div key={title} className="flex gap-3 border-b border-[#ddd3e1] py-5 last:border-0 sm:odd:border-r sm:odd:pr-5 md:border-b-0 md:border-r md:px-5 md:first:pl-0 md:last:border-r-0"><Icon className="shrink-0 text-[#5d3a86]" size={20} /><div><p className="font-bold">{title}</p><p className="mt-1 text-xs text-[#706a78]">{text}</p></div></div>; })}</div>;
+  return <div className="mt-10 grid rounded-[22px] bg-[#f2edf4] p-5 sm:grid-cols-2 md:grid-cols-4 md:p-8">{items.map(([title, text], index) => { const Icon = icons[index]; return <div key={title} className="flex gap-3 border-b border-[#ddd3e1] py-5 last:border-0 sm:odd:border-r sm:odd:pr-5 md:border-b-0 md:border-r md:px-5 md:first:pl-0 md:last:border-r-0"><Icon className="shrink-0 text-[var(--primary)]" size={20} /><div><p className="font-bold">{title}</p><p className="mt-1 text-xs text-[#706a78]">{text}</p></div></div>; })}</div>;
 }
 
 function GuideList({ icon: Icon, title, items, tone }: { icon: typeof Check; title: string; items: readonly string[]; tone: "green" | "purple" | "sand" }) {
-  const colors = { green: "text-[#51703c]", purple: "text-[#5d3a86]", sand: "text-[#9a6538]" };
+  const colors = { green: "text-[#51703c]", purple: "text-[var(--primary)]", sand: "text-[#9a6538]" };
   return <div className="mt-7"><h3 className="text-xs font-bold uppercase tracking-[.12em] text-[#817a85]">{title}</h3><ul className="mt-3 space-y-2.5">{items.map((item) => <li key={item} className="flex gap-2.5 text-sm leading-6 text-[#625a67]"><Icon size={17} className={`mt-1 shrink-0 ${colors[tone]}`} />{item}</li>)}</ul></div>;
 }

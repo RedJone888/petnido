@@ -43,6 +43,8 @@ import {
 } from "react-icons/pi";
 
 import cn from "@/lib/cn";
+import { usePageLanguage } from "@/components/providers/language-provider";
+import type { Lang } from "@/domain/lang/types";
 import {
   NEED_PREVIEW_STORAGE_KEY,
   type NeedPreviewSnapshot,
@@ -127,7 +129,7 @@ export function RequestDetailView({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-[#4c6b4f] transition hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8d6aa7] focus-visible:ring-offset-2"
+                  className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-[#4c6b4f] transition hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                 >
                   <PiArrowLeft size={18} />
                   Back to requests
@@ -137,7 +139,7 @@ export function RequestDetailView({
                 {request.title}
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full bg-[#eee7f3] px-3 py-1.5 text-xs font-bold text-[#5d3a86]">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[var(--primary-fixed)] px-3 py-1.5 text-xs font-bold text-[var(--primary)]">
                   <ModeIcon size={16} />
                   {meta.eyebrow}
                 </span>
@@ -152,7 +154,7 @@ export function RequestDetailView({
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <p className="flex items-start gap-2 text-sm font-bold leading-6 text-[#706a78]">
                   <PiMapPin
-                    className="mt-0.5 shrink-0 text-[#6f45a0]"
+                    className="mt-0.5 shrink-0 text-[var(--primary)]"
                     size={18}
                   />
                   <span>{request.area}</span>
@@ -162,7 +164,7 @@ export function RequestDetailView({
                 </span>
                 <p className="flex items-start gap-2 text-sm font-bold leading-6 text-[#706a78]">
                   <PiCalendarBlank
-                    className="mt-0.5 shrink-0 text-[#6f45a0]"
+                    className="mt-0.5 shrink-0 text-[var(--primary)]"
                     size={18}
                   />
                   <span>{request.dates.label}</span>
@@ -172,7 +174,7 @@ export function RequestDetailView({
                 </span>
                 <p className="flex items-start gap-2 text-sm font-bold leading-6 text-[#706a78]">
                   <ModeIcon
-                    className="mt-0.5 shrink-0 text-[#6f45a0]"
+                    className="mt-0.5 shrink-0 text-[var(--primary)]"
                     size={18}
                   />
                   <span>{meta.eyebrow}</span>
@@ -219,7 +221,7 @@ function PreviewPublisher() {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-[16px] border border-[#e5dfe7] bg-white px-3.5 py-3 sm:px-4">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eee7f3] text-[#6f45a0]">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--primary-fixed)] text-[var(--primary)]">
           <PiUserCircle size={28} />
         </span>
         <div>
@@ -247,11 +249,11 @@ function PreviewBar({ onBack }: { onBack: () => void }) {
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex shrink-0 items-center gap-2.5 border-r border-[#e6e0e7] pr-3 sm:pr-4">
             <Image src="/favicon.svg" alt="PetNido" width={30} height={30} />
-            <span className="hidden text-lg font-bold tracking-[0.015em] text-[#5d3a86] [font-family:'PT_Sans_Narrow','Avenir_Next_Condensed','Arial_Narrow',sans-serif] [font-stretch:condensed] sm:inline">
+            <span className="hidden text-lg font-bold tracking-[0.015em] text-[var(--primary)] [font-family:'PT_Sans_Narrow','Avenir_Next_Condensed','Arial_Narrow',sans-serif] [font-stretch:condensed] sm:inline">
               PetNido
             </span>
           </span>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eee7f3] text-[#5d3a86]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary-fixed)] text-[var(--primary)]">
             <PiEye size={17} />
           </span>
           <div className="min-w-0">
@@ -266,7 +268,7 @@ function PreviewBar({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[11px] border border-[#cfc4d5] bg-white px-3.5 text-sm font-bold text-[#5d3a86] transition hover:border-[#a98fba] hover:bg-[#f7f2fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8d6aa7] focus-visible:ring-offset-2"
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[11px] border border-[#cfc4d5] bg-white px-3.5 text-sm font-bold text-[var(--primary)] transition hover:border-[#a98fba] hover:bg-[var(--primary-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
         >
           <PiArrowLeft size={17} />
           <span>Back to edit</span>
@@ -277,10 +279,11 @@ function PreviewBar({ onBack }: { onBack: () => void }) {
 }
 
 function RequestStory({ request }: { request: NeedPreviewSnapshot }) {
+  const lang = usePageLanguage();
   const [expanded, setExpanded] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const storyRef = useRef<HTMLParagraphElement>(null);
-  const story = buildRequestStory(request);
+  const story = buildRequestStory(request, lang);
   useEffect(() => {
     const element = storyRef.current;
     if (!element || expanded) return;
@@ -302,8 +305,10 @@ function RequestStory({ request }: { request: NeedPreviewSnapshot }) {
   return (
     <section className="mt-6">
       <header className="mb-3 flex items-center gap-3">
-        <PiBookOpen className="text-[#6f45a0]" size={22} />
-        <h2 className="text-xl font-bold tracking-[-0.02em]">The story</h2>
+        <PiBookOpen className="text-[var(--primary)]" size={22} />
+        <h2 className="text-xl font-bold tracking-[-0.02em]">
+          {lang === "zh" ? "需求概述" : lang === "ja" ? "ご依頼の概要" : "About this request"}
+        </h2>
       </header>
       <div className="rounded-[16px] border border-[#e2dbe5] bg-white px-5 py-4 sm:px-6">
         <p
@@ -321,7 +326,7 @@ function RequestStory({ request }: { request: NeedPreviewSnapshot }) {
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
-          className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-[#5d3a86] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8d6aa7] focus-visible:ring-offset-2"
+          className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
         >
           {expanded ? <PiCaretUp /> : <PiCaretDown />}
           {expanded ? "Show less" : "See more"}
@@ -357,7 +362,7 @@ function FactsBar({ request }: { request: NeedPreviewSnapshot }) {
           key={label}
           className="flex min-w-0 gap-3 border-b border-[#eee9ef] px-1 py-4 last:border-b-0 sm:[&:nth-child(odd)]:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 xl:border-b-0 xl:border-r xl:px-4 xl:first:pl-1 xl:last:border-r-0"
         >
-          <Icon className="mt-0.5 shrink-0 text-[#6f45a0]" size={19} />
+          <Icon className="mt-0.5 shrink-0 text-[var(--primary)]" size={19} />
           <div className="min-w-0">
             <dd className="text-sm font-bold leading-5">{value}</dd>
             <dt className="mt-1 text-xs text-[#817a85]">{label}</dt>
@@ -506,7 +511,7 @@ function BoardingDetails({ request }: { request: NeedPreviewSnapshot }) {
           <div className="space-y-7">
             {visibleRoutineGroups.map((group) => (
               <div key={group.type}>
-                <h3 className="mb-2 text-sm font-bold text-[#5d3a86]">
+                <h3 className="mb-2 text-sm font-bold text-[var(--primary)]">
                   {group.title}
                 </h3>
                 <div className="divide-y divide-[#eee9ef] border-y border-[#eee9ef]">
@@ -572,7 +577,7 @@ function BoardingDetails({ request }: { request: NeedPreviewSnapshot }) {
         )}
         {boarding.homeFit.notes && (
           <div className="mt-5 flex gap-3 border-t border-[#eee9ef] pt-4 text-sm leading-6 text-[#625a67]">
-            <PiInfo className="mt-0.5 shrink-0 text-[#6f45a0]" size={18} />
+            <PiInfo className="mt-0.5 shrink-0 text-[var(--primary)]" size={18} />
             <p>{boarding.homeFit.notes}</p>
           </div>
         )}
@@ -636,6 +641,12 @@ function BoardingDetails({ request }: { request: NeedPreviewSnapshot }) {
             label="supply items"
           />
         )}
+        {boarding.supplies.notes && (
+          <div className="mt-5 flex items-start gap-2 rounded-2xl bg-[var(--primary-subtle)] p-4 text-sm leading-6 text-[#625769]">
+            <PiInfo className="mt-0.5 shrink-0 text-[var(--primary)]" size={18} />
+            <p>{boarding.supplies.notes}</p>
+          </div>
+        )}
       </PageSection>
 
       <PageSection title="Pickup & return" icon={PiCar}>
@@ -684,7 +695,8 @@ function ReadOnlyVisitCalendar({
   );
 
   useEffect(() => {
-    if (calendarStartMonth) setCalendarMonth(calendarStartMonth);
+    const nextStartMonth = parsePreviewCalendarDate(request.dates.startDate);
+    if (nextStartMonth) setCalendarMonth(startOfPreviewMonth(nextStartMonth));
   }, [request.dates.startDate, request.dates.endDate]);
 
   const canGoToPreviousMonth = Boolean(
@@ -779,10 +791,10 @@ function ReadOnlyVisitCalendar({
                       ? "text-[#c8c3c9]"
                       : "text-[#514956]",
                     isPlanned &&
-                      "bg-[#eee7f3] font-bold text-[#5d3a86]",
+                      "bg-[var(--primary-fixed)] font-bold text-[var(--primary)]",
                     isPlanned &&
                       date === firstPlannedDate &&
-                      "bg-[#5d3a86] text-white",
+                      "bg-[var(--primary)] text-white",
                     isExcluded &&
                       "border border-dashed border-[#c9c0ce] bg-[#faf8f5] text-[#aaa4ae] line-through",
                   )}
@@ -804,7 +816,7 @@ function ReadOnlyVisitCalendar({
         />
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#eee9ef] pt-4 text-[11px] text-[#817a85]">
           <span className="inline-flex items-center gap-2">
-            <span className="h-4 w-4 rounded-full bg-[#eee7f3]" />
+            <span className="h-4 w-4 rounded-full bg-[var(--primary-fixed)]" />
             Care dates
           </span>
           {visit.excludedVisitDates?.length ? (
@@ -896,12 +908,12 @@ function VisitTaskDetails({ request }: { request: NeedPreviewSnapshot }) {
                 type="button"
                 aria-expanded={isExpanded}
                 onClick={() => toggleVisit(item.number)}
-                className="flex w-full items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8d6aa7] focus-visible:ring-offset-2"
+                className="flex w-full items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f5f0f8] text-[#6f45a0]">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary-fixed)] text-[var(--primary)]">
                   {isExpanded ? <PiCaretDown size={17} /> : <PiCaretRight size={17} />}
                 </span>
-                <span className="font-bold text-[#5d3a86]">Visit {item.number}</span>
+                <span className="font-bold text-[var(--primary)]">Visit {item.number}</span>
                 <span aria-hidden="true" className="text-[#817a85]">·</span>
                 <span className="flex items-center gap-1.5 text-sm text-[#817a85]">
                   <PiClock />
@@ -935,7 +947,7 @@ function VisitTaskDetails({ request }: { request: NeedPreviewSnapshot }) {
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl bg-[#fff5f6] px-4 py-3 text-sm font-semibold text-[#a74755]">
+                    <p className="rounded-xl bg-danger-bg px-4 py-3 text-sm font-semibold text-danger-text">
                       No tasks assigned to this visit.
                     </p>
                   )}
@@ -981,7 +993,7 @@ function VisitTaskTarget({
           ))}
         </div>
       ) : (
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f5f0f8] text-[#6f45a0]">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--primary-fixed)] text-[var(--primary)]">
           <PiPawPrint size={22} />
         </span>
       )}
@@ -999,6 +1011,11 @@ function CustomDetails({ request }: { request: NeedPreviewSnapshot }) {
   return (
     <>
       <PageSection title="Requested care" icon={PiSparkle}>
+        {custom.timePreferenceLabel ? (
+          <p className="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+            {custom.timePreferenceLabel}
+          </p>
+        ) : null}
         {custom.tasks.length ? (
           <>
             <div className="divide-y divide-[#eee9ef] border-y border-[#eee9ef]">
@@ -1024,7 +1041,7 @@ function CustomDetails({ request }: { request: NeedPreviewSnapshot }) {
       <PageSection title="Requirements & cautions" icon={PiShieldCheck}>
         <div className="grid gap-7 md:grid-cols-2">
           <PreferenceList
-            label="Helper requirements"
+            label="Sitter requirements"
             items={custom.requirements}
             tone="needs"
           />
@@ -1050,7 +1067,7 @@ function RoutineRow({
   return (
     <div className="grid gap-3 py-4 text-sm md:grid-cols-[minmax(150px,0.8fr)_minmax(145px,0.8fr)_minmax(150px,0.8fr)_minmax(210px,1.25fr)] md:items-start">
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f5f0f8] text-[#6f45a0]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-fixed)] text-[var(--primary)]">
           <Icon size={18} />
         </span>
         <p className="font-bold">{routine.label}</p>
@@ -1099,7 +1116,7 @@ function TaskRow({
   if (compact) {
     return (
       <div className="flex items-start gap-3 py-2.5 text-sm">
-        <PiCheckCircle className="mt-0.5 shrink-0 text-[#6f45a0]" size={18} />
+        <PiCheckCircle className="mt-0.5 shrink-0 text-[var(--primary)]" size={18} />
         <div className="min-w-0">
           <p className="font-semibold text-[#302a34]">{task.label}</p>
           {task.notes && (
@@ -1118,7 +1135,7 @@ function TaskRow({
             {index + 1}
           </span>
         )}
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f5f0f8] text-[#6f45a0]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-fixed)] text-[var(--primary)]">
           <Icon size={18} />
         </span>
         <p
@@ -1139,7 +1156,7 @@ function TaskRow({
           className={cn(
             "shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
             task.priority === "must"
-              ? "bg-[#eee7f3] text-[#5d3a86]"
+              ? "bg-[var(--primary-fixed)] text-[var(--primary)]"
               : "bg-[#f3ede7] text-[#765942]",
           )}
         >
@@ -1187,7 +1204,7 @@ function PriceSidebar({
 
         <div className={cn(hasVisitCalendar && "pt-5")}>
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <p className="text-2xl font-bold leading-8 tracking-[-0.03em] text-[#5d3a86]">
+            <p className="text-2xl font-bold leading-8 tracking-[-0.03em] text-[var(--primary)]">
               {request.pricing.estimatedTotal}
             </p>
             <p className="text-xs font-semibold text-[#817a85]">estimated total</p>
@@ -1217,14 +1234,14 @@ function PriceSidebar({
           <button
             type="button"
             disabled={preview}
-            className="flex h-14 w-full items-center justify-center rounded-[11px] bg-[#5d3a86] px-4 text-sm font-bold text-white shadow-[0_10px_24px_-14px_rgba(93,58,134,0.75)] transition enabled:hover:bg-[#4b2e6d] disabled:cursor-not-allowed disabled:opacity-90"
+            className="button-primary-raised flex h-14 w-full items-center justify-center rounded-[11px] px-4 text-sm font-bold"
           >
             {request.careType === "visit" ? "Apply to help" : "Make an offer"}
           </button>
           <button
             type="button"
             disabled={preview}
-            className="flex h-14 w-full items-center justify-center rounded-[11px] border border-[#7e5a9d] bg-white px-4 text-sm font-bold text-[#5d3a86] transition enabled:hover:bg-[#f7f2fa] disabled:cursor-not-allowed"
+            className="flex h-14 w-full items-center justify-center rounded-[11px] border border-[#7e5a9d] bg-white px-4 text-sm font-bold text-[var(--primary)] transition enabled:hover:bg-[var(--primary-subtle)] disabled:cursor-not-allowed"
           >
             Save request
           </button>
@@ -1273,7 +1290,7 @@ function PageSection({
   return (
     <section className={cn("py-3 sm:py-4", className)}>
       <header className="mb-3 flex items-center gap-3">
-        <Icon className="text-[#6f45a0]" size={21} />
+        <Icon className="text-[var(--primary)]" size={21} />
         <h2 className="text-xl font-bold tracking-[-0.02em]">{title}</h2>
         {badge && (
           <span className="rounded-full border border-[#d7e1d5] bg-[#f0f5ee] px-2.5 py-1 text-xs font-semibold text-[#3e6843]">
@@ -1301,7 +1318,7 @@ function PreferenceList({
       ? "text-[#a86431]"
       : tone === "ok"
         ? "text-[#3e8168]"
-        : "text-[#5d3a86]";
+        : "text-[var(--primary)]";
   return (
     <div>
       <p className="text-[10px] font-bold uppercase tracking-[0.11em] text-[#8a5d34]">
@@ -1335,7 +1352,7 @@ function SupplyList({
 }) {
   return (
     <div>
-      <p className="text-sm font-bold text-[#5d3a86]">{label}</p>
+      <p className="text-sm font-bold text-[var(--primary)]">{label}</p>
       {items.length ? (
         <ul className="mt-3 divide-y divide-[#eee9ef] border-y border-[#eee9ef]">
           {items.map((item) => (
@@ -1344,7 +1361,7 @@ function SupplyList({
               className="flex items-center justify-between gap-4 py-3 text-sm"
             >
               <span className="flex items-center gap-2.5 font-semibold">
-                <PiPackage className="shrink-0 text-[#6f45a0]" size={17} />
+                <PiPackage className="shrink-0 text-[var(--primary)]" size={17} />
                 {item.label}
               </span>
               <span className="shrink-0 rounded-lg bg-[#f4eddf] px-2 py-1 text-[11px] font-bold text-[#69533c]">
@@ -1362,11 +1379,11 @@ function SupplyList({
 
 function CostArrangement({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mt-4 rounded-[14px] border border-[#e2d8e7] bg-[#f7f2fa] px-4 py-3">
+    <div className="mt-4 rounded-[14px] border border-[#e2d8e7] bg-[var(--primary-subtle)] px-4 py-3">
       <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34]">
         {label}
       </p>
-      <p className="mt-1 text-sm font-bold text-[#5d3a86]">{value}</p>
+      <p className="mt-1 text-sm font-bold text-[var(--primary)]">{value}</p>
       <p className="mt-1 text-xs leading-5 text-[#817a85]">
         {costTreatment(value)}
       </p>
@@ -1391,7 +1408,7 @@ function ExpandButton({
       type="button"
       aria-expanded={expanded}
       onClick={onClick}
-      className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-sm font-bold text-[#5d3a86] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8d6aa7] focus-visible:ring-offset-2"
+      className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg px-1 text-sm font-bold text-[var(--primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
     >
       {expanded ? <PiCaretUp /> : <PiCaretDown />}
       {expanded ? "Show less" : `See ${hiddenCount} more ${itemLabel}`}
@@ -1407,7 +1424,7 @@ function TransportSteps({ label, area }: { label: string; area: string }) {
         {steps.map((step, index) => (
           <div key={step} className="contents">
             <div className="flex min-w-[160px] flex-1 items-center gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5d3a86] text-xs font-bold text-white">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-white">
                 {index + 1}
               </span>
               <p className="text-sm font-bold leading-5">{step}</p>
@@ -1419,7 +1436,7 @@ function TransportSteps({ label, area }: { label: string; area: string }) {
         ))}
       </div>
       <p className="mt-4 flex items-center gap-2 text-sm text-[#817a85]">
-        <PiMapPin className="text-[#6f45a0]" />
+        <PiMapPin className="text-[var(--primary)]" />
         {area}
       </p>
     </div>
@@ -1429,7 +1446,7 @@ function TransportSteps({ label, area }: { label: string; area: string }) {
 function Note({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-3">
-      <PiInfo className="shrink-0 text-[#6f45a0]" size={18} />
+      <PiInfo className="shrink-0 text-[var(--primary)]" size={18} />
       <p className="whitespace-pre-wrap">{text}</p>
     </div>
   );
@@ -1471,7 +1488,7 @@ function MissingPreview({ onBack }: { onBack: () => void }) {
   return (
     <main className="flex min-h-[calc(100dvh-80px)] items-center justify-center bg-[#fbfaf8] px-5">
       <section className="w-full max-w-md rounded-[20px] border border-[#e4dee6] bg-white p-8 text-center shadow-[0_20px_60px_-42px_rgba(48,42,52,0.5)]">
-        <PiPawPrint className="mx-auto text-[#8d6aa7]" size={34} />
+        <PiPawPrint className="mx-auto text-[var(--primary)]" size={34} />
         <h1 className="mt-4 text-2xl font-bold">Preview unavailable</h1>
         <p className="mt-2 text-sm leading-6 text-[#706a78]">
           Return to your request and open the sitter view again.
@@ -1479,7 +1496,7 @@ function MissingPreview({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-[#5d3a86] px-5 text-sm font-bold text-white"
+          className="button-primary-raised mt-6 inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-bold"
         >
           <PiArrowLeft />
           Back to edit
@@ -1619,7 +1636,7 @@ function buildDemoPreview(careType: PreviewCareType): NeedPreviewSnapshot {
       boarding: {
         routines: [],
         homeFit: { needs: [], ok: [], avoid: [], notes: "" },
-        supplies: { owner: [], sitter: [] },
+        supplies: { owner: [], sitter: [], notes: "" },
         transportLabel: "Pickup and return will be discussed after matching",
       },
     };
@@ -1636,7 +1653,7 @@ const routineGroups: Array<{
   title: string;
 }> = [
   { type: "daily", title: "Every day" },
-  { type: "repeating", title: "Recurring" },
+  { type: "repeating", title: "Regularly" },
   { type: "once", title: "Once during the stay" },
   { type: "as-needed", title: "As needed" },
 ];
@@ -1775,40 +1792,76 @@ function costTreatment(value: string) {
   return "Included in the estimated total when set as a fixed allowance.";
 }
 
-function buildRequestStory(request: NeedPreviewSnapshot) {
-  const pets = petSummary(request.pets);
-  if (request.careType === "boarding" && request.boarding) {
-    const ownerItems = request.boarding.supplies.owner.length;
-    const sitterItems = request.boarding.supplies.sitter.length;
-    const supplySentence = sitterItems
-      ? `I’ll bring ${ownerItems} ${ownerItems === 1 ? "item" : "items"}, and I need the sitter to provide ${sitterItems}; supply costs are ${request.pricing.supplyCostLabel.toLowerCase()}.`
-      : `I’ll bring the arranged supplies, so the sitter does not need to provide additional items.`;
-    return `I’ll be away for ${request.dates.totalNights} nights (${request.dates.label}) and need a sitter to care for ${pets} in their home. I’m looking for a boarding home in ${request.area}. ${transportStory(request.boarding.transportLabel)} ${supplySentence} Transport costs are ${request.pricing.transportCostLabel.toLowerCase()}.`;
-  }
-  if (request.careType === "visit" && request.visit) {
-    const transportSentence = visitTransportStory(
-      request.pricing.transportCostLabel,
-    );
-    return [
-      `I need a sitter to visit my home ${request.visit.scheduleLabel.toLowerCase()} between ${request.dates.label} and care for ${pets}.`,
-      "I need you to complete some tasks on each visit; you can review them below.",
+function buildRequestStory(request: NeedPreviewSnapshot, lang: Lang = "en") {
+  const pets = petSummary(request.pets, lang);
 
-      transportSentence,
-      "If you have relevant experience and are interested, please get in touch.",
-    ]
-      .filter(Boolean)
-      .join(" ");
+  // Extract actual unique task labels from preview snapshot
+  const rawTasks =
+    request.careType === "visit"
+      ? (request.visit?.visits || []).flatMap((v) => v.tasks.map((t) => t.label?.trim()))
+      : request.careType === "boarding"
+      ? (request.boarding?.routines || []).map((r) => r.label?.trim())
+      : (request.custom?.tasks || []).map((t) => t.label?.trim());
+
+  const rawTaskLabels = Array.from(
+    new Set(rawTasks.filter((lbl) => Boolean(lbl && lbl.length > 0)))
+  );
+
+  const taskListZh = rawTaskLabels.length > 0 ? `，服务内容主要包括：${rawTaskLabels.join("、")}` : "";
+  const taskListJa = rawTaskLabels.length > 0 ? `（主な作業内容：${rawTaskLabels.join("、")}` + "）" : "";
+  const taskListEn =
+    rawTaskLabels.length > 0
+      ? ` Routine care includes ${
+          rawTaskLabels.length === 1
+            ? rawTaskLabels[0]
+            : `${rawTaskLabels.slice(0, -1).join(", ")} and ${rawTaskLabels.at(-1)}`
+        }.`
+      : "";
+
+  if (request.careType === "boarding" && request.boarding) {
+    if (lang === "zh") {
+      return `我们在 ${request.dates.label}（共 ${request.dates.totalNights} 晚）期间需要离家外出，希望能为 ${pets} 寻找一个温馨、安全且有经验的寄养家庭。我们希望在 ${request.area} 附近找到舒适的家庭寄养环境${taskListZh}。我们会备齐宠物的常用用品与口粮，确保毛孩子能平稳适应。具体的寄养日常日程与注意事项详见下方，期待与合适的服务者联系！`;
+    }
+    if (lang === "ja") {
+      return `${request.dates.label}（全 ${request.dates.totalNights} 泊）の外出に伴い、${pets} をご自宅で大切に預かってくださる安心できるホストファミリーを探しています（希望エリア：${request.area} 周辺）${taskListJa}。愛用グッズやフードはしっかり準備いたします。詳しいお世話ルーティンや留意事項は下記をご確認の上、ぜひご連絡をお待ちしております。`;
+    }
+    return `We will be away for ${request.dates.totalNights} ${request.dates.totalNights === 1 ? "night" : "nights"} (${request.dates.label}) and are seeking a warm, loving, and attentive boarding home in or around ${request.area} for ${pets}.${taskListEn} We will provide their familiar food and daily essentials so they feel right at home. Please review the care routines and house rules below—we would love to hear from you!`;
   }
-  const taskCount = request.custom?.tasks.length ?? 0;
-  return `I’m looking for help caring for ${pets} between ${request.dates.label}. This is a custom request with ${taskCount} ${taskCount === 1 ? "task" : "tasks"}; please review the requested care, location, requirements and cautions below before making an offer.`;
+
+  if (request.careType === "visit" && request.visit) {
+    if (lang === "zh") {
+      return `我们在 ${request.dates.label} 期间需要外出，希望能寻找一位细心、有爱心且可靠的服务者到家中提供上门照护，照顾 ${pets}${taskListZh}。具体的上门时间点与任务清单已在下方详细列出，期待与有经验的服务者联系！`;
+    }
+    if (lang === "ja") {
+      return `${request.dates.label} の留守中、自宅を訪問して大切なペット（${pets}）のお世話をしてくださる親切で信頼できるシッターさんを募集しています${taskListJa}。詳しいスケジュールやお願いしたい作業は下記をご確認ください。ご応募をお待ちしております！`;
+    }
+    return `We are heading out of town between ${request.dates.label} and are looking for a gentle, trustworthy sitter to visit our home and care for ${pets}.${taskListEn} Please check out the visit times and detailed tasks below—we look forward to hearing from you!`;
+  }
+
+  if (lang === "zh") {
+    return `我们在 ${request.dates.label} 期间需要为 ${pets} 寻找贴心的照料协助${taskListZh}。这是一项定制照护需求，涵盖专属的任务与时间安排。请在申请前查看下方具体的照护要求、服务位置与注意事项，期待您的应聘！`;
+  }
+  if (lang === "ja") {
+    return `${request.dates.label} の期間、${pets} のお世話をサポートしてくださる方を募集しています${taskListJa}。こちらはカスタム照護リクエストとなっておりますので、詳しい作業内容や条件を下記でご確認の上、お気軽にご応募ください。`;
+  }
+  return `We are looking for thoughtful and reliable care assistance for ${pets} between ${request.dates.label}.${taskListEn} This is a tailored care request; please review the specific tasks, location, and requirements below before applying.`;
 }
 
-function petSummary(pets: PreviewPet[]) {
-  if (!pets.length) return "my pets";
-  const groups = groupPets(pets);
-  const parts = groups.map(
-    (group) => `${group.quantity} ${pluralize(group.type, group.quantity)}`,
-  );
+function petSummary(pets: PreviewPet[], lang: Lang = "en") {
+  if (!pets.length) return lang === "zh" ? "我们的毛孩子" : lang === "ja" ? "ペットたち" : "our pets";
+  const parts = pets.map((p) => {
+    const isNamed = p.label && p.label.toLowerCase() !== p.type.toLowerCase();
+    if (lang === "zh") {
+      return isNamed ? `${p.label}（${p.type}）` : `${p.quantity || 1} 只${p.type}`;
+    }
+    if (lang === "ja") {
+      return isNamed ? `${p.label}（${p.type}）` : `${p.type}`;
+    }
+    return isNamed ? `${p.label} (${p.type})` : `${p.quantity || 1} ${p.type}`;
+  });
+  if (lang === "zh" || lang === "ja") {
+    return parts.join("、");
+  }
   if (parts.length === 1) return parts[0];
   return `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
 }

@@ -3,17 +3,22 @@ import LocationInput from "@/components/location/LocationInput";
 import MapLibreMap from "@/components/location/MapLibreMap";
 import CurrencySelect from "@/components/location/CurrencySelect";
 import cn from "@/lib/cn";
+import { useLanguage } from "@/components/providers/language-provider";
 interface AddressInputProps {
   controller: ReturnType<typeof useLocationController>;
+  inputId?: string;
   placeholder?: string;
   className?: string;
 }
 // 专门负责搜索输入和展示结果
 export const AddressInput = ({
   controller,
+  inputId,
   className = "",
-  placeholder = "駅名、住所、または建物名で検索...",
+  placeholder,
 }: AddressInputProps) => {
+  const { t } = useLanguage();
+  const copy = t.location;
   const {
     source,
     queryLabel,
@@ -26,6 +31,7 @@ export const AddressInput = ({
   return (
     <div className="relative w-full">
       <LocationInput
+        inputId={inputId}
         value={queryLabel}
         source={source}
         disabled={isReverseLoading}
@@ -33,7 +39,7 @@ export const AddressInput = ({
         loading={isSearchLoading}
         onSearchSelect={setBySearch}
         onInputChange={onInputChange}
-        placeholder={placeholder || "请输入地址..."}
+        placeholder={placeholder || copy.mapSelection}
         className={className} // 这里传入自定义样式
       />
 

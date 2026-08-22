@@ -38,7 +38,10 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { getNeedDisplayKey } from "@/domain/need/getNeedDisplayKey";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/providers/language-provider";
 export default function NeedCard({ need }: { need: MyNeedApi }) {
+  const { t } = useLanguage();
+  const management = t.core.management;
   const { executeCommand, deleteNeed } = useNeed();
   const confirm = useConfirm();
   const setIsDeleting = useConfirmStore((s) => s.setIsDeleting);
@@ -64,28 +67,29 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
   } = need;
   const {
     tagClassName: needTypeClass,
-    labelShort: needTypeLabel,
     emo: needTypeEmo,
     priceDisplayUnit,
   } = NEED_TYPE_JA[category];
+  const modeKey = category === ServiceCategory.VISIT ? "HOME_VISIT" : category === ServiceCategory.FOSTER ? "BOARDING" : "CUSTOM";
+  const needTypeLabel = t.core.modes[modeKey];
   const { symbol: currencySymbol } = CURRENCY_META[currency];
   const fallbackImage = PET_META[needPets[0].petCategory].placeImg;
   const displayKey = getNeedDisplayKey(status, endDate);
   const config = NEED_DISPLAY_CONFIG[displayKey];
   const handleDelete = async () => {
     const ok = await confirm({
-      title: "依頼の削除",
+      title: management.actions.cancelQuestion,
       variant: "danger",
-      confirmText: "削除する",
+      confirmText: management.actions.cancelConfirm,
       content: (
         <div className="space-y-4">
           {/* 主描述文字：居中对齐 */}
           <div className="space-y-1">
             <p className="font-semibold text-slate-800">
-              この依頼を完全に削除してもよろしいですか？
+              {management.actions.cancelQuestion}
             </p>
             <p className="text-sm text-slate-400">
-              関連する写真やペットの情報はすべて削除され、元に戻すことはできません。
+              {management.actions.cancelDetail}
             </p>
           </div>
 
@@ -96,10 +100,10 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
             </div>
             <div className="text-[12px] leading-relaxed">
               <p className="font-bold text-purple-900 mb-0.5">
-                ステータスの変更も可能です
+                {management.actions.close}
               </p>
               <p className="text-purple-700/80">
-                一時的に募集を止めたい場合は、ステータスを「募集終了」や「キャンセル」に変更することをお勧めします。
+                {management.actions.closeDetail}
               </p>
             </div>
           </div>
@@ -130,7 +134,7 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
       {/* 加载遮罩 */}
       {executeCommand.isLoading && (
         <div className="text-sm absolute inset-0 flex items-center justify-center rounded-2xl z-50">
-          <LoadingPage title="更新中..." size="w-6 h-6" />
+          <LoadingPage title={t.core.common.loading} size="w-6 h-6" />
         </div>
       )}
       {/* 顶部：封面图片 + 静态状态标签 */}
@@ -165,7 +169,7 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
 
             {config.emo && <span className="leading-none">{config.emo}</span>}
 
-            <span className="leading-none">{config.label}</span>
+            <span className="leading-none">{t.core.states[displayKey as keyof typeof t.core.states] ?? config.label}</span>
           </div>
         </div>
       </div>
@@ -254,7 +258,7 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex flex-col">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                Total Price
+                {t.core.servicePublishing.steps.pricing}
               </span>
               <p className="font-black text-primary text-lg leading-none">
                 {currencySymbol}
@@ -265,7 +269,7 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
               href={`/dashboard/needs/${id}`}
               className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors"
             >
-              プレビュー <ExternalLink className="w-3 h-3" />
+              {t.core.common.viewDetails} <ExternalLink className="w-3 h-3" />
             </Link>
           </div>
           <div className="flex gap-2">
@@ -273,12 +277,16 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
               href={`/dashboard/needs/${id}/edit`}
               className="flex-1 py-2 shadow-sm shadow-purple-100"
             >
-              編集する
+              {management.actions.edit}
             </Button>
             {/* 状态切换下拉 */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-primary hover:border-primary transition-all">
+                <button
+                  type="button"
+                  aria-label={management.actions.close}
+                  className="cursor-pointer p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-primary hover:border-primary transition-all"
+                >
                   <MoreHorizontal className="w-4 h-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -289,7 +297,7 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
                 className="w-32 rounded-xl shadow-xl font-bold text-[10px] bg-white border pt-2 pb-4 border-purple-200 z-50 animate-in slide-in-from-bottom-2"
               >
                 <div className="px-2 p-1.5 text-center text-slate-400 uppercase tracking-wider">
-                  ステータス変更
+                  {management.actions.close}
                 </div>
                 {(status === NeedStatus.OPEN ||
                   status === NeedStatus.MATCHED) && (
@@ -300,7 +308,7 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
                     className="cursor-pointer flex items-center gap-2 px-2 py-1 hover:bg-purple-50"
                   >
                     <span className="w-3 h-3 border-2 border-white rounded-full bg-slate-400" />{" "}
-                    募集を終了する
+                    {management.actions.close}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -313,16 +321,18 @@ export default function NeedCard({ need }: { need: MyNeedApi }) {
                         command: "CANCEL",
                       })
                     }
-                    className="cursor-pointer flex items-center text-red-500 gap-2 px-2 py-1 hover:bg-purple-50"
+                    className="cursor-pointer flex items-center text-danger-text gap-2 px-2 py-1 hover:bg-purple-50"
                   >
-                    <XCircle className="w-3 h-3" /> キャンセル
+                    <XCircle className="w-3 h-3" /> {t.core.workflow.cancel}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
             <button
+              type="button"
               onClick={handleDelete}
-              className="cursor-pointer p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-500 transition-all"
+              aria-label={management.actions.cancelConfirm}
+              className="cursor-pointer p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-danger-text hover:border-danger-text transition-all"
             >
               <Trash2 className="w-4 h-4" />
             </button>

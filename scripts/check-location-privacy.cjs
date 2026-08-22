@@ -2,13 +2,21 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const allowedLegacyFiles = new Set([
+  // These files mention precise-address terms only to explain what PetNido
+  // deliberately does not collect, or to assert that legacy fields are not
+  // serialized into public DTOs.
+  "src/i18n/messages/en.ts",
+  "src/i18n/messages/ja.ts",
+  "src/i18n/messages/zh.ts",
+  "src/domain/marketplace/need-public-dto.test.ts",
+  "src/domain/publishing/legacy-record-compatibility.test.ts",
   "src/app/(app)/dashboard/needs/_components/NeedCard.tsx",
   "src/app/(app)/dashboard/needs/_components/form/NeedForm.tsx",
   "src/app/(app)/dashboard/serviceprofile/_components/BaseInfoModal.tsx",
   "src/app/(app)/dashboard/serviceprofile/_components/ProfileHeader.tsx",
   "src/app/(app)/dashboard/serviceprofile/_components/ServiceProfile.tsx",
   "src/app/(app)/dashboard/serviceprofile/services/_components/form/ServiceForm.tsx",
-  "src/app/(app)/dashboard/serviceprofile/services/new/page.tsx",
+  "src/app/(app)/dashboard/serviceprofile/services/new/legacy-service-new-client.tsx",
   "src/app/(app)/public/needs/_components/NeedCard.tsx",
   "src/app/(app)/public/needs/_components/NeedDetailPage.tsx",
   "src/domain/need/constant.ts",

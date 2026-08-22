@@ -110,12 +110,12 @@ export default function BaseInfo({ serviceType }: Props) {
                   className={cn(
                     "w-full rounded-xl px-4 py-2.5 text-sm shadow-sm bg-white outline-none ring-1 focus:ring-2 transition-all",
                     errors.customType
-                      ? "ring-red-500"
+                      ? "ring-danger-text"
                       : "ring-transparent focus:ring-purple-500",
                   )}
                 />
                 {errors.customType && (
-                  <p className="absolute -top-1 -translate-y-full right-1 text-[10px] text-red-500 font-medium flex items-center gap-1 pl-1 whitespace-nowrap">
+                  <p className="absolute -top-1 -translate-y-full right-1 text-[10px] text-danger-text font-medium flex items-center gap-1 pl-1 whitespace-nowrap">
                     <AlertCircle className="h-3 w-3" />
                     {errors.customType.message}
                   </p>

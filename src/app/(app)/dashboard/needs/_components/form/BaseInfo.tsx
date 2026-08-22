@@ -101,12 +101,12 @@ export default function BaseInfo() {
             className={cn(
               "w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2",
               errors.title
-                ? "border border-red-500 focus:ring-red-500 focus:border-0"
+                ? "border border-danger-text focus:ring-danger-text focus:border-0"
                 : "border-none focus:ring-secondary/80",
             )}
           />
           {errors.title && (
-            <span className="absolute right-3 top-0 -translate-y-full text-xs text-red-500 whitespace-nowrap z-10">
+            <span className="absolute right-3 top-0 -translate-y-full text-xs text-danger-text whitespace-nowrap z-10">
               {errors.title.message}
             </span>
           )}
@@ -121,7 +121,7 @@ export default function BaseInfo() {
               className={cn(
                 "w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2",
                 errors.startDate
-                  ? "border border-red-500 focus:ring-red-500 focus:border-0"
+                  ? "border border-danger-text focus:ring-danger-text focus:border-0"
                   : "border-none focus:ring-secondary/80",
               )}
               {...register("startDate", {
@@ -129,7 +129,7 @@ export default function BaseInfo() {
               })}
             />
             {errors.startDate && (
-              <span className="absolute right-3 top-0 -translate-y-full text-xs text-red-500 whitespace-nowrap z-10">
+              <span className="absolute right-3 top-0 -translate-y-full text-xs text-danger-text whitespace-nowrap z-10">
                 {errors.startDate.message}
               </span>
             )}
@@ -142,7 +142,7 @@ export default function BaseInfo() {
               className={cn(
                 "w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2",
                 errors.endDate
-                  ? "border border-red-500 focus:ring-red-500 focus:border-0"
+                  ? "border border-danger-text focus:ring-danger-text focus:border-0"
                   : "border-none focus:ring-secondary/80",
               )}
               {...register("endDate", {
@@ -150,7 +150,7 @@ export default function BaseInfo() {
               })}
             />
             {errors.endDate && (
-              <span className="absolute right-3 top-0 -translate-y-full text-xs text-red-500 whitespace-nowrap z-10">
+              <span className="absolute right-3 top-0 -translate-y-full text-xs text-danger-text whitespace-nowrap z-10">
                 {errors.endDate.message}
               </span>
             )}

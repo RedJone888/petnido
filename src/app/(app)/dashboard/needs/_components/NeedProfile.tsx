@@ -51,71 +51,67 @@ export default function NeedProfile({ needs, user }: Props) {
   }, [needs, filterStatus]);
 
   return (
-    <div className="p-6 h-full flex flex-col items-start">
-      <div className="w-full flex items-end px-4 pb-4 gap-4">
-        <UserAvatar
-          size={64}
-          image={user?.image}
-          name={user?.name}
-          email={user?.email}
-        />
+    <div className="w-full space-y-4">
+      <div className="flex w-full flex-wrap items-end justify-between gap-4 px-1 pb-2">
+        <div className="flex items-center gap-4">
+          <UserAvatar
+            size={64}
+            image={user?.image}
+            name={user?.name}
+            email={user?.email}
+          />
 
-        <div className="flex-1 flex flex-col gap-2">
-          <h1 className="text-xl font-medium text-slate-400">
-            <span className="font-bold text-primary">
-              {user?.name ?? "ゲスト"}さん
-            </span>
-            の依頼
-          </h1>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-xl font-medium text-slate-400">
+              <span className="font-bold text-primary">
+                {user?.name ?? "ゲスト"}さん
+              </span>
+              の依頼
+            </h1>
 
-          {/* 第二行：状态分布统计 */}
-          <div className="flex items-center gap-1">
-            {stats.map((stat, idx) => (
-              <button
-                key={idx}
-                className={cn(
-                  "group flex items-baseline gap-1 px-3 rounded-full",
-                  filterStatus === stat.id && "bg-slate-100",
-                )}
-                onClick={() => setFilterStatus(stat.id)}
-              >
-                <span
+            {/* 第二行：状态分布统计 */}
+            <div className="flex items-center gap-1">
+              {stats.map((stat, idx) => (
+                <button
+                  key={idx}
                   className={cn(
-                    "text-[11px] font-bold text-slate-400 leading-none",
-                    filterStatus === stat.id && "text-slate-500",
+                    "group flex items-baseline gap-1 rounded-full px-3",
+                    filterStatus === stat.id && "bg-slate-100",
                   )}
+                  onClick={() => setFilterStatus(stat.id)}
                 >
-                  {stat.label}
-                </span>
-                <span
-                  className={cn(
-                    "text-lg font-black tabular-nums tracking-tight",
-                    stat.textColor,
-                  )}
-                >
-                  {stat.value}
-                </span>
-                <span
-                  className={cn(
-                    "text-[10px] font-bold text-slate-400",
-                    filterStatus === stat.id && "text-slate-500",
-                  )}
-                >
-                  件
-                </span>
-              </button>
-            ))}
+                  <span
+                    className={cn(
+                      "text-[11px] font-bold leading-none text-slate-400",
+                      filterStatus === stat.id && "text-slate-500",
+                    )}
+                  >
+                    {stat.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-lg font-black tabular-nums tracking-tight",
+                      stat.textColor,
+                    )}
+                  >
+                    {stat.value}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold text-slate-400",
+                      filterStatus === stat.id && "text-slate-500",
+                    )}
+                  >
+                    件
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* <button className="shrink-0 inline-flex rounded-full text-sm border px-4 py-1.5 text-white font-bold bg-purple-600 hover:bg-purple-700 shadow-sm shadow-purple-100 items-center gap-2">
-          <Plus className="h-4 w-4" strokeWidth={3} />
-          新しい依頼を作成する
-        </button> */}
         <Button
           href="/needs/create"
-          //  href={`/dashboard/needs/${id}/edit`}
-          //   onClick={() => router.push("/dashboard/needs/new")}
           className="shrink-0 rounded-full px-4 py-1.5 shadow-sm shadow-purple-100"
         >
           <Plus className="h-4 w-4" strokeWidth={3} />
@@ -123,46 +119,23 @@ export default function NeedProfile({ needs, user }: Props) {
         </Button>
       </div>
 
-      <div className="overflow-y-auto flex-1 p-4 w-full bg-[#f6f7fb] shadow-inner rounded-xl">
+      <div className="w-full rounded-xl bg-[#f6f7fb] p-4 shadow-inner">
         {filteredNeeds?.length === 0 ? (
-          //           // <div className="w-full h-full pt-8 px-10">
-          //   <ConfusedDog className="mx-auto w-60 h-60 scale-130 pointer-events-none" />
-          //   <div className="pt-6 px-4 border-t border-dashed border-slate-300 flex flex-col items-center text-center">
-          //     <p className="text-sm text-slate-400">
-          //       まだ提供しているサービスがありません 🐾
-          //     </p>
-          //     <p className="text-[10px] mt-1 text-slate-400">
-          //       お世話内容を登録すると、依頼を受けられます。
-          //       「新しいサービスを追加する」から始めてみましょう。
-          //     </p>
-          //   </div>
-          // </div>
-          <div className="w-full h-full pt-8 px-10">
+          <div className="w-full py-8 px-4">
             {needs.length === 0 ? (
               <EmptyState
-                icon={<ClipboardList className="w-10 h-10" />}
+                icon={<ClipboardList className="h-10 w-10" />}
                 title="まだ依頼はありません"
                 description="外出や出張のとき、大切な家族であるペットを安心して任せられるシッターさんを探してみませんか？"
               />
             ) : (
-              // <div className="flex flex-col items-center justify-center py-16 text-center">
-              //   <div className="mb-4 text-purple2">
-              //     <ClipboardList className="w-10 h-10" />
-              //   </div>
-              //   <h2 className="text-lg font-semibold text-neutral-900 mb-2">
-              //     まだ依頼はありません
-              //   </h2>
-              //   <p className="text-sm text-neutral-600 max-w-md mb-6">
-              //     外出や出張のとき、大切な家族であるペットを安心して任せられるシッターさんを探してみませんか？
-              //   </p>
-              // </div>
-              <div className="text-center py-10 text-gray-500">
+              <div className="py-10 text-center text-gray-500">
                 条件に合う依頼が見つかりませんでした。
               </div>
             )}
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {filteredNeeds.map((need) => {
               return <NeedCard key={need.id} need={need} />;
             })}

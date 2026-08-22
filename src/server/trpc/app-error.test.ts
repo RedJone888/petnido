@@ -19,6 +19,24 @@ describe("tRPC application error envelope", () => {
         "request-2",
       ),
     ).toMatchObject({ code: "CONFLICTING_UPDATE", retryable: true });
+    expect(
+      formatAppError(
+        new TRPCError({ code: "CONFLICT", message: "LAST_SIGN_IN_METHOD" }),
+        "request-3",
+      ),
+    ).toMatchObject({ code: "LAST_SIGN_IN_METHOD", retryable: false });
+    expect(
+      formatAppError(
+        new TRPCError({ code: "UNAUTHORIZED", message: "REAUTH_REQUIRED" }),
+        "request-4",
+      ),
+    ).toMatchObject({ code: "REAUTH_REQUIRED", retryable: false });
+    expect(
+      formatAppError(
+        new TRPCError({ code: "UNAUTHORIZED", message: "INVALID_CREDENTIALS" }),
+        "request-5",
+      ),
+    ).toMatchObject({ code: "INVALID_CREDENTIALS", retryable: false });
   });
 
   it("does not expose unknown internal error messages", () => {

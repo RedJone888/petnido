@@ -1,10 +1,16 @@
+import { AppImage } from "@/components/ui/app-image";
+
 export default function SitterCard({ sitter }: { sitter: any }) {
   return (
     <div className="border border-card-border bg-card rounded-2xl p-4 shadow-sm hover:shadow-md transition">
       <div className="flex gap-3 items-center">
-        <img
+        <AppImage
+          width={64}
+          height={64}
           src={sitter.avatar}
           alt={sitter.name}
+          loading="lazy"
+          decoding="async"
           className="w-16 h-16 rounded-full object-cover"
         />
         <div>

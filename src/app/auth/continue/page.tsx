@@ -1,26 +1,42 @@
 import { redirect } from "next/navigation";
 
-import { sanitizeReturnTo } from "@/domain/auth/return-to";
-import { auth } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { sanitizeReturnTo } from "@/modules/auth/return-to";
+import { getServerUserContext } from "@/server/validation/server-user-context";
 
 export default async function AuthContinuePage({
   searchParams,
 }: {
   searchParams: { returnTo?: string };
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/");
+  const { userId, prisma, isValidationSession } = await getServerUserContext();
+  if (!userId) redirect("/");
 
   const profile = await prisma.profile.upsert({
-    where: { userId: session.user.id },
+    where: { userId },
     update: {},
-    create: { userId: session.user.id },
-    select: { onboardingStep: true },
+    create: { userId },
+    select: { onboardingStep: true, lineFirstUseCompletedAt: true },
   });
   const returnTo = encodeURIComponent(
     sanitizeReturnTo(searchParams.returnTo, "/dashboard"),
   );
+
+  if (!isValidationSession && !profile.lineFirstUseCompletedAt) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        passwordHash: true,
+        accounts: { select: { provider: true } },
+      },
+    });
+    const isLineOnly =
+      !user?.email &&
+      !user?.passwordHash &&
+      user?.accounts.length === 1 &&
+      user.accounts[0]?.provider === "line";
+    if (isLineOnly) redirect(`/auth/line-first-use?returnTo=${returnTo}`);
+  }
 
   if (profile.onboardingStep === "PROFILE") {
     redirect(`/onboarding/profile?returnTo=${returnTo}`);

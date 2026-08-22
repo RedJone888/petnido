@@ -38,7 +38,7 @@ export function FloatInput({
           readOnly={!canEdit}
           className={cn(
             "w-full bg-transparent outline-none px-0 py-1 text-gray-900",
-            error ? "border-red-500 border-b" : "border-gray-300 border-b-2",
+            error ? "border-danger-text border-b" : "border-gray-300 border-b-2",
             !editable && "cursor-default text-gray-600",
           )}
         />
@@ -62,7 +62,7 @@ export function FloatInput({
             "absolute left-0 bottom-0 h-0.5 w-full",
             "transition-transform duration-300",
             focused ? "scale-x-100" : "scale-x-0",
-            error ? "bg-red-500" : "bg-purple-500",
+            error ? "bg-danger-bg0" : "bg-purple-500",
           )}
           style={{ transformOrigin: "center" }}
         ></span>
@@ -88,7 +88,7 @@ export function FloatInput({
         )}
       </div>
       {/* Error message */}
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="text-xs text-danger-text mt-1">{error}</p>}
     </div>
   );
 }

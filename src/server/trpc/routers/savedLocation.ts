@@ -43,13 +43,17 @@ export const savedLocationRouter = router({
             data: { isDefault: false },
           });
         }
+        const resolvedRegionLabel =
+          input.regionLabel?.trim() ||
+          input.label?.trim() ||
+          `${Number(input.lat).toFixed(4)}, ${Number(input.lon).toFixed(4)}`;
         return tx.userLocation.create({
           data: {
             userId,
-            label: input.label,
+            label: input.label?.trim() || null,
             lat: input.lat,
             lon: input.lon,
-            regionLabel: input.regionLabel,
+            regionLabel: resolvedRegionLabel,
             displayPrecision: input.displayPrecision,
             isDefault,
           },

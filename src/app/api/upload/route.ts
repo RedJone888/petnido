@@ -16,7 +16,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import { auth } from "@/lib/auth";
+import { auth } from "@/modules/auth";
 import prisma from "@/lib/prisma";
 import { ServicePhotoKind } from "@prisma/client";
 

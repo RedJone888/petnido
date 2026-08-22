@@ -22,14 +22,17 @@ export async function linkPhotos({
   serviceKind,
 }: Props) {
   if (!photoIds || photoIds.length === 0) return;
-  const updateData: any = {
-    status: 1,
-    serviceId: serviceId || null,
-    needId: needId || null,
-    petId: petId || null,
-    needPetId: needPetId || null,
-    serviceKind: serviceId ? serviceKind : null,
-  };
+  const updateData: any = { status: 1 };
+  if (serviceId) {
+    updateData.serviceId = serviceId;
+    updateData.serviceKind = serviceKind;
+  } else if (needId) {
+    updateData.needId = needId;
+  } else if (petId) {
+    updateData.petId = petId;
+  } else if (needPetId) {
+    updateData.needPetId = needPetId;
+  }
   await Promise.all(
     photoIds.map(async (id, index) => {
       const result = await tx.attachment.updateMany({
@@ -72,19 +75,18 @@ export async function syncPhotos(props: Props) {
     ownerFilter.needPetId = needPetId;
   }
   // 2. 【清理旧图】
+  const unlinkData: any = { status: 2 };
+  if (serviceId) unlinkData.serviceId = null;
+  else if (needId) unlinkData.needId = null;
+  else if (petId) unlinkData.petId = null;
+  else if (needPetId) unlinkData.needPetId = null;
   await tx.attachment.updateMany({
     where: {
       ...ownerFilter,
       userId,
       id: { notIn: photoIds },
     },
-    data: {
-      status: 2,
-      serviceId: null,
-      needId: null,
-      petId: null,
-      needPetId: null,
-    },
+    data: unlinkData,
   });
   // 2. 【认领新图 & 更新顺序】
   await linkPhotos(props);

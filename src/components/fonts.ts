@@ -1,20 +1,32 @@
-import {
-  Inter,
-  Kosugi_Maru,
-  Kiwi_Maru,
-  Plus_Jakarta_Sans,
-} from "next/font/google";
-export const inter = Inter({ subsets: ["latin"] });
-export const kosugiMaru = Kosugi_Maru({
-  weight: ["400"],
-  subsets: ["cyrillic"],
-});
-export const kiwiMaru = Kiwi_Maru({
-  weight: ["400", "300", "500"],
-  subsets: ["cyrillic"],
-});
+/**
+ * Font tokens deliberately use the platform font stack.
+ *
+ * The previous implementation imported next/font/google at build time, which
+ * made production builds depend on an external font download. Keeping the
+ * same token names lets existing layouts continue to work while using a
+ * deterministic local stack for Latin and CJK text.
+ */
+type LocalFont = {
+  className: string;
+  variable: string;
+};
 
-export const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
+export const inter: LocalFont = {
+  className: "font-local-inter",
+  variable: "--font-inter",
+};
+
+export const kosugiMaru: LocalFont = {
+  className: "font-local-kosugi",
+  variable: "--font-kosugi",
+};
+
+export const kiwiMaru: LocalFont = {
+  className: "font-local-kiwi",
+  variable: "--font-kiwi",
+};
+
+export const plusJakarta: LocalFont = {
+  className: "font-local-plus-jakarta",
   variable: "--font-plus-jakarta",
-});
+};

@@ -4,8 +4,10 @@ import { NeedForm } from "../../_components/form";
 import { NeedCreateInput } from "@/lib/zod/needs";
 import { useNeed } from "@/hooks/useNeed";
 import LoadingPage from "@/components/shared/loading-page";
+import { useLanguage } from "@/components/providers/language-provider";
 
 export default function NeedEditPage({ params }: { params: { id: string } }) {
+  const { t } = useLanguage();
   const { getNeedById, updateNeed } = useNeed(params.id);
   const needData = getNeedById.data;
   const handleSubmit = async (data: NeedCreateInput) => {
@@ -17,12 +19,12 @@ export default function NeedEditPage({ params }: { params: { id: string } }) {
     }
   };
   if (getNeedById.isLoading) {
-    return <LoadingPage title="読み込み中..." />;
+    return <LoadingPage title={t.core.common.loading} />;
   }
   if (!needData) {
     return (
       <div className="p-10 text-center text-gray-500">
-        依頼が見つかりませんでした。
+        {t.core.dashboardNeedDetail.unavailable}
       </div>
     );
   }

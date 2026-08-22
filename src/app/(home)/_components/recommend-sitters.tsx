@@ -3,6 +3,7 @@ import { SectionHeader } from "./section-header";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { useLanguage } from "@/components/providers/language-provider";
+import { AppImage } from "@/components/ui/app-image";
 const sitters = [
   {
     name: "Sarah M.",
@@ -50,7 +51,7 @@ export function RecommendSitters() {
             className="flex items-center gap-4 rounded-[18px] border border-outline-variant bg-white p-4 transition-colors hover:border-primary/30 active:scale-[0.99] md:flex-col md:gap-0 md:p-6 md:text-center"
           >
             {/* <div class="bg-surface-container-lowest p-4 rounded-3xl flex items-center gap-4 border border-outline-variant shadow-sm active:scale-[0.98] transition-all"></div> */}
-            <img
+            <AppImage
               src={sitter.image}
               alt={sitter.name}
               className="h-16 w-16 rounded-2xl border border-outline-variant object-cover md:mx-auto md:mb-4 md:h-24 md:w-24 md:rounded-full"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from "@/components/providers/language-provider";
+import { AppImage } from "@/components/ui/app-image";
 import { Power, RefreshCw, Users } from "lucide-react";
 
 const valueImages = [
@@ -17,7 +18,7 @@ export function CoreValueSection() {
     <div className="mx-auto flex w-full max-w-container-max-width flex-col items-center gap-10 px-margin-mobile md:flex-row md:gap-16 md:px-margin-desktop">
       <div className="hidden grid-cols-2 gap-4 md:grid md:w-1/2">
         {valueImages.map((image, index) => (
-          <img
+          <AppImage
             key={image}
             src={image}
             alt={index === 0 ? "Person caring for a small pet" : "Cat receiving care"}

@@ -1,27 +1,24 @@
-import { auth } from "@/lib/auth";
-import { listUserNeeds } from "@/lib/need";
-import EmptyState from "../_components/EmptyState";
-import { ClipboardList } from "lucide-react";
-import NeedProfile from "./_components/NeedProfile";
+import { auth } from "@/modules/auth";
+import { NeedV2List } from "./_components/NeedV2List";
+import { messages } from "@/i18n/messages";
+import { publishingV2WriteEnabled } from "@/server/feature-flags/publishing-v2";
 
 export default async function NeedsPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    return <>请先登录</>;
-  }
-  const needs = await listUserNeeds(session.user.id);
-
-  if (!needs) {
     return (
-      <EmptyState
-        icon={<ClipboardList className="w-10 h-10" />}
-        title="まだ依頼はありません"
-        description="外出や出張のとき、大切な家族であるペットを安心して任せられるシッターさんを探してみませんか？"
-        href="/needs/create"
-        btnLabel="新しい依頼を作成する"
-      />
+      <main className="h-full overflow-y-auto p-6">
+        {messages.en.core.dashboardNeeds.signIn}
+      </main>
     );
   }
 
-  return <NeedProfile needs={needs} user={session.user} />;
+  return (
+    <main className="w-full h-full flex flex-col overflow-hidden">
+      <NeedV2List
+        user={session.user}
+        mutable={publishingV2WriteEnabled()}
+      />
+    </main>
+  );
 }

@@ -1,226 +1,493 @@
 "use client";
 
-import { Check, MapPin, Pencil, Plus, Star, Trash2, X } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { PiMagnifyingGlass, PiShieldCheck } from "react-icons/pi";
 
+import { AddressInput } from "@/components/location/AddressField";
+import { ModalShell } from "@/components/ui/modal-shell";
+import { useLocationController } from "@/hooks/useLocationController";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useConfirmStore } from "@/store/useConfirmStore";
+import { useAdaptiveDropdownPlacement } from "@/hooks/useAdaptiveDropdownPlacement";
 import { trpc } from "@/utils/trpc";
+import { useLanguage } from "@/components/providers/language-provider";
 import {
-  fieldClass,
-  primaryButtonClass,
-  secondaryButtonClass,
-  SettingsCard,
+  settingsFieldLabelClass,
+  softActionButtonClass,
 } from "./settings-card";
 
-const MapLibreMap = dynamic(
-  () => import("@/components/location/MapLibreMap"),
-  { ssr: false },
-);
+const MapLibreMap = dynamic(() => import("@/components/location/MapLibreMap"), {
+  ssr: false,
+});
 
-type Precision = "CITY" | "DISTRICT" | "NEIGHBORHOOD" | "MAP_POINT";
-
-const emptyLocation = {
-  id: null as string | null,
-  label: "",
-  regionLabel: "",
-  lat: "35.681236",
-  lon: "139.767125",
-  displayPrecision: "MAP_POINT" as Precision,
-  makeDefault: false,
+type LocationSeed = {
+  id: string | null;
+  regionLabel: string;
+  lat: number;
+  lon: number;
+  makeDefault: boolean;
 };
 
+const emptyLocation: LocationSeed = {
+  id: null,
+  regionLabel: "",
+  lat: 34.6937,
+  lon: 135.5023,
+  makeDefault: true,
+};
+
+function LocationEditor({
+  seed,
+  busy,
+  mapAvailable,
+  onCancel,
+  onSave,
+}: {
+  seed: LocationSeed;
+  busy: boolean;
+  mapAvailable: boolean;
+  onCancel: () => void;
+  onSave: (values: {
+    id: string | null;
+    regionLabel: string;
+    lat: number;
+    lon: number;
+    makeDefault: boolean;
+  }) => Promise<void>;
+}) {
+  const { t, lang } = useLanguage();
+  const copy = t.settings.locations;
+  const locationFieldCopy = {
+    en: {
+      label: "Location",
+      privacy:
+        "Search for a city, district, neighborhood, or station, or choose an approximate point on the map. Do not enter a street number, building, floor, or room number.",
+    },
+    zh: {
+      label: "位置",
+      privacy:
+        "搜索城市、市区、街区或车站，或在地图上选择大致位置。请勿输入门牌号、楼栋、楼层或房号。",
+    },
+    ja: {
+      label: "場所",
+      privacy:
+        "市区町村、地域、駅名を検索するか、地図上でおおよその地点を選んでください。番地、建物名、階、部屋番号は入力しないでください。",
+    },
+  }[lang];
+  const [makeDefault, setMakeDefault] = useState(seed.makeDefault);
+  const controller = useLocationController({
+    location: {
+      label: seed.regionLabel,
+      lat: seed.lat,
+      lon: seed.lon,
+    },
+  });
+  const selected =
+    controller.source !== "search" &&
+    Boolean(controller.location.label.trim()) &&
+    Number.isFinite(controller.location.lat) &&
+    Number.isFinite(controller.location.lon);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selected || controller.isReverseLoading) return;
+    await onSave({
+      id: seed.id,
+      regionLabel: controller.location.label.trim(),
+      lat: controller.location.lat,
+      lon: controller.location.lon,
+      makeDefault,
+    });
+  }
+
+  return (
+    <ModalShell
+      title={seed.id ? copy.edit : copy.newLocation}
+      titleId="location-editor-title"
+      closeLabel={copy.close}
+      cancelLabel={copy.cancel}
+      saveLabel={copy.save}
+      savingLabel={copy.saving}
+      saving={busy}
+      saveDisabled={!mapAvailable || !selected || controller.isReverseLoading}
+      onClose={onCancel}
+      onCancel={onCancel}
+      onSubmit={submit}
+      bodyClassName="space-y-3"
+    >
+      <div className="mb-5 flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <PiShieldCheck className="mt-0.5 shrink-0" size={18} />
+        <span>{locationFieldCopy.privacy}</span>
+      </div>
+
+      <div>
+        <label
+          htmlFor="address-location-search"
+          className={`${settingsFieldLabelClass} mb-2`}
+        >
+          {locationFieldCopy.label}
+        </label>
+        <div className="relative">
+          <PiMagnifyingGlass
+            aria-hidden="true"
+            className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[#8a5d34]"
+            size={19}
+          />
+          <AddressInput
+            inputId="address-location-search"
+            controller={controller}
+            placeholder={copy.searchPlaceholder}
+            className="h-11 !pl-11 !pr-10 !text-sm"
+          />
+        </div>
+      </div>
+
+      {mapAvailable ? (
+        <div
+          data-location-map
+          className="relative mt-3 h-72 min-h-[18rem] max-h-[18rem] shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+        >
+          <MapLibreMap
+            lat={controller.location.lat}
+            lon={controller.location.lon}
+            editable
+            onLocationChange={controller.setByMap}
+          />
+          {controller.isReverseLoading ? (
+            <div
+              role="status"
+              className="pointer-events-none absolute bottom-3 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/80 bg-white/90 px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-[0_3px_14px_rgba(30,41,59,0.18)] backdrop-blur-sm"
+            >
+              <span
+                aria-hidden="true"
+                className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--primary-border)] border-t-[var(--primary)]"
+              />
+              {copy.identifyingArea}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-600">
+          {copy.mapUnavailable}
+        </p>
+      )}
+
+      {!seed.id ? (
+        <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <input
+            type="checkbox"
+            checked={makeDefault}
+            onChange={(event) => setMakeDefault(event.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          {copy.makeDefault}
+        </label>
+      ) : null}
+    </ModalShell>
+  );
+}
+
 export function LocationSettings() {
+  const { t } = useLanguage();
+  const copy = t.settings.locations;
+  const confirm = useConfirm();
+  const setConfirmLoading = useConfirmStore((state) => state.setIsDeleting);
+  const closeConfirm = useConfirmStore((state) => state.close);
   const utils = trpc.useUtils();
   const locations = trpc.savedLocation.listMine.useQuery();
-  const [form, setForm] = useState(emptyLocation);
-  const [showForm, setShowForm] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [editorSeed, setEditorSeed] = useState<LocationSeed | null>(null);
+  const [editorVersion, setEditorVersion] = useState(0);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [optimisticDefaultId, setOptimisticDefaultId] = useState<string | null>(
+    null,
+  );
+  const addressDropdown = useAdaptiveDropdownPlacement(
+    dropdownOpen,
+    dropdownRef,
+  );
   const refresh = async () => {
     await utils.savedLocation.listMine.invalidate();
     await utils.serviceProfile.getSettings.invalidate();
   };
   const create = trpc.savedLocation.create.useMutation({ onSuccess: refresh });
   const update = trpc.savedLocation.update.useMutation({ onSuccess: refresh });
-  const setDefault = trpc.savedLocation.setDefault.useMutation({ onSuccess: refresh });
-  const archive = trpc.savedLocation.archive.useMutation({ onSuccess: refresh });
+  const setDefault = trpc.savedLocation.setDefault.useMutation({
+    onMutate: ({ id }) => setOptimisticDefaultId(id),
+    onSuccess: async () => {
+      await refresh();
+      setOptimisticDefaultId(null);
+    },
+    onError: () => setOptimisticDefaultId(null),
+  });
+  const archive = trpc.savedLocation.archive.useMutation({
+    onSuccess: refresh,
+  });
   const busy = create.isLoading || update.isLoading;
   const mapAvailable = Boolean(process.env.NEXT_PUBLIC_MAPTILER_KEY);
-  const mapLat = Number(form.lat);
-  const mapLon = Number(form.lon);
-  const validMapPoint =
-    Number.isFinite(mapLat) &&
-    Number.isFinite(mapLon) &&
-    mapLat >= -90 &&
-    mapLat <= 90 &&
-    mapLon >= -180 &&
-    mapLon <= 180;
+  const serverDefaultId = locations.data?.find(
+    (location) => location.isDefault,
+  )?.id;
+  const effectiveDefaultId = optimisticDefaultId ?? serverDefaultId;
+  const orderedLocations = [...(locations.data ?? [])].sort((a, b) => {
+    if (a.id === effectiveDefaultId) return -1;
+    if (b.id === effectiveDefaultId) return 1;
+    return Number(a.createdAt) - Number(b.createdAt);
+  });
+  const defaultLocation = orderedLocations[0];
 
-  function resetForm() {
-    setForm(emptyLocation);
-    setShowForm(false);
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [dropdownOpen]);
+
+  useEffect(() => {
+    if (!editorSeed) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [editorSeed]);
+
+  function openEditor(seed: LocationSeed) {
+    setDropdownOpen(false);
+    setEditorVersion((version) => version + 1);
+    setEditorSeed(seed);
   }
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    const values = {
-      label: form.label.trim() || null,
-      regionLabel: form.regionLabel.trim() || undefined,
-      lat: Number(form.lat),
-      lon: Number(form.lon),
-      displayPrecision: form.displayPrecision,
+  async function saveLocation(values: {
+    id: string | null;
+    regionLabel: string;
+    lat: number;
+    lon: number;
+    makeDefault: boolean;
+  }) {
+    const payload = {
+      label: null,
+      regionLabel: values.regionLabel,
+      lat: values.lat,
+      lon: values.lon,
+      displayPrecision: "MAP_POINT" as const,
     };
     try {
-      if (form.id) await update.mutateAsync({ id: form.id, ...values });
-      else await create.mutateAsync({ ...values, makeDefault: form.makeDefault });
-      toast.success(form.id ? "場所を更新しました" : "場所を追加しました");
-      resetForm();
+      if (values.id) {
+        await update.mutateAsync({ id: values.id, ...payload });
+      } else {
+        await create.mutateAsync({
+          ...payload,
+          makeDefault: values.makeDefault,
+        });
+      }
+      toast.success(values.id ? copy.updateSuccess : copy.createSuccess);
+      setEditorSeed(null);
     } catch {
-      toast.error("場所を保存できません。座標と地域名を確認してください");
+      toast.error(copy.saveError);
+    }
+  }
+
+  async function chooseDefault(id: string) {
+    setDropdownOpen(false);
+    if (id === effectiveDefaultId || setDefault.isLoading) return;
+    try {
+      await setDefault.mutateAsync({ id });
+      toast.success(copy.setDefaultSuccess);
+    } catch {
+      toast.error(copy.setDefaultError);
     }
   }
 
   return (
-    <SettingsCard
+    <section
       id="locations"
-      icon={MapPin}
-      title="保存した場所"
-      description="正確な住所や住居の詳細は保存しません。地図座標と任意の大まかな地域名だけを使用します。"
+      className="grid gap-3 py-4 md:grid-cols-[112px_minmax(0,1fr)] md:items-start md:gap-5"
+      data-profile-row="address"
     >
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          地域名には市区町村やエリア名だけを入力し、番地や住居の詳細は入力しないでください。
-        </div>
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => {
-              setForm(emptyLocation);
-              setShowForm(true);
-            }}
-            className={secondaryButtonClass}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            場所を追加
-          </button>
-        </div>
-
-        {showForm && (
-          <form onSubmit={submit} className="rounded-2xl border border-primary/20 bg-purple-50/40 p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">{form.id ? "場所を編集" : "新しい場所"}</h3>
-              <button type="button" onClick={resetForm} aria-label="入力を閉じる" className="rounded-lg p-2 text-slate-500 hover:bg-white">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-semibold text-slate-700">
-                登録名（任意）
-                <input maxLength={50} value={form.label} onChange={(event) => setForm({ ...form, label: event.target.value })} placeholder="例：自宅周辺" className={fieldClass} />
-              </label>
-              <label className="text-sm font-semibold text-slate-700">
-                地域名（任意・大まかな表示）
-                <input maxLength={120} value={form.regionLabel} onChange={(event) => setForm({ ...form, regionLabel: event.target.value })} placeholder="例：世田谷区、東京都" className={fieldClass} />
-              </label>
-              <label className="text-sm font-semibold text-slate-700">
-                緯度
-                <input required type="number" min={-90} max={90} step="0.000001" value={form.lat} onChange={(event) => setForm({ ...form, lat: event.target.value })} className={fieldClass} />
-              </label>
-              <label className="text-sm font-semibold text-slate-700">
-                経度
-                <input required type="number" min={-180} max={180} step="0.000001" value={form.lon} onChange={(event) => setForm({ ...form, lon: event.target.value })} className={fieldClass} />
-              </label>
-              <label className="text-sm font-semibold text-slate-700">
-                表示精度
-                <select value={form.displayPrecision} onChange={(event) => setForm({ ...form, displayPrecision: event.target.value as Precision })} className={fieldClass}>
-                  <option value="MAP_POINT">本人用の地図点</option>
-                  <option value="NEIGHBORHOOD">周辺地域</option>
-                  <option value="DISTRICT">市区町村</option>
-                  <option value="CITY">都市</option>
-                </select>
-              </label>
-              {!form.id && (
-                <label className="flex items-center gap-3 self-end rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
-                  <input type="checkbox" checked={form.makeDefault} onChange={(event) => setForm({ ...form, makeDefault: event.target.checked })} className="h-4 w-4 accent-primary" />
-                  既定の場所にする
-                </label>
-              )}
-            </div>
-            {mapAvailable && validMapPoint && (
-              <div className="mt-4">
-                <p className="mb-2 text-sm font-semibold text-slate-700">
-                  地図をクリックするか、マーカーを動かして位置を選択
-                </p>
-                <div className="h-72 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                  <MapLibreMap
-                    lat={mapLat}
-                    lon={mapLon}
-                    editable
-                    onLocationChange={(lat, lon) =>
-                      setForm({
-                        ...form,
-                        lat: lat.toFixed(6),
-                        lon: lon.toFixed(6),
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            )}
-            {!mapAvailable && (
-              <p className="mt-4 text-xs leading-5 text-slate-500">
-                地図キーが設定されていない環境では、緯度と経度を直接入力できます。
-              </p>
-            )}
-            <button type="submit" disabled={busy || !form.lat || !form.lon} className={`${primaryButtonClass} mt-4`}>
-              {busy ? "保存中..." : "保存"}
-            </button>
-          </form>
-        )}
-
+      <p className="text-sm font-bold text-slate-700 md:flex md:h-11 md:items-center">
+        {copy.label}
+      </p>
+      <div className="min-w-0 max-w-3xl">
         {locations.isLoading ? (
-          <p className="text-sm text-slate-500">読み込み中...</p>
-        ) : locations.data?.length ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {locations.data.map((location) => (
-              <article key={location.id} className="rounded-2xl border border-slate-200 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-slate-900">{location.label || "名称未設定"}</h3>
-                      {location.isDefault && <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-bold text-primary"><Star className="h-3 w-3 fill-current" />既定</span>}
-                    </div>
-                    <p className="mt-2 text-sm text-slate-600">{location.regionLabel || "地域名なし"}</p>
-                    <p className="mt-1 font-mono text-xs text-slate-400">{String(location.lat)}, {String(location.lon)}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    {!location.isDefault && (
-                      <button type="button" aria-label={`${location.label || "場所"}を既定にする`} disabled={setDefault.isLoading} onClick={async () => {
-                        try {
-                          await setDefault.mutateAsync({ id: location.id });
-                          toast.success("既定の場所を変更しました");
-                        } catch { toast.error("既定の場所を変更できませんでした"); }
-                      }} className="rounded-lg p-2 text-slate-500 hover:bg-green-50 hover:text-green-700"><Check className="h-4 w-4" /></button>
-                    )}
-                    <button type="button" aria-label={`${location.label || "場所"}を編集`} onClick={() => {
-                      setForm({ id: location.id, label: location.label ?? "", regionLabel: location.regionLabel ?? "", lat: String(location.lat), lon: String(location.lon), displayPrecision: location.displayPrecision as Precision, makeDefault: location.isDefault });
-                      setShowForm(true);
-                    }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-primary"><Pencil className="h-4 w-4" /></button>
-                    <button type="button" aria-label={`${location.label || "場所"}を削除`} disabled={archive.isLoading} onClick={async () => {
-                      if (!window.confirm("この場所を登録情報から削除しますか？")) return;
-                      try {
-                        await archive.mutateAsync({ id: location.id });
-                        toast.success("場所を削除しました");
-                      } catch { toast.error("場所を削除できませんでした"); }
-                    }} className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                </div>
-              </article>
-            ))}
+          <div className="motion-safe:animate-pulse">
+            <div className="h-11 max-w-md rounded-xl bg-slate-200/80" />
+          </div>
+        ) : orderedLocations.length === 0 ? (
+          <div className="flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center">
+            <p
+              data-empty-address-field
+              className="flex min-h-11 min-w-0 items-center rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-500 sm:max-w-md sm:flex-1"
+            >
+              {copy.notSet}
+            </p>
+            <button
+              type="button"
+              onClick={() => openEditor(emptyLocation)}
+              className={`${softActionButtonClass} shrink-0`}
+            >
+              {copy.add}
+            </button>
           </div>
         ) : (
-          <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">まだ場所が登録されていません。</p>
+          <div ref={dropdownRef} className="relative max-w-md">
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={dropdownOpen}
+              aria-controls="saved-address-menu"
+              onClick={() => setDropdownOpen((value) => !value)}
+              className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 transition hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-purple-100"
+            >
+              <span className="min-w-0 truncate">
+                {defaultLocation
+                  ? defaultLocation.regionLabel ||
+                    defaultLocation.label ||
+                    (Number.isFinite(Number(defaultLocation.lat)) &&
+                    Number.isFinite(Number(defaultLocation.lon))
+                      ? `${Number(defaultLocation.lat).toFixed(4)}, ${Number(defaultLocation.lon).toFixed(4)}`
+                      : copy.unnamed)
+                  : copy.none}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-slate-500 transition ${dropdownOpen ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+
+            {dropdownOpen ? (
+              <div
+                id="saved-address-menu"
+                role="menu"
+                data-address-dropdown
+                className={`absolute left-0 right-0 z-40 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ${
+                  addressDropdown.placement === "top"
+                    ? "bottom-full mb-2"
+                    : "top-full mt-2"
+                }`}
+                style={{ maxHeight: addressDropdown.maxHeight }}
+              >
+                {locations.isLoading ? (
+                  <p className="px-3 py-2 text-sm text-slate-500">
+                    {copy.loading}
+                  </p>
+                ) : orderedLocations.length ? (
+                  orderedLocations.map((location) => {
+                    const isDefault = location.id === effectiveDefaultId;
+                    const displayName =
+                      location.regionLabel ||
+                      location.label ||
+                      (Number.isFinite(Number(location.lat)) &&
+                      Number.isFinite(Number(location.lon))
+                        ? `${Number(location.lat).toFixed(4)}, ${Number(location.lon).toFixed(4)}`
+                        : copy.unnamed);
+                    return (
+                      <div
+                        key={location.id}
+                        data-address-item
+                        data-default={isDefault ? "true" : "false"}
+                        className="flex items-center gap-1 rounded-xl hover:bg-slate-50"
+                      >
+                        <button
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={isDefault}
+                          data-address-select
+                          onClick={() => void chooseDefault(location.id)}
+                          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold text-slate-800"
+                        >
+                          <span className="min-w-0 truncate">
+                            {displayName}
+                          </span>
+                          {isDefault ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
+                              <Star className="h-3 w-3 fill-current" />
+                              {copy.defaultBadge}
+                            </span>
+                          ) : null}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${copy.edit}: ${displayName}`}
+                          onClick={() =>
+                            openEditor({
+                              id: location.id,
+                              regionLabel:
+                                location.regionLabel ?? location.label ?? "",
+                              lat: Number(location.lat),
+                              lon: Number(location.lon),
+                              makeDefault: isDefault,
+                            })
+                          }
+                          className="rounded-lg p-2 text-slate-500 hover:bg-white hover:text-primary"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${copy.delete}: ${displayName}`}
+                          disabled={archive.isLoading}
+                          onClick={async () => {
+                            const accepted = await confirm({
+                              title: copy.delete,
+                              content: <p>{copy.deleteQuestion}</p>,
+                              confirmText: copy.deleteConfirm,
+                              cancelText: copy.cancel,
+                              variant: "danger",
+                            });
+                            if (!accepted) return;
+                            setConfirmLoading(true);
+                            try {
+                              await archive.mutateAsync({ id: location.id });
+                              toast.success(copy.deleteSuccess);
+                            } catch {
+                              toast.error(copy.deleteError);
+                            } finally {
+                              setConfirmLoading(false);
+                              closeConfirm();
+                            }
+                          }}
+                          className="rounded-lg p-2 text-slate-500 hover:bg-white hover:text-danger-text"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : null}
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-address-add
+                  onClick={() => openEditor(emptyLocation)}
+                  className={`${softActionButtonClass} mt-1 w-full !justify-start`}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {copy.add}
+                </button>
+              </div>
+            ) : null}
+          </div>
         )}
       </div>
-    </SettingsCard>
+
+      {editorSeed ? (
+        <LocationEditor
+          key={`${editorSeed.id ?? "new"}-${editorVersion}`}
+          seed={editorSeed}
+          busy={busy}
+          mapAvailable={mapAvailable}
+          onCancel={() => setEditorSeed(null)}
+          onSave={saveLocation}
+        />
+      ) : null}
+    </section>
   );
 }

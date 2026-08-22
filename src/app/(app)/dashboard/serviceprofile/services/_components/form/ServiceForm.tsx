@@ -55,7 +55,7 @@ export function ServiceForm({ initialData, onSubmit, isLoading }: Props) {
         currentPhotos.filter((p) => p.serviceKind !== ServicePhotoKind.HOME),
       );
     }
-  }, [serviceType, form.setValue]);
+  }, [form, serviceType]);
 
   const experiencePhotos = photos.filter(
     (p) => p.serviceKind === ServicePhotoKind.EXPERIENCE,
@@ -118,11 +118,11 @@ export function ServiceForm({ initialData, onSubmit, isLoading }: Props) {
     });
     form.setValue("areaLat", locController.location.lat);
     form.setValue("areaLon", locController.location.lon);
-  }, [locController.location, form.setValue]);
+  }, [form, locController.location]);
   useEffect(() => {
     if (!locController.currency) return;
     form.setValue("currency", locController.currency, { shouldValidate: true });
-  }, [locController.currency, form.setValue]);
+  }, [form, locController.currency]);
 
   const onErrors = (errors: any) => {
     console.log("❌ 校验失败详情:", errors);
@@ -264,7 +264,7 @@ export function ServiceForm({ initialData, onSubmit, isLoading }: Props) {
               <span>下書き保存済み {lastSavedTime}</span>
             )}
             {saveStatus === "ERROR" && (
-              <span className="text-red-400">保存に失敗しました</span>
+              <span className="text-danger-text">保存に失敗しました</span>
             )}
             {saveStatus === "IDLE" && lastSavedTime && (
               <span>下書き保存済み {lastSavedTime}</span>

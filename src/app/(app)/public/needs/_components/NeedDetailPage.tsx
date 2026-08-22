@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AppImage } from "@/components/ui/app-image";
 import { useMemo, useState } from "react";
 import { format, eachDayOfInterval, endOfMonth, endOfWeek, isSameDay, isWithinInterval, startOfMonth, startOfWeek } from "date-fns";
 import {
@@ -122,7 +123,7 @@ function VisitCalendar({ startDate, endDate }: { startDate: Date; endDate: Date 
 
       <div className="grid grid-cols-7 gap-y-2 text-center">
         {WEEKDAYS.map((weekday, index) => (
-          <div key={weekday} className={`pb-2 text-[11px] font-bold ${index > 4 ? "text-rose-400" : "text-slate-400"}`}>
+          <div key={weekday} className={`pb-2 text-[11px] font-bold ${index > 4 ? "text-danger-text" : "text-slate-400"}`}>
             {weekday}
           </div>
         ))}
@@ -205,7 +206,7 @@ export default function NeedDetailPage({ initialNeed }: NeedDetailPageProps) {
               type="button"
               aria-label={isFavorite ? "收藏を解除" : "收藏する"}
               onClick={() => setIsFavorite((value) => !value)}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-500" : "border-slate-200 bg-white text-slate-500 hover:border-violet-200 hover:text-violet-600"}`}
+              className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${isFavorite ? "border-danger-border bg-danger-bg text-danger-text" : "border-slate-200 bg-white text-slate-500 hover:border-violet-200 hover:text-violet-600"}`}
             >
               <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
             </button>
@@ -218,7 +219,7 @@ export default function NeedDetailPage({ initialNeed }: NeedDetailPageProps) {
         <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_20px_70px_rgba(64,45,112,0.08)]">
           <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <div className="relative min-h-[270px] bg-violet-100 lg:min-h-[360px]">
-              <img src={coverImage} alt="依頼のイメージ" className="h-full w-full object-cover" />
+              <AppImage src={coverImage} alt="依頼のイメージ" className="h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
               <div className="absolute left-5 top-5 flex flex-wrap gap-2">
                 <span className={`inline-flex items-center gap-1.5 rounded-full border bg-white/90 px-3 py-1.5 text-xs font-black backdrop-blur ${categoryMeta.tagClassName}`}>
@@ -279,7 +280,7 @@ export default function NeedDetailPage({ initialNeed }: NeedDetailPageProps) {
                   return (
                     <div key={pet.id || index} className="flex gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
                       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-violet-50">
-                        <img src={petImage} alt={petLabel} className="h-full w-full object-cover" />
+                        <AppImage src={petImage} alt={petLabel} width={80} height={80} className="h-full w-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
@@ -331,7 +332,7 @@ export default function NeedDetailPage({ initialNeed }: NeedDetailPageProps) {
               ) : (
                 <button type="button" onClick={() => setShowApply(true)} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-4 text-sm font-black text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:bg-violet-700"><MessageCircle size={18} />この依頼に応募する</button>
               )}
-              <button type="button" onClick={() => setIsFavorite((value) => !value)} className={`mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black transition ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-500" : "border-slate-200 bg-white text-slate-600 hover:border-violet-200 hover:text-violet-600"}`}><Heart size={17} fill={isFavorite ? "currentColor" : "none"} />{isFavorite ? "收藏中" : "收藏这个依頼"}</button>
+              <button type="button" onClick={() => setIsFavorite((value) => !value)} className={`mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black transition ${isFavorite ? "border-danger-border bg-danger-bg text-danger-text" : "border-slate-200 bg-white text-slate-600 hover:border-violet-200 hover:text-violet-600"}`}><Heart size={17} fill={isFavorite ? "currentColor" : "none"} />{isFavorite ? "收藏中" : "收藏这个依頼"}</button>
               <p className="mt-4 text-center text-[11px] leading-5 text-slate-400">报名后先通过消息确认，再决定是否正式匹配。</p>
             </section>
 
@@ -349,7 +350,7 @@ export default function NeedDetailPage({ initialNeed }: NeedDetailPageProps) {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-10px_30px_rgba(29,25,45,0.08)] backdrop-blur md:hidden">
-        <div className="flex gap-2"><button type="button" onClick={() => setIsFavorite((value) => !value)} className={`flex w-12 items-center justify-center rounded-2xl border ${isFavorite ? "border-rose-200 text-rose-500" : "border-slate-200 text-slate-500"}`}><Heart size={18} fill={isFavorite ? "currentColor" : "none"} /></button><button type="button" onClick={() => setShowApply(true)} className="flex-1 rounded-2xl bg-violet-600 px-4 py-3.5 text-sm font-black text-white shadow-lg shadow-violet-200">{isApplied ? "报名意向已发送" : "报名照顾 · " + currencyMeta.symbol + Number(initialNeed.totalPrice || 0).toLocaleString()}</button></div>
+        <div className="flex gap-2"><button type="button" onClick={() => setIsFavorite((value) => !value)} className={`flex w-12 items-center justify-center rounded-2xl border ${isFavorite ? "border-danger-border text-danger-text" : "border-slate-200 text-slate-500"}`}><Heart size={18} fill={isFavorite ? "currentColor" : "none"} /></button><button type="button" onClick={() => setShowApply(true)} className="flex-1 rounded-2xl bg-violet-600 px-4 py-3.5 text-sm font-black text-white shadow-lg shadow-violet-200">{isApplied ? "报名意向已发送" : "报名照顾 · " + currencyMeta.symbol + Number(initialNeed.totalPrice || 0).toLocaleString()}</button></div>
       </div>
     </div>
   );

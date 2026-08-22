@@ -211,7 +211,7 @@ export default async function CardList({
 //             </button>
 
 //             <Link
-//               href={`/dashboard/messages?chat=${mockSitter.id}`}
+//               href={`/dashboard/notifications?view=conversations&chat=${mockSitter.id}`}
 //               className="px-6 py-3 border rounded-lg hover:bg-gray-50"
 //             >
 //               发消息

@@ -1,14 +1,16 @@
 import NextAuth from "next-auth";
 
-import { sanitizeReturnTo } from "@/domain/auth/return-to";
-import { edgeAuthConfig } from "@/lib/auth.config";
+import { edgeAuthConfig } from "@/modules/auth/config/edge";
+import { sanitizeReturnTo } from "@/modules/auth/return-to";
+import { hasValidProfileValidationToken } from "@/server/validation/profile-session";
 
 const { auth } = NextAuth(edgeAuthConfig);
 
 export default auth((req) => {
   const isLoggedIn = Boolean(req.auth);
+  const isValidationSession = hasValidProfileValidationToken(req);
   const { nextUrl } = req;
-  if (nextUrl.pathname.startsWith("/dashboard") && !isLoggedIn) {
+  if (nextUrl.pathname.startsWith("/dashboard") && !isLoggedIn && !isValidationSession) {
     const returnTo = sanitizeReturnTo(
       `${nextUrl.pathname}${nextUrl.search}`,
       "/dashboard",

@@ -1,4 +1,5 @@
 export const validationProfileCookie = "petnido_profile_validation";
+export const validationFailureCookie = "petnido_validation_failure";
 export const validationProfileUserId = "validation-profile-user";
 
 export function validationProfileEnabled() {

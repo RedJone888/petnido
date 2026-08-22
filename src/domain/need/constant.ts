@@ -44,7 +44,7 @@ export const NEED_TYPE_JA: Record<
     showAddressCircle: false,
     photoHint:
       "アドバイス：フードの保管場所、蛇口の開け方、見守りカメラの画角などの写真を登録しておくとスムーズです。",
-    tagClassName: "border-rose-200 bg-rose-50 text-rose-600",
+    tagClassName: "border-danger-border bg-danger-bg text-danger-text",
   },
   FOSTER: {
     label: "ペット預かり",
@@ -131,8 +131,8 @@ export const NEED_DISPLAY_CONFIG: Record<
   CANCELLED: {
     label: "キャンセル",
     emo: "⏹",
-    textColor: "text-red-500",
-    className: "bg-red-600 border-red-500",
+    textColor: "text-danger-text",
+    className: "bg-danger-hover border-danger-text",
     dot: "hidden",
   },
 };
@@ -197,7 +197,7 @@ export const TAG_GROUPS = [
       {
         id: "AGGRESSIVE",
         label: "噛み癖・攻撃性",
-        color: "bg-rose-100 text-rose-600 border-rose-200",
+        color: "bg-danger-bg text-danger-text border-danger-border",
       },
       {
         id: "NO_CONTACT",

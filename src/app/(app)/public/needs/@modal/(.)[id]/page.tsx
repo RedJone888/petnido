@@ -1,30 +1,16 @@
-// (.)[id] 拦截了上一级目录的 [id] 路由，即 /requests/[id]
-
-import { Modal } from "@/components/Modal"; // 模态框容器组件
-import NeedDetailPage from "../../_components/NeedDetailPage"; // 您的详情页内容组件
+import { redirect } from "next/navigation";
+import { Modal } from "@/components/Modal";
+import NeedDetailPage from "../../_components/NeedDetailPage";
 import { getNeedById } from "@/lib/need";
+import { publicMarketplaceV2Enabled } from "@/server/feature-flags/publishing-v2";
 
-interface ModalDetailsPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default async function ModalDetailsPage({
+export default async function LegacyNeedModalDetailPage({
   params,
-}: ModalDetailsPageProps) {
+}: {
+  params: { id: string };
+}) {
+  if (publicMarketplaceV2Enabled()) redirect(`/needs/${encodeURIComponent(params.id)}`);
   const needData = await getNeedById(params.id);
-  if (!needData) {
-    return (
-      <Modal>
-        <div className="p-8">请求未找到</div>
-      </Modal>
-    );
-  }
-
-  return (
-    <Modal>
-      <NeedDetailPage initialNeed={needData} />
-    </Modal>
-  );
+  if (!needData) return <Modal><div className="p-8">Request not found</div></Modal>;
+  return <Modal><NeedDetailPage initialNeed={needData} /></Modal>;
 }

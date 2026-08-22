@@ -123,7 +123,7 @@ export default function DetailInfo({
                           className={cn(
                             "max-w-16 border-b border-gray-400 text-center text-sm outline-none p-2 focus:border-b-2",
                             errors.customDays
-                              ? "border-red-500 focus:border-red-500"
+                              ? "border-danger-text focus:border-danger-text"
                               : "focus:border-primary/80",
                           )}
                           onFocus={(e) => {
@@ -146,7 +146,7 @@ export default function DetailInfo({
                           }}
                         />
                         {errors.customDays && (
-                          <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-red-500 text-[10px] z-10">
+                          <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-danger-text text-[10px] z-10">
                             {errors.customDays.message}
                           </span>
                         )}
@@ -170,7 +170,7 @@ export default function DetailInfo({
                           className={cn(
                             "max-w-16 border-b border-gray-400 text-center text-sm outline-none p-2 focus:border-b-2",
                             errors.customTimes
-                              ? "border-red-500 focus:border-red-500"
+                              ? "border-danger-text focus:border-danger-text"
                               : "focus:border-primary/80",
                           )}
                           onFocus={(e) => {
@@ -193,7 +193,7 @@ export default function DetailInfo({
                           }}
                         />
                         {errors.customTimes && (
-                          <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-red-500 text-[10px] z-10">
+                          <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-danger-text text-[10px] z-10">
                             {errors.customTimes.message}
                           </span>
                         )}
@@ -296,12 +296,12 @@ export default function DetailInfo({
               className={cn(
                 "w-full p-4 bg-gray-50 rounded-xl h-32 outline-none focus:ring-2",
                 errors.requirement
-                  ? "border border-red-500 focus:ring-red-500 focus:border-0"
+                  ? "border border-danger-text focus:ring-danger-text focus:border-0"
                   : "border-none focus:ring-secondary/80",
               )}
             />
             {errors.requirement && (
-              <span className="absolute -translate-y-full top-0 right-3 text-xs text-red-500 whitespace-nowrap z-10">
+              <span className="absolute -translate-y-full top-0 right-3 text-xs text-danger-text whitespace-nowrap z-10">
                 {errors.requirement.message}
               </span>
             )}

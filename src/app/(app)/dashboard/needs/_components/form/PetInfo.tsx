@@ -70,7 +70,7 @@ export default function PetInfo({ index, pet, remove, canRemove }: Props) {
       {canRemove && (
         <button
           onClick={() => remove(index)}
-          className="absolute -top-2 -right-2 bg-white text-red-500 border border-red-100 rounded-full p-1.5 shadow-md opacity-0 group-hover/card:opacity-100 transition"
+          className="absolute -top-2 -right-2 bg-white text-danger-text border border-danger-border rounded-full p-1.5 shadow-md opacity-0 group-hover/card:opacity-100 transition"
         >
           <Trash2 size={14} />
         </button>
@@ -132,7 +132,7 @@ export default function PetInfo({ index, pet, remove, canRemove }: Props) {
                     className={cn(
                       "w-full p-2 rounded-xl bg-white border border-gray-200 shadow-sm outline-none focus:ring-2",
                       petTypeError
-                        ? "border-red-500 focus:ring-red-500 focus:border-0"
+                        ? "border-danger-text focus:ring-danger-text focus:border-0"
                         : "border-none focus:ring-secondary/80",
                     )}
                     {...register(`needPets.${index}.petType`)}
@@ -151,7 +151,7 @@ export default function PetInfo({ index, pet, remove, canRemove }: Props) {
                     list={`pet-suggestions-${index}`}
                   />
                   {petTypeError && (
-                    <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-red-500 text-[10px] z-10">
+                    <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-danger-text text-[10px] z-10">
                       {petTypeError.message}
                     </span>
                   )}
@@ -178,7 +178,7 @@ export default function PetInfo({ index, pet, remove, canRemove }: Props) {
                         className={cn(
                           "w-full p-2 rounded-xl bg-white border border-gray-200 shadow-sm outline-none focus:ring-2",
                           countError
-                            ? "border-red-500 focus:ring-red-500 focus:border-0"
+                            ? "border-danger-text focus:ring-danger-text focus:border-0"
                             : "border-none focus:ring-secondary/80",
                         )}
                         onFocus={(e) => {
@@ -198,7 +198,7 @@ export default function PetInfo({ index, pet, remove, canRemove }: Props) {
                         }}
                       />
                       {countError && (
-                        <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-red-500 text-[10px] z-10">
+                        <span className="absolute -translate-y-full top-0 right-0 whitespace-nowrap text-danger-text text-[10px] z-10">
                           {countError.message}
                         </span>
                       )}
@@ -257,7 +257,7 @@ export default function PetInfo({ index, pet, remove, canRemove }: Props) {
           right={
             <div className="flex flex-col items-end">
               {currentPet.tags.includes("AGGRESSIVE") && (
-                <span className="text-[10px] text-rose-500 font-medium">
+                <span className="text-[10px] text-danger-text font-medium">
                   ⚠️ 安全のため、攻撃性についての詳細を記入してください
                 </span>
               )}

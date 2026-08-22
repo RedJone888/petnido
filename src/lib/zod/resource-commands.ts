@@ -5,7 +5,7 @@ export const ownedResourceIdSchema = z.object({
 });
 
 export const legacyNeedCommandSchema = ownedResourceIdSchema.extend({
-  command: z.enum(["CLOSE", "CANCEL"]),
+  command: z.enum(["CLOSE", "REOPEN", "CANCEL"]),
 });
 
 export const legacyServiceCommandSchema = ownedResourceIdSchema.extend({

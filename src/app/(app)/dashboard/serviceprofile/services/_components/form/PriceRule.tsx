@@ -62,7 +62,7 @@ export default function PriceRule({
                 className={cn(
                   "group relative p-4 rounded-2xl border transition-all duration-200",
                   "bg-purple-50/40 border-slate-100 hover:border-purple-200 hover:shadow-md",
-                  currentError ? "border-red-100 bg-red-50/10" : "",
+                  currentError ? "border-danger-border bg-danger-bg/10" : "",
                 )}
               >
                 {/* 削除按钮 - 浮动在右上角 */}
@@ -70,8 +70,8 @@ export default function PriceRule({
                   <button
                     type="button"
                     onClick={() => remove(index)}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border  
-                      text-red-500 border-red-200 shadow-sm flex items-center justify-center 
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border
+                      text-danger-text border-danger-border shadow-sm flex items-center justify-center
                        transition-all z-20 opacity-0 group-hover:opacity-100"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -92,12 +92,12 @@ export default function PriceRule({
                         className={cn(
                           "w-full rounded-xl border bg-white px-3 py-2.5 text-sm shadow-sm transition-all outline-none focus:ring-2",
                           groupLabelError
-                            ? "border-red-500 focus:border-0 focus:ring-red-500"
+                            ? "border-danger-text focus:border-0 focus:ring-danger-text"
                             : "border-none focus:ring-purple-400",
                         )}
                       />
                       {groupLabelError && (
-                        <p className="absolute -top-1 -translate-y-full right-1 text-[10px] text-red-500 font-medium whitespace-nowrap">
+                        <p className="absolute -top-1 -translate-y-full right-1 text-[10px] text-danger-text font-medium whitespace-nowrap">
                           {groupLabelError.message}
                         </p>
                       )}
@@ -122,7 +122,7 @@ export default function PriceRule({
                               className={cn(
                                 "w-full rounded-xl border bg-white pl-3 pr-12 py-2.5 shadow-sm text-sm font-bold transition-all outline-none focus:ring-2",
                                 priceError
-                                  ? "border-red-500 focus:border-0 focus:ring-red-500"
+                                  ? "border-danger-text focus:border-0 focus:ring-danger-text"
                                   : "border-none focus:ring-purple-500",
                               )}
                               placeholder="0"
@@ -143,7 +143,7 @@ export default function PriceRule({
                             </span>
 
                             {priceError && (
-                              <p className="absolute -top-1 -translate-y-full right-1 text-[10px] text-red-500 font-medium whitespace-nowrap">
+                              <p className="absolute -top-1 -translate-y-full right-1 text-[10px] text-danger-text font-medium whitespace-nowrap">
                                 {priceError.message}
                               </p>
                             )}

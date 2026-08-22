@@ -1,191 +1,275 @@
 "use client";
 
-import { Pencil, PawPrint, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { PawPrint } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { trpc } from "@/utils/trpc";
+import { useLanguage } from "@/components/providers/language-provider";
 import {
-  fieldClass,
-  primaryButtonClass,
-  secondaryButtonClass,
-  SettingsCard,
-  textareaClass,
-} from "./settings-card";
+  emptyPetProfileEditorValue,
+  petProfileTypes,
+  PetProfileAddButton,
+  PetProfileCard,
+  PetProfileEditorDialog,
+  type PetProfileEditorErrors,
+  type PetProfileEditorValue,
+  type PetProfileType,
+} from "@/components/pets/pet-profile-components";
+import {
+  localizeOtherPetType,
+  localizePetBreed,
+} from "@/domain/pet/profile-options";
+import { useConfirm } from "@/hooks/useConfirm";
+import { useConfirmStore } from "@/store/useConfirmStore";
+import { trpc } from "@/utils/trpc";
+import { SettingsCard, SettingsTabSkeleton } from "./settings-card";
 
-const petTypes = [
-  ["DOG", "犬"],
-  ["CAT", "猫"],
-  ["RABBIT", "うさぎ"],
-  ["BIRD", "鳥"],
-  ["CHINCHILLA", "チンチラ"],
-  ["GUINEA_PIG", "モルモット"],
-  ["HAMSTER", "ハムスター"],
-  ["OTHER", "その他"],
-] as const;
-
-type PetTypeValue = (typeof petTypes)[number][0];
-
-const emptyForm = {
-  id: null as string | null,
-  name: "",
-  type: "DOG" as PetTypeValue,
-  breed: "",
-  age: "",
-  notes: "",
+const legacyCustomTypes: Record<string, string> = {
+  CHINCHILLA: "Chinchilla",
+  GUINEA_PIG: "Guinea pig",
+  HAMSTER: "Hamster",
 };
 
+const emptyErrors: PetProfileEditorErrors = {};
+
+function freshEmptyForm(): PetProfileEditorValue {
+  return { ...emptyPetProfileEditorValue, photos: [] };
+}
+
 export function PetSettings() {
+  const { t, lang } = useLanguage();
+  const copy = t.settings.pets;
+  const confirm = useConfirm();
+  const setConfirmLoading = useConfirmStore((state) => state.setIsDeleting);
+  const closeConfirm = useConfirmStore((state) => state.close);
   const utils = trpc.useUtils();
   const pets = trpc.pet.listMine.useQuery();
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<PetProfileEditorValue>(freshEmptyForm);
+  const [errors, setErrors] = useState<PetProfileEditorErrors>(emptyErrors);
   const [showForm, setShowForm] = useState(false);
+  const previousLanguage = useRef(lang);
   const refresh = () => utils.pet.listMine.invalidate();
   const create = trpc.pet.create.useMutation({ onSuccess: refresh });
   const update = trpc.pet.update.useMutation({ onSuccess: refresh });
   const archive = trpc.pet.archive.useMutation({ onSuccess: refresh });
   const busy = create.isLoading || update.isLoading;
+  const petCount = pets.data?.length ?? 0;
+  const petCountLabel = copy.countSummary
+    .replace("{count}", String(petCount))
+    .replace(/^You currently have ([01]) pets$/, "You currently have $1 pet");
+
+  useEffect(() => {
+    if (previousLanguage.current === lang) return;
+    setForm((current) => {
+      const localizedCustomType =
+        current.type === "OTHER"
+          ? localizeOtherPetType(current.customType, lang)
+          : current.customType;
+      return {
+        ...current,
+        customType: localizedCustomType,
+        breed: localizePetBreed(
+          current.breed,
+          lang,
+          current.type,
+          current.customType,
+        ),
+      };
+    });
+    previousLanguage.current = lang;
+  }, [lang]);
 
   function resetForm() {
-    setForm(emptyForm);
+    setForm(freshEmptyForm());
+    setErrors(emptyErrors);
     setShowForm(false);
   }
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
+  async function submit() {
+    const nextErrors: PetProfileEditorErrors = {
+      name: form.name.trim() ? "" : copy.nameRequired,
+      type: form.type ? "" : copy.typeRequired,
+      customType:
+        form.type === "OTHER" && !form.customType.trim()
+          ? copy.customTypeRequired
+          : "",
+    };
+    setErrors(nextErrors);
+    if (nextErrors.name || nextErrors.type || nextErrors.customType) return;
+
+    const petType = form.type as PetProfileType;
     const values = {
-      name: form.name,
-      type: form.type,
+      name: form.name.trim(),
+      type: petType,
+      customType: petType === "OTHER" ? form.customType.trim() || null : null,
       breed: form.breed.trim() || null,
-      age: form.age === "" ? null : Number(form.age),
+      age: null,
+      birthDate: form.birthDate
+        ? new Date(`${form.birthDate}T00:00:00.000Z`)
+        : null,
+      weightGrams:
+        form.weight === ""
+          ? null
+          : Math.round(
+              Number(form.weight) * (form.weightUnit === "kg" ? 1000 : 1),
+            ),
+      sex: form.sex || null,
+      neutered: form.neutered || null,
       notes: form.notes.trim() || null,
+      photoIds: form.photos.map((photo) => photo.id),
     };
     try {
       if (form.id) await update.mutateAsync({ id: form.id, ...values });
       else await create.mutateAsync(values);
-      toast.success(form.id ? "ペットプロフィールを更新しました" : "ペットプロフィールを追加しました");
+      toast.success(form.id ? copy.updateSuccess : copy.createSuccess);
       resetForm();
     } catch {
-      toast.error("ペットプロフィールを保存できませんでした");
+      toast.error(copy.saveError);
     }
+  }
+
+  function openEditor(pet: NonNullable<typeof pets.data>[number]) {
+    const editType =
+      petProfileTypes.includes(pet.type as PetProfileType) &&
+      pet.type !== "OTHER"
+        ? (pet.type as PetProfileType)
+        : "OTHER";
+    const editCustomType = pet.customType ?? legacyCustomTypes[pet.type] ?? "";
+    setForm({
+      id: pet.id,
+      name: pet.name ?? "",
+      type: editType,
+      customType: localizeOtherPetType(editCustomType, lang),
+      breed: localizePetBreed(
+        pet.breed ?? "",
+        lang,
+        pet.type,
+        editCustomType,
+      ),
+      birthDate: pet.birthDate
+        ? new Date(pet.birthDate).toISOString().slice(0, 10)
+        : "",
+      weight:
+        pet.weightGrams == null ? "" : String(pet.weightGrams / 1000),
+      weightUnit: "kg",
+      sex: (pet.sex ?? "") as PetProfileEditorValue["sex"],
+      neutered: (pet.neutered ?? "") as PetProfileEditorValue["neutered"],
+      photos: pet.photos.map((photo) => ({
+        ...photo,
+        isUploading: false,
+      })),
+      notes: pet.notes ?? "",
+    });
+    setErrors(emptyErrors);
+    setShowForm(true);
   }
 
   return (
     <SettingsCard
       id="pets"
       icon={PawPrint}
-      title="ペットプロフィール"
-      description="依頼作成時にここから選べます。健康・ケアメモは本人と取引関係者だけが扱う保護情報です。"
+      title={copy.title}
+      description={copy.description}
+      showHeader={false}
     >
+      {pets.isLoading ? (
+        <SettingsTabSkeleton variant="pets" />
+      ) : (
       <div className="space-y-4">
-        <div className="flex justify-end">
-          <button
-            type="button"
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold text-slate-600">
+            {petCountLabel}
+          </p>
+          <PetProfileAddButton
+            label={copy.add}
             onClick={() => {
-              setForm(emptyForm);
+              setForm(freshEmptyForm());
+              setErrors(emptyErrors);
               setShowForm(true);
             }}
-            className={secondaryButtonClass}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            ペットを追加
-          </button>
+          />
         </div>
 
-        {showForm && (
-          <form onSubmit={submit} className="rounded-2xl border border-primary/20 bg-purple-50/40 p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-bold text-slate-900">
-                {form.id ? "ペットを編集" : "新しいペット"}
-              </h3>
-              <button type="button" onClick={resetForm} aria-label="入力を閉じる" className="rounded-lg p-2 text-slate-500 hover:bg-white">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-semibold text-slate-700">
-                名前
-                <input required maxLength={80} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={fieldClass} />
-              </label>
-              <label className="text-sm font-semibold text-slate-700">
-                種類
-                <select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as PetTypeValue })} className={fieldClass}>
-                  {petTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label className="text-sm font-semibold text-slate-700">
-                品種（任意）
-                <input maxLength={120} value={form.breed} onChange={(event) => setForm({ ...form, breed: event.target.value })} className={fieldClass} />
-              </label>
-              <label className="text-sm font-semibold text-slate-700">
-                年齢（年）
-                <input type="number" min={0} max={100} value={form.age} onChange={(event) => setForm({ ...form, age: event.target.value })} className={fieldClass} />
-              </label>
-            </div>
-            <label className="mt-4 block text-sm font-semibold text-slate-700">
-              健康・性格・ケアメモ（任意）
-              <textarea rows={4} maxLength={3000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} className={textareaClass} />
-            </label>
-            <button type="submit" disabled={busy || !form.name.trim()} className={`${primaryButtonClass} mt-4`}>
-              {busy ? "保存中..." : "保存"}
-            </button>
-          </form>
-        )}
+        {showForm ? (
+          <PetProfileEditorDialog
+            value={form}
+            mode={form.id ? "edit" : "create"}
+            errors={errors}
+            busy={busy}
+            onChange={(next) => {
+              setForm(next);
+              if (errors.name || errors.type || errors.customType) {
+                setErrors(emptyErrors);
+              }
+            }}
+            onCancel={resetForm}
+            onSubmit={() => void submit()}
+          />
+        ) : null}
 
-        {pets.isLoading ? (
-          <p className="text-sm text-slate-500">読み込み中...</p>
-        ) : pets.data?.length ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+        {pets.data?.length ? (
+          <div className="flex flex-wrap items-start gap-3">
             {pets.data.map((pet) => (
-              <article key={pet.id} className="rounded-2xl border border-slate-200 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-900">{pet.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {petTypes.find(([value]) => value === pet.type)?.[1] ?? pet.type}
-                      {pet.breed ? ` · ${pet.breed}` : ""}
-                      {pet.age != null ? ` · ${pet.age}歳` : ""}
-                    </p>
-                    {pet.notes && <p className="mt-3 line-clamp-3 whitespace-pre-line text-sm leading-6 text-slate-600">{pet.notes}</p>}
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button
-                      type="button"
-                      aria-label={`${pet.name}を編集`}
-                      onClick={() => {
-                        setForm({ id: pet.id, name: pet.name ?? "", type: pet.type, breed: pet.breed ?? "", age: pet.age == null ? "" : String(pet.age), notes: pet.notes ?? "" });
-                        setShowForm(true);
-                      }}
-                      className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-primary"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`${pet.name}を削除`}
-                      disabled={archive.isLoading}
-                      onClick={async () => {
-                        if (!window.confirm(`${pet.name}をプロフィールから削除しますか？`)) return;
-                        try {
-                          await archive.mutateAsync({ id: pet.id });
-                          toast.success("ペットプロフィールを削除しました");
-                        } catch {
-                          toast.error("削除できませんでした");
-                        }
-                      }}
-                      className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </article>
+              <PetProfileCard
+                key={pet.id}
+                pet={{
+                  id: pet.id,
+                  name: pet.name ?? "",
+                  type: pet.type,
+                  customType:
+                    pet.customType ?? legacyCustomTypes[pet.type] ?? "",
+                  breed: pet.breed,
+                  birthDate: pet.birthDate,
+                  weightGrams: pet.weightGrams,
+                  sex: pet.sex,
+                  neutered: pet.neutered,
+                  notes: pet.notes,
+                  photoUrl: pet.photos[0]?.url,
+                }}
+                editLabel={copy.editAria.replace("{name}", pet.name ?? "")}
+                deleteLabel={copy.deleteAria.replace("{name}", pet.name ?? "")}
+                deleteDisabled={archive.isLoading}
+                onEdit={() => openEditor(pet)}
+                onDelete={async () => {
+                  const deleteLabel = copy.deleteAria.replace(
+                    "{name}",
+                    pet.name ?? "",
+                  );
+                  const accepted = await confirm({
+                    title: deleteLabel,
+                    content: (
+                      <p>
+                        {copy.deleteQuestion.replace(
+                          "{name}",
+                          pet.name ?? "",
+                        )}
+                      </p>
+                    ),
+                    confirmText: deleteLabel,
+                    variant: "danger",
+                  });
+                  if (!accepted) return;
+                  setConfirmLoading(true);
+                  try {
+                    await archive.mutateAsync({ id: pet.id });
+                    toast.success(copy.deleteSuccess);
+                  } catch {
+                    toast.error(copy.deleteError);
+                  } finally {
+                    setConfirmLoading(false);
+                    closeConfirm();
+                  }
+                }}
+              />
             ))}
           </div>
         ) : (
-          <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">まだペットが登録されていません。</p>
+          <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">
+            {copy.none}
+          </p>
         )}
       </div>
+      )}
     </SettingsCard>
   );
 }
