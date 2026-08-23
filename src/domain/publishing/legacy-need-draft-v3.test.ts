@@ -128,6 +128,153 @@ describe("legacy need draft v3 migration", () => {
     expect(result.payload.description).toBeNull();
   });
 
+  it("publishes and restores date-step schedule notes independently", () => {
+    const mapped = mapLegacyNeedDraftV3(
+      draft({
+        careType: "visit",
+        dates: {
+          startDate: "2026-08-10",
+          endDate: "2026-08-12",
+          notes: "Building access starts after 18:00",
+        },
+        taskNotes: "Feed according to the task plan",
+      }),
+      "Asia/Tokyo",
+    );
+
+    expect(mapped.payload).toMatchObject({
+      scheduleNotes: "Building access starts after 18:00",
+      description: "Feed according to the task plan",
+    });
+
+    const restored = mapNeedDraftPayloadToLegacyNeedDraftV3({
+      draftId: "d9428888-122b-11e1-b85c-61cd3cbb3210",
+      mode: "HOME_VISIT",
+      payload: mapped.payload,
+    });
+
+    expect(restored.dates.notes).toBe("Building access starts after 18:00");
+    expect(restored.taskNotes).toBe("Feed according to the task plan");
+  });
+
+  it("restores older server drafts whose task order was explicitly null", () => {
+    const mapped = mapLegacyNeedDraftV3(
+      draft({
+        careType: "visit",
+        pets: [pet],
+        dates: { startDate: "2026-08-10", endDate: "2026-08-12", notes: "" },
+        visitPlans: [
+          {
+            id: "legacy-null-order",
+            templateId: "feeding",
+            label: "Feeding",
+            priority: "must",
+            petIds: ["pet-1"],
+            visitNumbers: [1],
+            custom: false,
+          },
+        ],
+      }),
+      "Asia/Tokyo",
+    );
+    const legacyPayload = structuredClone(mapped.payload);
+    const legacyTask = legacyPayload.homeVisit?.tasks?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    if (!legacyTask) throw new Error("Expected mapped home-visit task");
+    legacyTask.order = null;
+
+    const restored = mapNeedDraftPayloadToLegacyNeedDraftV3({
+      draftId: "d9428888-122b-11e1-b85c-61cd3cbb3210",
+      mode: "HOME_VISIT",
+      payload: legacyPayload,
+    });
+
+    expect(restored.visitPlans[0].order).toBeUndefined();
+  });
+
+  it("round-trips standard task codes across all supported labels", () => {
+    const base = mapLegacyNeedDraftV3(
+      draft({
+        careType: "visit",
+        pets: [pet],
+        dates: { startDate: "2026-08-10", endDate: "2026-08-12", notes: "" },
+        visitPlans: [
+          {
+            id: "task-standard",
+            templateId: "feeding",
+            label: "Feeding",
+            priority: "must",
+            petIds: ["pet-1"],
+            visitNumbers: [1],
+            custom: false,
+          },
+        ],
+      }),
+      "Asia/Tokyo",
+    );
+
+    for (const label of ["Feeding", "喂食", "給餌"]) {
+      const payload = {
+        ...base.payload,
+        homeVisit: {
+          ...base.payload.homeVisit!,
+          tasks: [{ ...base.payload.homeVisit!.tasks![0], label }],
+        },
+      };
+      const restored = mapNeedDraftPayloadToLegacyNeedDraftV3({
+        draftId: "d9428888-122b-11e1-b85c-61cd3cbb3210",
+        mode: "HOME_VISIT",
+        payload,
+      });
+      expect(restored.visitPlans[0]).toMatchObject({
+        templateId: "feeding",
+        label: "feeding",
+        custom: false,
+      });
+      const republished = mapLegacyNeedDraftV3(restored, "Asia/Tokyo");
+      expect(republished.payload.homeVisit?.tasks?.[0]).toMatchObject({
+        category: "FEEDING",
+        label: "feeding",
+      });
+    }
+  });
+
+  it("keeps a custom label that happens to match a standard translation", () => {
+    const mapped = mapLegacyNeedDraftV3(
+      draft({
+        careType: "custom",
+        pets: [pet],
+        dates: { startDate: "2026-08-10", endDate: "2026-08-12", notes: "" },
+        customPlans: [
+          {
+            id: "task-custom",
+            templateId: "custom-task-custom",
+            label: "Feeding",
+            priority: "must",
+            petIds: ["pet-1"],
+            visitNumbers: [],
+            custom: true,
+          },
+        ],
+      }),
+      "Asia/Tokyo",
+    );
+    expect(mapped.payload.custom?.tasks?.[0]).toMatchObject({
+      category: "CUSTOM",
+      label: "Feeding",
+    });
+    const restored = mapNeedDraftPayloadToLegacyNeedDraftV3({
+      draftId: "d9428888-122b-11e1-b85c-61cd3cbb3210",
+      mode: "CUSTOM",
+      payload: mapped.payload,
+    });
+    expect(restored.customPlans[0]).toMatchObject({
+      custom: true,
+      label: "Feeding",
+    });
+  });
+
   it("maps home visits, pets, task references and minor-unit money", () => {
     const result = mapLegacyNeedDraftV3(
       draft({
@@ -320,7 +467,6 @@ describe("legacy need draft v3 migration", () => {
       revision: 1,
       idempotencyKey: "123e4567-e89b-12d3-a456-426614174001",
       mode: mapped.mode!,
-      title: "Custom Care for a cat",
     };
 
     const parsed = needPublishSchema.safeParse(input);
@@ -669,6 +815,49 @@ describe("legacy need draft v3 migration", () => {
       scheduleKind: null,
       priority: "MUST",
       visitNumbers: [1, 2],
+    });
+  });
+
+  it("round-trips independent order for each shared home visit task", () => {
+    const mapped = mapLegacyNeedDraftV3(
+      draft({
+        careType: "visit",
+        pets: [pet],
+        dates: { startDate: "2026-08-10", endDate: "2026-08-12", notes: "" },
+        visitsPerDay: 2,
+        visitPlans: [
+          {
+            id: "task-feed",
+            templateId: "feeding",
+            label: "Feed cat",
+            priority: "must",
+            petIds: ["pet-1"],
+            visitNumbers: [1, 2],
+            custom: false,
+            order: 0,
+            orderByVisit: { 1: 1, 2: 0 },
+          },
+        ],
+      }),
+      "Asia/Tokyo",
+    );
+
+    expect(mapped.payload.homeVisit?.tasks?.[0].orderByVisit).toEqual({
+      1: 1,
+      2: 0,
+    });
+
+    const restored = mapNeedDraftPayloadToLegacyNeedDraftV3({
+      draftId: "d9428888-122b-11e1-b85c-61cd3cbb3210",
+      mode: "HOME_VISIT",
+      payload: mapped.payload,
+    });
+    expect(restored.visitPlans[0].orderByVisit).toEqual({ 1: 1, 2: 0 });
+
+    const republished = mapLegacyNeedDraftV3(restored, "Asia/Tokyo");
+    expect(republished.payload.homeVisit?.tasks?.[0].orderByVisit).toEqual({
+      1: 1,
+      2: 0,
     });
   });
 

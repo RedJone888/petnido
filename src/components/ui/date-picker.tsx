@@ -230,7 +230,7 @@ export function DatePicker({
         align="start"
         collisionPadding={12}
         className={cn(
-          "z-[1200] w-[var(--radix-popover-trigger-width)] max-h-[min(420px,calc(100dvh-128px))] max-w-[calc(100vw-24px)] overflow-y-auto border-[#ded9e0] p-2 [--rdp-accent-color:var(--primary)] [--rdp-accent-background-color:#f1edf5]",
+          "z-[1200] w-[calc(100vw-24px)] max-h-[min(420px,calc(100dvh-128px))] max-w-[calc(100vw-24px)] overflow-y-auto border-[#ded9e0] p-2 [--rdp-accent-color:var(--primary)] [--rdp-accent-background-color:#f1edf5]",
           popoverClassName,
         )}
       >

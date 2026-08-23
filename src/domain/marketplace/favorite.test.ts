@@ -21,7 +21,7 @@ describe("favorites", () => {
     const now = new Date("2026-08-04T00:00:00.000Z");
     expect(needFavoriteAvailability({ state: "OPEN", endsAt: now, archivedAt: null }, now)).toBe("EXPIRED");
     expect(needFavoriteAvailability({ state: "OPEN", endsAt: new Date("2026-08-05T00:00:00.000Z"), archivedAt: null }, now)).toBe("AVAILABLE");
-    expect(needFavoriteAvailability({ state: "CANCELLED", endsAt: new Date("2026-08-05T00:00:00.000Z"), archivedAt: null }, now)).toBe("UNAVAILABLE");
+    expect(needFavoriteAvailability({ state: "CLOSED", endsAt: new Date("2026-08-05T00:00:00.000Z"), archivedAt: null }, now)).toBe("UNAVAILABLE");
   });
 
   it("marks paused or globally closed services unavailable without deleting the favorite", () => {

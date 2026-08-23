@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { PrismaClient } from "../../.generated/validation-client";
-import { needV2Router } from "../../src/server/trpc/routers/needV2";
+import { needPublishingRouter } from "../../src/modules/need-publishing/api/router";
+import { marketplaceNeedRouter } from "../../src/server/trpc/routers/marketplaceNeed";
 
 const prisma = new PrismaClient();
 
@@ -17,6 +18,7 @@ function context(userId: string) {
 
 async function reset() {
   process.env.FEATURE_PUBLISHING_V2 = "true";
+  process.env.FEATURE_PUBLIC_MARKETPLACE_V2 = "true";
   await prisma.serviceV2.deleteMany();
   await prisma.needV2.deleteMany();
   await prisma.locationSnapshotV2.deleteMany();
@@ -39,7 +41,6 @@ async function createNeed(ownerId: string, endsAt = new Date("2026-08-20T00:00:0
       ownerId,
       mode: "CUSTOM",
       state: "OPEN",
-      title: "Help Mochi",
       startsAt: new Date("2026-08-10T00:00:00Z"),
       endsAt,
       timeZone: "Asia/Tokyo",
@@ -76,6 +77,7 @@ async function createNeed(ownerId: string, endsAt = new Date("2026-08-20T00:00:0
 beforeEach(reset);
 afterAll(async () => {
   delete process.env.FEATURE_PUBLISHING_V2;
+  delete process.env.FEATURE_PUBLIC_MARKETPLACE_V2;
   await prisma.$disconnect();
 });
 
@@ -85,7 +87,7 @@ describe("V2 need owner management", () => {
     const other = await prisma.user.create({ data: { email: "v2-other@example.com" } });
     const expired = await createNeed(owner.id, new Date("2020-01-01T00:00:00Z"));
     await createNeed(other.id);
-    const caller = needV2Router.createCaller(context(owner.id));
+    const caller = needPublishingRouter.createCaller(context(owner.id));
 
     const result = await caller.listMine();
 
@@ -110,19 +112,36 @@ describe("V2 need owner management", () => {
     const need = await createNeed(owner.id);
 
     await expect(
-      needV2Router.createCaller(context(other.id)).getMine({ id: need.id }),
+      needPublishingRouter.createCaller(context(other.id)).getMine({ id: need.id }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("creates one resumable edit draft from the persisted V2 snapshot", async () => {
+  it("lists public V2 needs with the validation Prisma client", async () => {
+    const owner = await prisma.user.create({ data: { email: "v2-marketplace@example.com" } });
+    const need = await createNeed(owner.id, new Date("2099-01-01T00:00:00Z"));
+    const caller = marketplaceNeedRouter.createCaller(context(owner.id));
+
+    const result = await caller.list({ filter: {}, limit: 20 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      publicId: `v2:${need.id}`,
+      source: "V2",
+      title: "Mochi · Custom pet care",
+      owner: { requestsCount: 1 },
+    });
+  });
+
+  it("loads an edit baseline without creating a draft until it is dirty", async () => {
     const owner = await prisma.user.create({ data: { email: "v2-edit@example.com" } });
     const need = await createNeed(owner.id);
-    const caller = needV2Router.createCaller(context(owner.id));
+    const caller = needPublishingRouter.createCaller(context(owner.id));
 
     const first = await caller.beginEdit({ id: need.id });
     const resumed = await caller.beginEdit({ id: need.id });
 
-    expect(resumed.id).toBe(first.id);
+    expect(first.id).toBeNull();
+    expect(resumed.id).toBeNull();
     expect(first).toMatchObject({
       kind: "NEED",
       mode: "CUSTOM",
@@ -142,13 +161,72 @@ describe("V2 need owner management", () => {
       await prisma.publishDraftV2.count({
         where: { ownerId: owner.id, editingNeedId: need.id, status: "ACTIVE" },
       }),
+    ).toBe(0);
+
+    const dirty = await caller.createEditDraft({
+      id: randomUUID(),
+      needId: need.id,
+      mode: "CUSTOM",
+      currentStep: "preview",
+      payload: first.payload,
+    });
+    expect(dirty).toMatchObject({
+      editingNeedId: need.id,
+      isDirty: true,
+      status: "ACTIVE",
+    });
+    expect(
+      await prisma.publishDraftV2.count({
+        where: { ownerId: owner.id, editingNeedId: need.id, status: "ACTIVE" },
+      }),
     ).toBe(1);
+  });
+
+  it("blocks matched edits but lets the owner reuse the request as a new draft", async () => {
+    const owner = await prisma.user.create({ data: { email: "v2-reuse-owner@example.com" } });
+    const other = await prisma.user.create({ data: { email: "v2-reuse-other@example.com" } });
+    const need = await createNeed(owner.id);
+    await prisma.needV2.update({ where: { id: need.id }, data: { state: "MATCHED" } });
+
+    const ownerCaller = needPublishingRouter.createCaller(context(owner.id));
+    const otherCaller = needPublishingRouter.createCaller(context(other.id));
+
+    await expect(ownerCaller.beginEdit({ id: need.id })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "NEED_MATCHED_EDIT_REQUIRES_CANCEL_MATCH",
+    });
+    await expect(otherCaller.reuse({ id: need.id, draftId: randomUUID() })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+
+    const reuseDraftId = randomUUID();
+    const reused = await ownerCaller.reuse({ id: need.id, draftId: reuseDraftId });
+    const replayed = await ownerCaller.reuse({ id: need.id, draftId: reuseDraftId });
+    expect(reused).toMatchObject({
+      sourceNeedId: need.id,
+      clonedFromNeedId: need.id,
+      editingNeedId: null,
+      currentStep: "pets",
+      status: "ACTIVE",
+    });
+    expect(reused.payload).toMatchObject({
+      startsAt: null,
+      endsAt: null,
+      workspace: { common: { confirmedScreenIds: ["care"] } },
+    });
+    expect(replayed.id).toBe(reused.id);
+    expect(
+      await prisma.publishDraftV2.count({ where: { id: reuseDraftId } }),
+    ).toBe(1);
+    expect(await prisma.needV2.findUnique({ where: { id: need.id }, select: { state: true } })).toEqual({
+      state: "MATCHED",
+    });
   });
 
   it("closes with optimistic concurrency and rejects stale commands", async () => {
     const owner = await prisma.user.create({ data: { email: "v2-command@example.com" } });
     const need = await createNeed(owner.id);
-    const caller = needV2Router.createCaller(context(owner.id));
+    const caller = needPublishingRouter.createCaller(context(owner.id));
 
     await expect(
       caller.executeCommand({

@@ -8,7 +8,7 @@ export function summarizeOwnedRecords(records: DashboardOwnedRecord[]) {
   const byMode = { HOME_VISIT: 0, BOARDING: 0, CUSTOM: 0 };
   const needByMode = { HOME_VISIT: 0, BOARDING: 0, CUSTOM: 0 };
   const serviceByMode = { HOME_VISIT: 0, BOARDING: 0, CUSTOM: 0 };
-  const needStates = { OPEN: 0, MATCHED: 0, CLOSED: 0, CANCELLED: 0 };
+  const needStates = { OPEN: 0, MATCHED: 0, CLOSED: 0 };
   const serviceStates = { ACTIVE: 0, PAUSED: 0, ARCHIVED: 0 };
   let needs = 0;
   let services = 0;

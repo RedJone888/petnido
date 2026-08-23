@@ -45,8 +45,8 @@ const commonNeed = {
   draftId: "draft-1",
   revision: 2,
   idempotencyKey: "d9428888-122b-11e1-b85c-61cd3cbb3210",
-  title: "Care for Mochi",
   description: null,
+  scheduleNotes: null,
   startsAt: "2026-08-10T00:00:00+09:00",
   endsAt: "2026-08-12T00:00:00+09:00",
   timeZone: "Asia/Tokyo",
@@ -144,7 +144,6 @@ describe("publishing contracts", () => {
       homeVisit: {
         intervalDays: 1,
         firstServiceDate: "2026-08-10",
-        excludedDates: [],
         visitsPerServiceDay: 1,
         visitWindows: [
           { visitNumber: 1, kind: "FLEXIBLE" as const, preferredLocalTime: null },
@@ -154,6 +153,12 @@ describe("publishing contracts", () => {
     };
     expect(needPublishSchema.safeParse(input).success).toBe(true);
     expect(needPublishSchema.parse(input).attachmentIds).toEqual([]);
+    expect(
+      needPublishSchema.safeParse({
+        ...input,
+        homeVisit: { ...input.homeVisit, excludedDates: [] },
+      }).success,
+    ).toBe(false);
     expect(
       needPublishSchema.safeParse({
         ...input,
@@ -279,7 +284,6 @@ describe("publishing contracts", () => {
       homeVisit: {
         intervalDays: 1,
         firstServiceDate: "2026-08-10",
-        excludedDates: [],
         visitsPerServiceDay: 1,
         visitWindows: [
           { visitNumber: 1, kind: "FLEXIBLE" as const, preferredLocalTime: null },
@@ -297,7 +301,6 @@ describe("publishing contracts", () => {
       homeVisit: {
         intervalDays: 1,
         firstServiceDate: "2026-08-12",
-        excludedDates: [],
         visitsPerServiceDay: 1,
         visitWindows: [
           { visitNumber: 1, kind: "FLEXIBLE" as const, preferredLocalTime: null },

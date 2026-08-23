@@ -10,17 +10,20 @@ import {
   ClipboardCheck,
   CalendarCheck,
   Sparkles,
+  FilePenLine,
 } from "lucide-react";
 import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import cn from "@/lib/cn";
 import { useLanguage } from "@/components/providers/language-provider";
+import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
 import UserAvatar from "@/components/shared/user-avatar";
+import { isDashboardNavItemActive } from "./nav-matching";
 
 interface NavItem {
   href: string;
-  labelKey: "overview" | "needs" | "services" | "favorites" | "applications" | "bookings" | "matches" | "notifications" | "settings";
+  labelKey: "overview" | "needs" | "drafts" | "services" | "favorites" | "applications" | "bookings" | "matches" | "notifications" | "settings";
   icon: React.ElementType;
   exact?: boolean;
 }
@@ -43,6 +46,7 @@ const navGroups: NavGroup[] = [
     titleKey: "groupRequests",
     items: [
       { href: "/dashboard/needs", labelKey: "needs", icon: ClipboardList },
+      { href: "/dashboard/needs?tab=drafts", labelKey: "drafts", icon: FilePenLine },
       { href: "/dashboard/favorites", labelKey: "favorites", icon: Heart },
       { href: "/dashboard/matches", labelKey: "matches", icon: Sparkles },
     ],
@@ -74,7 +78,9 @@ export default function NavLinks({
   user?: { name?: string | null; email?: string | null; image?: string | null };
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
+  const needMessages = useNeedPublishingMessages();
   const copy = t.core.dashboard;
 
   useEffect(() => {
@@ -82,10 +88,7 @@ export default function NavLinks({
   }, [pathname]);
 
   const isLinkActive = (item: NavItem) => {
-    if (item.exact || item.href === "/dashboard") {
-      return pathname === "/dashboard";
-    }
-    return pathname === item.href || pathname.startsWith(item.href + "/");
+    return isDashboardNavItemActive(item, pathname, searchParams);
   };
 
   return (
@@ -115,6 +118,8 @@ export default function NavLinks({
                 <span>
                   {item.href === "/dashboard/needs"
                     ? `${copy.groupRequests} · ${copy.needs}`
+                    : item.href === "/dashboard/needs?tab=drafts"
+                    ? `${copy.groupRequests} · ${needMessages.dashboardNeeds.drafts}`
                     : item.href === "/dashboard/serviceprofile"
                     ? `${copy.groupServices} · ${copy.services}`
                     : copy[item.labelKey]}

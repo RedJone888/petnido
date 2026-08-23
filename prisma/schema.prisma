@@ -29,6 +29,8 @@ enum PetType {
   CHINCHILLA
   GUINEA_PIG
   HAMSTER
+  TURTLE
+  FERRET
   OTHER
 }
 
@@ -104,11 +106,9 @@ enum PublishModeV2 {
 }
 
 enum NeedStateV2 {
-  DRAFT
   OPEN
   MATCHED
   CLOSED
-  CANCELLED
 }
 
 enum ServiceStateV2 {
@@ -794,6 +794,9 @@ model PublishDraftV2 {
   publishedNeedId    String?              @unique
   publishedNeed      NeedV2?              @relation("NeedPublishedDraft", fields: [publishedNeedId], references: [id], onDelete: SetNull)
   editingNeedId      String?
+  editingBaselineJson String?
+  isDirty            Boolean              @default(false)
+  clonedFromNeedId   String?
   publishedServiceId String?              @unique
   publishedService   ServiceV2?           @relation("ServicePublishedDraft", fields: [publishedServiceId], references: [id], onDelete: SetNull)
   editingServiceId   String?
@@ -805,6 +808,7 @@ model PublishDraftV2 {
   @@index([ownerId, status, updatedAt])
   @@index([kind, mode, status])
   @@index([ownerId, editingNeedId, status])
+  @@index([ownerId, clonedFromNeedId])
   @@index([ownerId, editingServiceId, status])
 }
 
@@ -827,9 +831,9 @@ model NeedV2 {
   ownerId              String
   owner                User                    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   mode                 PublishModeV2
-  state                NeedStateV2             @default(DRAFT)
-  title                String
+  state                NeedStateV2             @default(OPEN)
   description          String?
+  scheduleNotes        String?
   startsAt             DateTime
   endsAt               DateTime
   timeZone             String
@@ -850,7 +854,7 @@ model NeedV2 {
   boardingDetail       BoardingNeedDetailV2?
   pets                 NeedPetSnapshotV2[]
   tasks                NeedTaskV2[]
-  dateExceptions       NeedDateExceptionV2[]
+  homeVisitTaskOrders  HomeVisitTaskOrderV2[]
   visitWindows         NeedVisitWindowV2[]
   supplies             NeedSupplyV2[]
   requirements         NeedRequirementV2[]
@@ -881,15 +885,6 @@ model BoardingNeedDetailV2 {
   supplyNotes               String?
 }
 
-model NeedDateExceptionV2 {
-  id     String   @id @default(cuid())
-  needId String
-  need   NeedV2   @relation(fields: [needId], references: [id], onDelete: Cascade)
-  date   DateTime @db.Date
-
-  @@unique([needId, date])
-}
-
 model NeedVisitWindowV2 {
   id                 String            @id @default(cuid())
   needId             String
@@ -910,7 +905,8 @@ model NeedPetSnapshotV2 {
   quantity     Int                 @default(1)
   sourcePet    Pet?                @relation(fields: [sourcePetId], references: [id], onDelete: SetNull)
   name         String
-  petType      String
+  petType      PetType
+  customPetType String?
   breed        String?
   birthDate    DateTime?           @db.Date
   weightGrams  Int?
@@ -931,17 +927,37 @@ model NeedTaskV2 {
   needId        String
   need          NeedV2              @relation(fields: [needId], references: [id], onDelete: Cascade)
   clientTaskKey String
+  semanticFingerprint String @default("")
+  fingerprintVersion Int @default(1)
   category      String
   label         String
   instructions  String?
   priority      TaskPriorityV2?
   scheduleKind  TaskScheduleKindV2?
   visitNumbers  Int[]
-  order         Int
+  // Home-visit ordering lives in HomeVisitTaskOrderV2 per visit. Boarding and
+  // custom tasks retain a single mode-level order here.
+  order         Int?
   petLinks      NeedTaskPetV2[]
+  visitOrders   HomeVisitTaskOrderV2[]
 
   @@unique([needId, clientTaskKey])
+  @@unique([needId, semanticFingerprint])
   @@index([category, needId])
+}
+
+model HomeVisitTaskOrderV2 {
+  id          String     @id @default(cuid())
+  needId      String
+  need        NeedV2     @relation(fields: [needId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        NeedTaskV2 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  visitNumber Int
+  order       Int
+
+  @@unique([needId, taskId, visitNumber])
+  @@index([needId, visitNumber, order])
+  @@index([taskId, visitNumber])
 }
 
 model NeedTaskPetV2 {

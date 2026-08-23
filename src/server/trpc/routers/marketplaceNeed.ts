@@ -1,6 +1,6 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { PetType, Prisma, PrismaClient } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 
 import {
   publicLegacyNeedSelect,
@@ -19,6 +19,7 @@ import {
   type MarketplaceCursor,
   type MarketplaceSource,
 } from "@/domain/marketplace/pagination";
+import { petTypeCodes } from "@/modules/need-publishing/domain/pet-types";
 import { publicMarketplaceV2Enabled } from "@/server/feature-flags/publishing-v2";
 import { publicProcedure, router } from "@/server/trpc/trpc";
 
@@ -27,7 +28,7 @@ const currencies = ["JPY", "USD", "EUR", "CNY", "TWD", "KRW", "GBP"] as const;
 
 const needMarketplaceFilterSchema = z.object({
   modes: z.array(z.enum(modes)).max(3).default([]),
-  petTypes: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
+  petTypes: z.array(z.enum(petTypeCodes)).max(20).default([]),
   taskCategories: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
   currency: z.enum(currencies).optional(),
   minBudgetMinor: z.number().int().safe().nonnegative().optional(),
@@ -147,7 +148,9 @@ async function fetchV2(
       archivedAt: null,
       endsAt: { gt: endAfter },
       ...(filter.modes.length ? { mode: { in: filter.modes } } : {}),
-      ...(filter.petTypes.length ? { pets: { some: { petType: { in: filter.petTypes } } } } : {}),
+      ...(filter.petTypes.length
+        ? { pets: { some: { petType: { in: filter.petTypes as PetType[] } } } }
+        : {}),
       ...(filter.taskCategories.length ? { tasks: { some: { category: { in: filter.taskCategories } } } } : {}),
       ...(filter.availableTo ? { startsAt: { lt: new Date(filter.availableTo) } } : {}),
       ...sourceCursorWhere(cursor, "V2"),
@@ -167,7 +170,7 @@ async function fetchLegacy(
 ) {
   if (!("need" in prisma)) return [];
   if (filter.taskCategories.length) return [];
-  const knownPetTypes = new Set(["DOG", "CAT", "RABBIT", "BIRD", "CHINCHILLA", "GUINEA_PIG", "HAMSTER", "OTHER"]);
+  const knownPetTypes = new Set<string>(petTypeCodes);
   const legacyPetTypes = filter.petTypes.filter((type): type is PetType => knownPetTypes.has(type));
   const endAfter = filter.availableFrom && new Date(filter.availableFrom) > now
     ? new Date(filter.availableFrom)

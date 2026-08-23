@@ -10,12 +10,18 @@ import {
 function commandFixture() {
   const createdAt = new Date("2026-08-04T00:00:00.000Z");
   const tx = {
-    needV2: { findFirst: vi.fn().mockResolvedValue({ ownerId: "owner", title: "Rabbit visit", mode: "HOME_VISIT" }) },
+    needV2: {
+      findFirst: vi.fn().mockResolvedValue({
+        ownerId: "owner",
+        mode: "HOME_VISIT",
+        pets: [{ name: "Mochi", petType: "CAT", customPetType: null }],
+      }),
+    },
     need: { findFirst: vi.fn() }, serviceV2: { findFirst: vi.fn() }, service: { findFirst: vi.fn() },
     conversationV2: {
       upsert: vi.fn().mockResolvedValue({ id: "conversation-1" }),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
-      findFirst: vi.fn().mockResolvedValue({ contextTitle: "Rabbit visit", participants: [{ userId: "actor" }, { userId: "owner" }] }),
+      findFirst: vi.fn().mockResolvedValue({ contextTitle: "Mochi · Home visit care", participants: [{ userId: "actor" }, { userId: "owner" }] }),
     },
     conversationParticipantV2: {
       upsert: vi.fn().mockResolvedValue({}),
@@ -60,7 +66,13 @@ describe("conversation V2 commands", () => {
 
   it("rejects self-consultation even when the target is otherwise public", async () => {
     const prisma = {
-      needV2: { findFirst: vi.fn().mockResolvedValue({ ownerId: "actor", title: "Own need", mode: "CUSTOM" }) },
+      needV2: {
+        findFirst: vi.fn().mockResolvedValue({
+          ownerId: "actor",
+          mode: "CUSTOM",
+          pets: [{ name: "Mochi", petType: "CAT", customPetType: null }],
+        }),
+      },
     };
     await expect(resolveConsultationTarget(prisma as never, { kind: "NEED", publicId: "v2:need-1", source: "V2", contextId: "need-1" }, "actor"))
       .rejects.toEqual(expect.objectContaining({ code: "FORBIDDEN_RESOURCE_ACTION" }));

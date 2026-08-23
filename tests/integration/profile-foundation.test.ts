@@ -66,6 +66,25 @@ describe("profile foundation", () => {
     });
   });
 
+  it("completes publishing onboarding directly from the profile step", async () => {
+    const user = await createUser("publish-first@example.com");
+    const caller = profileRouter.createCaller(context(user.id));
+
+    await expect(
+      caller.completeOnboardingProfile({
+        nickname: "Publisher",
+        avatarUrl: null,
+        preferredLocale: "zh",
+        timeZone: "Asia/Tokyo",
+        initialIntent: "POST_NEED",
+      }),
+    ).resolves.toEqual({ nextStep: "COMPLETE" });
+
+    expect(
+      await prisma.profile.findUniqueOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({ onboardingStep: "COMPLETE", initialIntent: "POST_NEED" });
+  });
+
   it("lets a first-time user finish onboarding without publishing", async () => {
     const user = await createUser("browse@example.com");
     const caller = profileRouter.createCaller(context(user.id));

@@ -15,7 +15,6 @@ describe("Need Pricing Domain Engine", () => {
         homeVisit: {
           intervalDays: 1,
           visitsPerServiceDay: 2,
-          excludedDates: [],
         },
       },
       budget: {
@@ -27,14 +26,14 @@ describe("Need Pricing Domain Engine", () => {
       additionalCosts: [],
     });
 
-    expect(pricing.totalUnitsCount).toBe(34);
+    expect(pricing.totalUnitsCount).toBe(32);
     expect(pricing.unitRateMinor).toBe(1600);
-    expect(pricing.careFeeSubtotalMinor).toBe(54400);
-    expect(pricing.estimatedTotalMinMinor).toBe(54400);
+    expect(pricing.careFeeSubtotalMinor).toBe(51200);
+    expect(pricing.estimatedTotalMinMinor).toBe(51200);
     expect(pricing.isEstimateReady).toBe(true);
     expect(pricing.isNegotiable).toBe(true);
 
-    expect(formatNeedEstimatedBadge(pricing)).toBe("¥54,400");
+    expect(formatNeedEstimatedBadge(pricing)).toBe("¥51,200");
   });
 
   it("calculates exact home visit with fixed travel fee allowance", () => {
@@ -46,7 +45,6 @@ describe("Need Pricing Domain Engine", () => {
         homeVisit: {
           intervalDays: 1,
           visitsPerServiceDay: 1,
-          excludedDates: [],
         },
       },
       budget: {
@@ -63,11 +61,11 @@ describe("Need Pricing Domain Engine", () => {
       ],
     });
 
-    expect(pricing.totalUnitsCount).toBe(5);
-    expect(pricing.careFeeSubtotalMinor).toBe(10000);
-    expect(pricing.travelFeeSubtotalMinor).toBe(2500);
-    expect(pricing.estimatedTotalMinMinor).toBe(12500);
-    expect(formatNeedEstimatedBadge(pricing)).toBe("¥12,500");
+    expect(pricing.totalUnitsCount).toBe(4);
+    expect(pricing.careFeeSubtotalMinor).toBe(8000);
+    expect(pricing.travelFeeSubtotalMinor).toBe(2000);
+    expect(pricing.estimatedTotalMinMinor).toBe(10000);
+    expect(formatNeedEstimatedBadge(pricing)).toBe("¥10,000");
   });
 
   it("calculates range boarding pricing correctly", () => {
@@ -136,7 +134,45 @@ describe("Need Pricing Domain Engine", () => {
 
     expect(pricing.isLegacy).toBe(true);
     expect(pricing.estimatedTotalMinMinor).toBe(10000);
-    expect(pricing.unitRateMinor).toBe(1000); // 10000 / 10 visits
+    expect(pricing.unitRateMinor).toBe(1250); // 10000 / 8 visits
     expect(formatNeedEstimatedBadge(pricing)).toBe("¥10,000");
+  });
+
+  it("counts the full visit cadence and marks actual travel separately", () => {
+    const pricing = calculateNeedPricing({
+      mode: "HOME_VISIT",
+      startsAt: "2026-09-01T00:00:00.000Z",
+      endsAt: "2026-09-04T00:00:00.000Z",
+      schedule: {
+        homeVisit: {
+          intervalDays: 1,
+          visitsPerServiceDay: 1,
+        },
+      },
+      budget: { kind: "EXACT", minAmountMinor: 1000, currency: "JPY" },
+      additionalCosts: [{ kind: "TRAVEL", mode: "ACTUAL", amountMinor: null }],
+    });
+
+    expect(pricing.totalUnitsCount).toBe(3);
+    expect(pricing.estimatedTotalMinMinor).toBe(3000);
+    expect(pricing.completeness).toBe("EXCLUDES_ACTUAL_COSTS");
+  });
+
+  it("calculates boarding fixed additions without multiplying them by nights", () => {
+    const pricing = calculateNeedPricing({
+      mode: "BOARDING",
+      startsAt: "2026-09-01T00:00:00.000Z",
+      endsAt: "2026-09-04T00:00:00.000Z",
+      budget: { kind: "OPEN", minAmountMinor: null, currency: "JPY" },
+      additionalCosts: [
+        { kind: "SUPPLY", mode: "FIXED", amountMinor: 500 },
+        { kind: "TRAVEL", mode: "FIXED", amountMinor: 700 },
+      ],
+    });
+
+    expect(pricing.totalUnitsCount).toBe(3);
+    expect(pricing.estimatedTotalMinMinor).toBe(1200);
+    expect(pricing.estimatedTotalMaxMinor).toBeNull();
+    expect(pricing.completeness).toBe("EXCLUDES_DISCUSS_COSTS");
   });
 });

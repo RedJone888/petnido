@@ -1,4 +1,6 @@
 import type { Prisma } from "@prisma/client";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
+import { normalizeTaskIdentity } from "@/modules/need-publishing/domain/task-catalog";
 
 export const publicNeedV2Include = {
   owner: {
@@ -10,7 +12,10 @@ export const publicNeedV2Include = {
       profile: { select: { bio: true } },
       _count: {
         select: {
-          needs: true,
+          // The V2 validation database intentionally contains only the V2
+          // models and therefore has no legacy User.needs relation. Keep the
+          // shared V2 include valid for both Prisma clients; legacy records
+          // still use publicLegacyNeedSelect below.
           needsV2: true,
         },
       },
@@ -22,6 +27,7 @@ export const publicNeedV2Include = {
     select: {
       name: true,
       petType: true,
+      customPetType: true,
       quantity: true,
       breed: true,
       birthDate: true,
@@ -56,6 +62,10 @@ export const publicNeedV2Include = {
       priority: true,
       scheduleKind: true,
       visitNumbers: true,
+      order: true,
+      visitOrders: {
+        orderBy: { visitNumber: "asc" as const },
+      },
       petLinks: {
         select: {
           pet: {
@@ -71,7 +81,6 @@ export const publicNeedV2Include = {
   homeVisitDetail: true,
   boardingDetail: true,
   visitWindows: { orderBy: { visitNumber: "asc" as const } },
-  dateExceptions: { orderBy: { date: "asc" as const } },
   supplies: {
     orderBy: { id: "asc" as const },
     select: { category: true, label: true, providedBy: true },
@@ -177,8 +186,12 @@ export function toPublicNeedV2Dto(
     publicId: `v2:${need.id}`,
     source: "V2" as const,
     mode: need.mode,
-    title: need.title,
+    title: buildNeedDisplayTitle({
+      mode: need.mode,
+      pets: need.pets,
+    }),
     description: need.description,
+    scheduleNotes: need.scheduleNotes,
     startsAt: need.startsAt,
     endsAt: need.endsAt,
     timeZone: need.timeZone,
@@ -201,6 +214,7 @@ export function toPublicNeedV2Dto(
     pets: need.pets.map((pet) => ({
       name: pet.name,
       petType: pet.petType,
+      customPetType: pet.customPetType,
       quantity: pet.quantity,
       breed: pet.breed || pet.sourcePet?.breed || null,
       birthDate: (pet.birthDate || pet.sourcePet?.birthDate)?.toISOString() || null,
@@ -211,12 +225,35 @@ export function toPublicNeedV2Dto(
       image: pet.sourcePet?.photos[0]?.url ?? null,
     })),
     tasks: need.tasks.map((task) => ({
-      category: task.category,
-      label: task.label,
+      ...(() => {
+        const category = task.category ?? "";
+        const upperCategory = category.toUpperCase();
+        const custom =
+          upperCategory === "CUSTOM" || upperCategory.startsWith("CUSTOM-");
+        const identity = normalizeTaskIdentity({
+          category,
+          label: task.label,
+          custom,
+        });
+        return {
+          category: identity.custom
+            ? custom
+              ? "CUSTOM"
+              : category
+            : identity.code.toUpperCase(),
+          label: identity.label,
+        };
+      })(),
       instructions: task.instructions ?? null,
       priority: task.priority,
       scheduleKind: task.scheduleKind,
       visitNumbers: task.visitNumbers,
+      orderByVisit: Object.fromEntries(
+        task.visitOrders.map((visitOrder) => [
+          visitOrder.visitNumber,
+          visitOrder.order,
+        ]),
+      ),
       pets: task.petLinks.map((link) => ({
         name: link.pet.name,
         petType: link.pet.petType,
@@ -233,7 +270,6 @@ export function toPublicNeedV2Dto(
               kind: window.kind,
               preferredLocalTime: window.preferredLocalTime,
             })),
-            excludedDates: need.dateExceptions.map((item) => item.date),
           }
         : null,
       boarding: need.boardingDetail
@@ -314,6 +350,7 @@ export function toPublicLegacyNeedDto(
       priority: mode === "HOME_VISIT" ? ("MUST" as const) : null,
       scheduleKind: mode === "BOARDING" ? ("DAILY" as const) : null,
       visitNumbers: [],
+      orderByVisit: {},
       pets: [],
     })),
     schedule: {

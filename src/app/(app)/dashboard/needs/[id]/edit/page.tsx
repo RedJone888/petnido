@@ -5,9 +5,11 @@ import { NeedCreateInput } from "@/lib/zod/needs";
 import { useNeed } from "@/hooks/useNeed";
 import LoadingPage from "@/components/shared/loading-page";
 import { useLanguage } from "@/components/providers/language-provider";
+import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
 
 export default function NeedEditPage({ params }: { params: { id: string } }) {
   const { t } = useLanguage();
+  const needMessages = useNeedPublishingMessages();
   const { getNeedById, updateNeed } = useNeed(params.id);
   const needData = getNeedById.data;
   const handleSubmit = async (data: NeedCreateInput) => {
@@ -24,7 +26,7 @@ export default function NeedEditPage({ params }: { params: { id: string } }) {
   if (!needData) {
     return (
       <div className="p-10 text-center text-gray-500">
-        {t.core.dashboardNeedDetail.unavailable}
+        {needMessages.dashboardNeedDetail.unavailable}
       </div>
     );
   }

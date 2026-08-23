@@ -23,7 +23,11 @@ function fixture() {
       update: vi.fn().mockResolvedValue({}), updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     needV2: {
-      findFirst: vi.fn().mockResolvedValue({ ownerId: "owner", title: "Rabbit care", mode: "HOME_VISIT" }),
+      findFirst: vi.fn().mockResolvedValue({
+        ownerId: "owner",
+        mode: "HOME_VISIT",
+        pets: [{ name: "Mochi", petType: "CAT", customPetType: null }],
+      }),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     need: { findFirst: vi.fn(), updateMany: vi.fn() },

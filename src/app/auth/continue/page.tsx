@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { sanitizeReturnTo } from "@/modules/auth/return-to";
+import { isNeedPublishingContinuation } from "@/modules/need-publishing/server/continuation";
 import { getServerUserContext } from "@/server/validation/server-user-context";
 
 export default async function AuthContinuePage({
@@ -17,9 +18,9 @@ export default async function AuthContinuePage({
     create: { userId },
     select: { onboardingStep: true, lineFirstUseCompletedAt: true },
   });
-  const returnTo = encodeURIComponent(
-    sanitizeReturnTo(searchParams.returnTo, "/dashboard"),
-  );
+  const safeReturnTo = sanitizeReturnTo(searchParams.returnTo, "/dashboard");
+  const returnTo = encodeURIComponent(safeReturnTo);
+  const isNeedPublishingFlow = isNeedPublishingContinuation(safeReturnTo);
 
   if (!isValidationSession && !profile.lineFirstUseCompletedAt) {
     const user = await prisma.user.findUnique({
@@ -39,9 +40,20 @@ export default async function AuthContinuePage({
   }
 
   if (profile.onboardingStep === "PROFILE") {
-    redirect(`/onboarding/profile?returnTo=${returnTo}`);
+    redirect(
+      `/onboarding/profile?returnTo=${returnTo}${
+        isNeedPublishingFlow ? "&variant=post_need" : ""
+      }`,
+    );
   }
   if (profile.onboardingStep === "INTENT") {
+    if (isNeedPublishingFlow) {
+      await prisma.profile.updateMany({
+        where: { userId, onboardingStep: "INTENT" },
+        data: { initialIntent: "POST_NEED", onboardingStep: "COMPLETE" },
+      });
+      redirect(safeReturnTo);
+    }
     redirect(`/onboarding/intent?returnTo=${returnTo}`);
   }
   if (profile.onboardingStep === "PROVIDER_PROFILE") {

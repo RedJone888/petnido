@@ -9,6 +9,7 @@ import {
   publishSchemaVersion,
   servicePublishSchema,
 } from "@/domain/publishing/contracts";
+import { canEditPublishedNeed } from "@/domain/need/state-machine";
 import { publishNeedV2Transaction } from "@/server/domains/publishing/publish-need-v2";
 import { publishServiceV2Transaction } from "@/server/domains/publishing/publish-service-v2";
 import { consumePostPublishEmailPrompt } from "@/server/domains/notification/email-preference";
@@ -33,6 +34,11 @@ function requirePublishingV2Write() {
 
 function serializePayload(payload: Record<string, unknown>) {
   return JSON.stringify(payload);
+}
+
+function comparablePayload(payload: Record<string, unknown>) {
+  const { workspace: _workspace, ...activePayload } = payload;
+  return serializePayload(activePayload);
 }
 
 function toDraftDto<T extends { payloadJson: string }>(draft: T) {
@@ -144,20 +150,14 @@ export const publishDraftRouter = router({
     .mutation(async ({ ctx, input }) => {
       requirePublishingV2Write();
       const userId = ctx.session.user.id;
-      const existing = await ctx.prisma.publishDraftV2.findUnique({
+      // The browser can enqueue the first autosave while the auth redirect
+      // is settling, and another tab may submit the same id at the same time.
+      // A read-then-create sequence turns that harmless replay into an
+      // uncaught P2002/HTTP 500. Upsert makes creation atomic while retaining
+      // the owner and kind checks below for an existing id.
+      const draft = await ctx.prisma.publishDraftV2.upsert({
         where: { id: input.id },
-      });
-      if (existing) {
-        if (existing.ownerId !== userId) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
-        }
-        if (existing.kind !== input.kind) {
-          throw new TRPCError({ code: "CONFLICT", message: "IDEMPOTENCY_KEY_REUSED" });
-        }
-        return toDraftDto(existing);
-      }
-      const created = await ctx.prisma.publishDraftV2.create({
-        data: {
+        create: {
           id: input.id,
           ownerId: userId,
           kind: input.kind,
@@ -168,8 +168,15 @@ export const publishDraftRouter = router({
           payloadJson: serializePayload(input.payload),
           status: "ACTIVE",
         },
+        update: {},
       });
-      return toDraftDto(created);
+      if (draft.ownerId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
+      }
+      if (draft.kind !== input.kind) {
+        throw new TRPCError({ code: "CONFLICT", message: "IDEMPOTENCY_KEY_REUSED" });
+      }
+      return toDraftDto(draft);
     }),
 
   save: protectedProcedure
@@ -179,7 +186,13 @@ export const publishDraftRouter = router({
       const userId = ctx.session.user.id;
       const owned = await ctx.prisma.publishDraftV2.findFirst({
         where: { id: input.id, ownerId: userId },
-        select: { id: true, kind: true },
+        select: {
+          id: true,
+          kind: true,
+          editingNeedId: true,
+          editingBaselineJson: true,
+          isDirty: true,
+        },
       });
       if (!owned) {
         throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
@@ -187,6 +200,36 @@ export const publishDraftRouter = router({
       if (owned.kind !== input.kind) {
         throw new TRPCError({ code: "CONFLICT", message: "DRAFT_KIND_MISMATCH" });
       }
+      if (owned.editingNeedId) {
+        // Editing permission must be checked again on every draft write. The
+        // Need may have become matched, archived, or otherwise unavailable
+        // after the editor was opened in another tab/session.
+        const editTarget = await ctx.prisma.needV2.findFirst({
+          where: {
+            id: owned.editingNeedId,
+            ownerId: userId,
+            archivedAt: null,
+          },
+          select: { state: true },
+        });
+        if (!editTarget) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
+        }
+        if (!canEditPublishedNeed(editTarget.state)) {
+          if (editTarget.state !== "MATCHED") {
+            throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
+          }
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "NEED_MATCHED_EDIT_REQUIRES_CANCEL_MATCH",
+          });
+        }
+      }
+      const isDirty = owned.editingNeedId
+        ? owned.editingBaselineJson
+          ? comparablePayload(input.payload) !== owned.editingBaselineJson
+          : true
+        : owned.isDirty;
       const updated = await ctx.prisma.publishDraftV2.updateMany({
         where: {
           id: input.id,
@@ -199,6 +242,7 @@ export const publishDraftRouter = router({
           mode: input.mode,
           currentStep: input.currentStep,
           payloadJson: serializePayload(input.payload),
+          isDirty,
           lastValidatedAt: new Date(),
           revision: { increment: 1 },
         },
@@ -241,7 +285,16 @@ export const publishDraftRouter = router({
         where: {
           ownerId: ctx.session.user.id,
           kind: input.kind,
-          status: input.includeAbandoned ? undefined : { not: "ABANDONED" },
+          // The dashboard's draft list is intentionally ACTIVE-only. A
+          // published draft is an audit/idempotency record, not something a
+          // user can resume. `includeAbandoned` remains an explicit escape
+          // hatch for migration/admin tooling.
+          status: input.includeAbandoned ? undefined : "ACTIVE",
+          ...(input.kind === "NEED"
+            ? {
+                OR: [{ editingNeedId: null }, { editingNeedId: { not: null }, isDirty: true }],
+              }
+            : {}),
         },
         orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       });

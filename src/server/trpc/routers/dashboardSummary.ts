@@ -35,7 +35,14 @@ export const dashboardSummaryRouter = router({
     ]);
     const records: DashboardOwnedRecord[] = [
       ...needsV2.map((item) => ({ kind: "NEED" as const, mode: item.mode, state: item.state })),
-      ...legacyNeeds.map((item) => ({ kind: "NEED" as const, mode: mode(item.category), state: item.status })),
+      ...legacyNeeds.map((item) => ({
+        kind: "NEED" as const,
+        mode: mode(item.category),
+        // Legacy CANCELLED requests share the same terminal meaning as CLOSED
+        // in the publishing module. Keep that distinction out of the current
+        // dashboard even while legacy rows remain readable.
+        state: item.status === "CANCELLED" ? "CLOSED" : item.status,
+      })),
       ...servicesV2.map((item) => ({ kind: "SERVICE" as const, mode: item.mode, state: item.state })),
       ...legacyServices.map((item) => ({ kind: "SERVICE" as const, mode: mode(item.serviceType), state: item.isActive ? "ACTIVE" : "PAUSED" })),
     ];

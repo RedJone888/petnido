@@ -22,6 +22,7 @@ import {
 
 import { toast } from "sonner";
 import { useLanguage } from "@/components/providers/language-provider";
+import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { trpc } from "@/utils/trpc";
@@ -33,6 +34,7 @@ export function DashboardHomeContent({
   user: { name?: string | null; image?: string | null; email?: string | null };
 }) {
   const { t } = useLanguage();
+  const needMessages = useNeedPublishingMessages();
   const copy = t.core.dashboardHome;
   const modes = t.core.modes;
   const confirm = useConfirm();
@@ -222,7 +224,7 @@ export function DashboardHomeContent({
                       className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
                     >
                       <Plus size={12} />
-                      <span>{t.core.dashboardNeeds.create}</span>
+                      <span>{needMessages.dashboardNeeds.create}</span>
                     </Link>
                   </div>
                 ) : (

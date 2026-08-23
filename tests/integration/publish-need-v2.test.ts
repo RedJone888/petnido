@@ -26,8 +26,8 @@ function common(draftId: string) {
     draftId,
     revision: 0,
     idempotencyKey: randomUUID(),
-    title: "Care for Mochi",
     description: "Please follow the care plan.",
+    scheduleNotes: "Access after 18:00 on the first day.",
     startsAt: "2026-08-10T00:00:00+09:00",
     endsAt: "2026-08-13T00:00:00+09:00",
     timeZone: "Asia/Tokyo",
@@ -132,12 +132,26 @@ describe("V2 need publication transaction", () => {
       homeVisit: {
         intervalDays: 1,
         firstServiceDate: "2026-08-10",
-        excludedDates: ["2026-08-12"],
-        visitsPerServiceDay: 1,
+        visitsPerServiceDay: 2,
         visitWindows: [
           { visitNumber: 1, kind: "PREFERRED", preferredLocalTime: "09:30" },
+          { visitNumber: 2, kind: "PREFERRED", preferredLocalTime: "18:30" },
         ],
-        tasks: [task("EACH_VISIT")],
+        tasks: [
+          {
+            ...task("EACH_VISIT"),
+            visitNumbers: [1, 2],
+            orderByVisit: { 1: 0, 2: 1 },
+          },
+          {
+            ...task("EACH_VISIT"),
+            clientTaskKey: "task-water",
+            label: "Refresh water",
+            visitNumbers: [1, 2],
+            order: 1,
+            orderByVisit: { 1: 1, 2: 0 },
+          },
+        ],
       },
     });
 
@@ -155,19 +169,32 @@ describe("V2 need publication transaction", () => {
         where: { id: first.needId },
         include: {
           pets: true,
-          tasks: { include: { petLinks: true } },
+          tasks: { include: { petLinks: true, visitOrders: true } },
           homeVisitDetail: true,
           visitWindows: true,
-          dateExceptions: true,
           additionalCosts: true,
           attachments: true,
         },
       }),
     ).toMatchObject({
       state: "OPEN",
+      scheduleNotes: "Access after 18:00 on the first day.",
       pets: [{ quantity: 2, petType: "CAT" }],
-      homeVisitDetail: { intervalDays: 1, visitsPerServiceDay: 1 },
+      homeVisitDetail: { intervalDays: 1, visitsPerServiceDay: 2 },
     });
+    const savedTasks = await prisma.needTaskV2.findMany({
+      where: { needId: first.needId },
+      include: { visitOrders: { orderBy: { visitNumber: "asc" } } },
+      orderBy: { clientTaskKey: "asc" },
+    });
+    expect(savedTasks.map((savedTask) => [
+      savedTask.clientTaskKey,
+      savedTask.visitOrders.map((visitOrder) => [visitOrder.visitNumber, visitOrder.order]),
+    ])).toEqual([
+      ["task-1", [[1, 0], [2, 1]]],
+      ["task-water", [[1, 1], [2, 0]]],
+    ]);
+    expect(savedTasks.map((savedTask) => savedTask.order)).toEqual([null, null]);
     const savedPet = await prisma.pet.findFirstOrThrow({
       where: { ownerId: owner.id },
     });
@@ -224,7 +251,7 @@ describe("V2 need publication transaction", () => {
     expect(
       await prisma.needV2.findUnique({
         where: { id: result.needId },
-        include: { boardingDetail: true, supplies: true, requirements: true },
+        include: { boardingDetail: true, supplies: true, requirements: true, tasks: true },
       }),
     ).toMatchObject({
       boardingDetail: {
@@ -234,6 +261,7 @@ describe("V2 need publication transaction", () => {
       },
       supplies: [{ label: "Dry food", providedBy: "OWNER" }],
       requirements: [{ kind: "UNACCEPTABLE", label: "Unsecured windows" }],
+      tasks: [{ order: 0 }],
     });
   });
 
@@ -261,7 +289,9 @@ describe("V2 need publication transaction", () => {
       }),
     ).toMatchObject({
       mode: "CUSTOM",
-      tasks: [{ scheduleKind: "DAILY", label: "Feed dinner" }],
+      // Frequency is not applicable to CUSTOM tasks and must not inherit the
+      // generic helper's DAILY default.
+      tasks: [{ scheduleKind: null, label: "Feed dinner", order: 0 }],
       requirements: [
         { kind: "OTHER_NEED", label: "Quiet handling" },
         { kind: "WARNING", label: "No retractable leash" },
@@ -327,7 +357,6 @@ describe("V2 need publication transaction", () => {
     await createDraft(owner.id, editDraftId, "BOARDING", created.needId);
     const editInput = needPublishSchema.parse({
       ...common(editDraftId),
-      title: "Updated boarding for Mochi",
       pets: [
         {
           ...common(editDraftId).pets[0],
@@ -375,7 +404,6 @@ describe("V2 need publication transaction", () => {
       }),
     ).toMatchObject({
       mode: "BOARDING",
-      title: "Updated boarding for Mochi",
       boardingDetail: { maxProviderDistanceMeters: 5000 },
       requirements: [{ label: "Quiet room" }],
       pets: [{ sourcePetId: savedPet.id, quantity: 1 }],

@@ -40,6 +40,10 @@ import {
   resolveOtherPetTypeKey,
 } from "@/domain/pet/profile-options";
 import cn from "@/lib/cn";
+import {
+  normalizePetTypeSelection,
+  petTypeLabel,
+} from "@/modules/need-publishing/domain/pet-types";
 
 export const petProfileTypes = [
   "DOG",
@@ -197,6 +201,8 @@ const legacyPetTypeIcons: Record<string, OptionIcon> = {
   CHINCHILLA: ChinchillaIcon,
   GUINEA_PIG: GuineaPigIcon,
   HAMSTER: HamsterIcon,
+  TURTLE: TurtleIcon,
+  FERRET: FerretIcon,
 };
 
 type SelectOption = { value: string; label: string; icon?: OptionIcon };
@@ -256,7 +262,7 @@ function IconSelect({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="z-[1200] w-[var(--radix-popover-trigger-width)] min-w-[180px] p-1.5"
+        className="z-[1200] w-[var(--radix-popover-trigger-width)] min-w-0 p-1.5"
       >
         <div className="space-y-1">
           {options.map((option) => {
@@ -363,7 +369,7 @@ function OtherTypeField({
         ) : null}
       </div>
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-[80] w-64 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg">
+        <div className="absolute inset-x-0 top-[calc(100%+6px)] z-[80] w-full rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg">
           {options.map((option) => {
             const Icon = otherTypeIcons[option.key] ?? PiPawPrint;
             return (
@@ -430,7 +436,7 @@ function SuggestionField({
         ) : null}
       </div>
       {open && options.length ? (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-[80] w-full min-w-[220px] rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg">
+        <div className="absolute inset-x-0 top-[calc(100%+6px)] z-[80] w-full rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg">
           {options.map((option) => (
             <button
               key={option}
@@ -642,6 +648,7 @@ function DateSelect({
       maxDate={maxDate}
       placeholder={placeholder}
       triggerClassName="mt-2 h-11"
+      popoverClassName="w-[calc(min(100vw-24px,64rem)-32px)] max-w-none sm:w-[calc(min(100vw-48px,64rem)-48px)]"
     />
   );
 }
@@ -774,9 +781,10 @@ export function PetProfileEditorDialog({
         onSubmit();
       }}
       bodyClassName="space-y-6"
+      panelClassName="max-h-[80dvh]"
     >
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="relative">
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+        <label className="relative col-span-2 lg:col-span-1">
           <FieldCaption label={copy.name} />
           <input
             id="pet-name"
@@ -805,7 +813,10 @@ export function PetProfileEditorDialog({
           ) : null}
         </label>
         <div
-          className={cn("relative", value.type === "OTHER" && "lg:col-span-2")}
+          className={cn(
+            "relative",
+            value.type === "OTHER" && "col-span-2 lg:col-span-2",
+          )}
         >
           <FieldCaption label={copy.type} />
           <div className={value.type === "OTHER" ? "grid grid-cols-2" : ""}>
@@ -861,7 +872,7 @@ export function PetProfileEditorDialog({
             </p>
           ) : null}
         </div>
-        <div>
+        <div className={cn(value.type === "OTHER" && "col-span-2 lg:col-span-1")}>
           <FieldCaption label={copy.breed} optional={copy.optional} />
           <SuggestionField
             value={value.breed}
@@ -872,7 +883,7 @@ export function PetProfileEditorDialog({
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
         <div>
           <FieldCaption label={copy.birthDate} optional={copy.optional} />
           <DateSelect
@@ -1053,6 +1064,10 @@ export function PetProfileCard({
   const rawCustomType = pet.customType ?? "";
   const canonicalOtherType = resolveOtherPetTypeKey(rawCustomType);
   const normalizedType = normalizeProfileEnum(pet.type);
+  const canonicalSelection = normalizePetTypeSelection(
+    normalizedType,
+    rawCustomType,
+  );
   const localizedCustomType = localizeOtherPetType(rawCustomType, lang);
   const localizedBreed = localizePetBreed(
     pet.breed ?? "",
@@ -1068,8 +1083,9 @@ export function PetProfileCard({
         OtherIcon);
   const typeOrBreed =
     localizedBreed ||
-    localizedCustomType ||
-    copy.typeLabels[normalizedType as keyof typeof copy.typeLabels] ||
+    (canonicalSelection.petType === "OTHER"
+      ? localizedCustomType
+      : petTypeLabel(canonicalSelection.petType, lang)) ||
     pet.type;
   const age = petAgeParts(pet.birthDate);
   const ageText = age

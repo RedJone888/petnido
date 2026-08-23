@@ -25,7 +25,7 @@ describe("three-language content contract", () => {
 
   it("provides localized user labels for every public taxonomy value", () => {
     const modeCodes = ["HOME_VISIT", "BOARDING", "CUSTOM"] as const;
-    const petCodes = ["DOG", "CAT", "RABBIT", "BIRD", "CHINCHILLA", "GUINEA_PIG", "HAMSTER", "OTHER"] as const;
+    const petCodes = ["DOG", "CAT", "RABBIT", "BIRD", "CHINCHILLA", "GUINEA_PIG", "HAMSTER", "TURTLE", "FERRET", "OTHER"] as const;
     const taskCodes = ["FEEDING", "WATER", "WALK", "CLEANING", "MEDICATION", "TRANSPORT", "OTHER"] as const;
 
     for (const language of supportedLanguages) {

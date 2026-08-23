@@ -334,6 +334,9 @@ model PublishDraftV2 {
   publishedNeedId    String?    @unique
   publishedNeed      NeedV2?    @relation("NeedPublishedDraft", fields: [publishedNeedId], references: [id], onDelete: SetNull)
   editingNeedId      String?
+  editingBaselineJson String?
+  isDirty            Boolean    @default(false)
+  clonedFromNeedId   String?
   publishedServiceId String?    @unique
   publishedService   ServiceV2? @relation("ServicePublishedDraft", fields: [publishedServiceId], references: [id], onDelete: SetNull)
   editingServiceId   String?
@@ -367,9 +370,9 @@ model NeedV2 {
   ownerId            String
   owner              User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   mode               String
-  state              String                 @default("DRAFT")
-  title              String
+  state              String                 @default("OPEN")
   description        String?
+  scheduleNotes      String?
   startsAt           DateTime
   endsAt             DateTime
   timeZone           String
@@ -390,7 +393,7 @@ model NeedV2 {
   boardingDetail     BoardingNeedDetailV2?
   pets               NeedPetSnapshotV2[]
   tasks              NeedTaskV2[]
-  dateExceptions     NeedDateExceptionV2[]
+  homeVisitTaskOrders HomeVisitTaskOrderV2[]
   visitWindows       NeedVisitWindowV2[]
   supplies           NeedSupplyV2[]
   requirements       NeedRequirementV2[]
@@ -421,15 +424,6 @@ model BoardingNeedDetailV2 {
   supplyNotes               String?
 }
 
-model NeedDateExceptionV2 {
-  id     String   @id @default(cuid())
-  needId String
-  need   NeedV2   @relation(fields: [needId], references: [id], onDelete: Cascade)
-  date   DateTime
-
-  @@unique([needId, date])
-}
-
 model NeedVisitWindowV2 {
   id                 String  @id @default(cuid())
   needId             String
@@ -451,6 +445,7 @@ model NeedPetSnapshotV2 {
   quantity     Int                 @default(1)
   name         String
   petType      String
+  customPetType String?
   breed        String?
   birthDate    DateTime?
   weightGrams  Int?
@@ -470,16 +465,36 @@ model NeedTaskV2 {
   needId        String
   need          NeedV2          @relation(fields: [needId], references: [id], onDelete: Cascade)
   clientTaskKey String
+  semanticFingerprint String      @default("")
+  fingerprintVersion Int          @default(1)
   category      String
   label         String
   instructions  String?
   priority      String?
   scheduleKind  String?
   visitNumbers  String
-  order         Int
+  // Home-visit ordering lives in HomeVisitTaskOrderV2 per visit. Boarding and
+  // custom tasks retain a single mode-level order here.
+  order         Int?
   petLinks      NeedTaskPetV2[]
+  visitOrders   HomeVisitTaskOrderV2[]
 
   @@unique([needId, clientTaskKey])
+  @@unique([needId, semanticFingerprint])
+}
+
+model HomeVisitTaskOrderV2 {
+  id          String     @id @default(cuid())
+  needId      String
+  need        NeedV2     @relation(fields: [needId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        NeedTaskV2 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  visitNumber Int
+  order       Int
+
+  @@unique([needId, taskId, visitNumber])
+  @@index([needId, visitNumber, order])
+  @@index([taskId, visitNumber])
 }
 
 model NeedTaskPetV2 {

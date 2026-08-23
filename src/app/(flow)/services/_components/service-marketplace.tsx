@@ -9,9 +9,10 @@ import { AppImage } from "@/components/ui/app-image";
 import { usePageLanguage } from "@/components/providers/language-provider";
 import type { Lang } from "@/domain/lang/types";
 import { messages } from "@/i18n/messages";
+import { petTypeCodes } from "@/modules/need-publishing/domain/pet-types";
 
 type Mode = "HOME_VISIT" | "BOARDING" | "CUSTOM";
-const petTypes = ["DOG", "CAT", "RABBIT", "BIRD", "CHINCHILLA", "GUINEA_PIG", "HAMSTER", "OTHER"] as const;
+const petTypes = petTypeCodes;
 const inputClass = "min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm";
 
 function amountMinor(value: string, currency: string) {

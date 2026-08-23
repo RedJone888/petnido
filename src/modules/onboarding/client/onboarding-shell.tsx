@@ -5,17 +5,19 @@ import { useOnboardingMessages } from "../i18n/use-onboarding-messages";
 export function OnboardingShell({
   step,
   children,
+  variant,
 }: {
   step: "PROFILE" | "INTENT" | "PROVIDER_PROFILE";
   children: React.ReactNode;
+  variant?: "POST_NEED";
 }) {
   const { copy } = useOnboardingMessages();
   const content =
     step === "PROFILE"
       ? {
-          eyebrow: copy.profileEyebrow,
-          title: copy.profileTitle,
-          description: copy.profileDescription,
+          eyebrow: variant === "POST_NEED" ? copy.postNeedProfileEyebrow : copy.profileEyebrow,
+          title: variant === "POST_NEED" ? copy.postNeedProfileTitle : copy.profileTitle,
+          description: variant === "POST_NEED" ? copy.postNeedProfileDescription : copy.profileDescription,
         }
       : step === "INTENT"
         ? {

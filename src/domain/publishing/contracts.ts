@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+import { petTypeCodes } from "@/modules/need-publishing/domain/pet-types";
+import {
+  boardingTaskFingerprint,
+  customTaskFingerprint,
+  homeVisitTaskFingerprint,
+} from "@/modules/need-publishing/domain/task-fingerprint";
+import { normalizeTaskIdentity } from "@/modules/need-publishing/domain/task-catalog";
+
 export const publishSchemaVersion = 1 as const;
 
 export const publishingModeSchema = z.enum([
@@ -122,14 +130,15 @@ export const additionalCostInputSchema = z
     }
   });
 
-export const petSnapshotInputSchema = z
+const petSnapshotObjectSchema = z
   .object({
     clientPetKey: z.string().min(1).max(80),
     sourcePetId: z.string().min(1).nullable(),
     profileAction: z.enum(["CREATE", "UPDATE", "NONE"]).optional(),
     quantity: z.number().int().positive().max(100).default(1),
     name: z.string().trim().min(1).max(80),
-    petType: z.string().trim().min(1).max(40),
+    petType: z.enum(petTypeCodes),
+    customPetType: z.string().trim().min(1).max(80).nullable().default(null),
     breed: z.string().trim().max(100).nullable(),
     birthDate: dateOnlySchema.nullable(),
     weightGrams: z.number().int().positive().nullable(),
@@ -138,6 +147,29 @@ export const petSnapshotInputSchema = z
     careNotes: z.string().trim().max(4000).nullable(),
   })
   .strict();
+
+export const petSnapshotInputSchema = petSnapshotObjectSchema.superRefine(
+  (pet, ctx) => {
+    if (pet.petType === "OTHER" && !pet.customPetType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["customPetType"],
+        message: "OTHER_PET_TYPE_REQUIRES_CUSTOM_VALUE",
+      });
+    }
+    if (pet.petType !== "OTHER" && pet.customPetType !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["customPetType"],
+        message: "CANONICAL_PET_TYPE_MUST_NOT_HAVE_CUSTOM_VALUE",
+      });
+    }
+  },
+);
+
+const taskOrderByVisitSchema = z
+  .record(z.string().regex(/^[1-9]\d*$/), z.number().int().nonnegative())
+  .optional();
 
 export const needTaskInputSchema = z
   .object({
@@ -150,6 +182,9 @@ export const needTaskInputSchema = z
     scheduleKind: z.enum(["EACH_VISIT", "DAILY", "REPEATING", "ONCE", "AS_NEEDED"]).nullable().optional(),
     visitNumbers: z.array(z.number().int().positive()).default([]),
     order: z.number().int().nonnegative(),
+    // Home-visit display order is scoped to each visit. `order` remains as a
+    // backwards-compatible fallback for older drafts and non-visit modes.
+    orderByVisit: taskOrderByVisitSchema,
   })
   .strict()
   .superRefine((task, ctx) => {
@@ -163,8 +198,10 @@ const needCommonShape = {
   draftId: z.string().min(1),
   revision: z.number().int().nonnegative(),
   idempotencyKey: z.string().uuid(),
-  title: z.string().trim().min(1).max(160),
   description: z.string().trim().max(4000).nullable(),
+  // Notes about the requested care dates/timing. Keep this independent from
+  // task instructions and mode-specific requirements.
+  scheduleNotes: z.string().trim().max(2000).nullable().optional(),
   startsAt: z.string().datetime({ offset: true }),
   endsAt: z.string().datetime({ offset: true }),
   timeZone: z.string().min(1).refine(isIanaTimeZone, "INVALID_TIME_ZONE"),
@@ -198,7 +235,6 @@ const homeVisitNeedPublishSchema = z.object({
     .object({
       intervalDays: z.number().int().positive(),
       firstServiceDate: dateOnlySchema,
-      excludedDates: z.array(dateOnlySchema),
       visitsPerServiceDay: z.number().int().min(1).max(12),
       visitWindows: z.array(visitWindowSchema).min(1).max(12),
       tasks: z.array(needTaskInputSchema).min(1).max(200),
@@ -301,12 +337,73 @@ export const needPublishSchema = z
       if (task.petKeys.some((key) => !petKeys.has(key))) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "TASK_PET_NOT_FOUND" });
       }
-      if (
-        need.mode === "HOME_VISIT" &&
-        task.visitNumbers.some((number) => number > need.homeVisit.visitsPerServiceDay)
-      ) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "TASK_VISIT_OUT_OF_RANGE" });
+      if (need.mode === "HOME_VISIT") {
+        if (!task.priority) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "HOME_TASK_REQUIRES_PRIORITY" });
+        }
+        if (!task.visitNumbers.length) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "HOME_TASK_REQUIRES_VISIT" });
+        } else if (task.visitNumbers.some((number) => number > need.homeVisit.visitsPerServiceDay)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "TASK_VISIT_OUT_OF_RANGE" });
+        }
+        if (
+          task.orderByVisit &&
+          Object.keys(task.orderByVisit).some(
+            (visit) => Number(visit) > need.homeVisit.visitsPerServiceDay,
+          )
+        ) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "TASK_VISIT_OUT_OF_RANGE" });
+        }
+      } else if (need.mode === "BOARDING") {
+        if (!task.scheduleKind || task.scheduleKind === "EACH_VISIT") {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BOARDING_TASK_REQUIRES_FREQUENCY" });
+        }
+      } else {
+        // Older draft payloads may still carry generic priority/frequency
+        // defaults. The publish transaction normalizes them away for CUSTOM;
+        // they must not become a second source of identity here.
       }
+    }
+    const semanticFingerprints = tasks.map((task) => {
+      const category = task.category ?? "";
+      const upperCategory = category.toUpperCase();
+      const custom =
+        upperCategory === "CUSTOM" || upperCategory.startsWith("CUSTOM-");
+      const identity = normalizeTaskIdentity({
+        category,
+        label: task.label,
+        custom,
+      });
+      if (need.mode === "HOME_VISIT") {
+        return homeVisitTaskFingerprint({
+          assignmentPetKeys: task.petKeys,
+          taskName: identity.label,
+          taskCode: identity.code,
+          custom: identity.custom,
+          priority: task.priority ?? "",
+          notes: task.instructions,
+        });
+      }
+      if (need.mode === "BOARDING") {
+        return boardingTaskFingerprint({
+          assignmentPetKeys: task.petKeys,
+          taskName: identity.label,
+          taskCode: identity.code,
+          custom: identity.custom,
+          frequency: task.scheduleKind ?? "",
+          notes: task.instructions,
+        });
+      }
+      return customTaskFingerprint({
+        assignmentPetKeys: task.petKeys,
+        taskName: identity.label,
+        taskCode: identity.code,
+        custom: identity.custom,
+        notes: task.instructions,
+      });
+    });
+    if (new Set(semanticFingerprints).size !== semanticFingerprints.length) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "DUPLICATE_TASK_SEMANTIC_FINGERPRINT" });
     }
     if (need.mode === "HOME_VISIT") {
       const first = need.homeVisit.firstServiceDate;
@@ -468,7 +565,10 @@ const draftTaskSchema = z
     petKeys: z.array(z.string().min(1)).optional(),
     scheduleKind: z.enum(["EACH_VISIT", "DAILY", "REPEATING", "ONCE", "AS_NEEDED"]).nullable().optional(),
     visitNumbers: z.array(z.number().int().positive()).optional(),
-    order: z.number().int().nonnegative().optional(),
+    // Drafts saved before per-visit ordering may contain an explicit null.
+    // Accept it on read and normalize it away in the legacy workspace mapper.
+    order: z.number().int().nonnegative().nullable().optional(),
+    orderByVisit: taskOrderByVisitSchema,
   })
   .strict();
 
@@ -490,12 +590,27 @@ const draftVisitWindowSchema = z
 
 export const needDraftPayloadSchema = z
   .object({
+    // The publish serializer still reads the active branch fields above, but
+    // drafts also carry the complete browser workspace so switching modes or
+    // resuming on another device never silently discards inactive branches.
+    workspace: z
+      .object({
+        version: z.literal(1),
+        common: z.record(z.unknown()),
+        draftByMode: z.record(z.record(z.unknown())),
+      })
+      .strict()
+      .optional(),
+    // Accepted only to read drafts created before derived titles were
+    // removed. New serializers never write this field and published NeedV2
+    // records do not persist it.
     title: z.string().trim().max(160).optional(),
     description: z.string().trim().max(4000).nullable().optional(),
+    scheduleNotes: z.string().trim().max(2000).nullable().optional(),
     startsAt: z.string().datetime({ offset: true }).nullable().optional(),
     endsAt: z.string().datetime({ offset: true }).nullable().optional(),
     timeZone: z.string().refine(isIanaTimeZone, "INVALID_TIME_ZONE").nullable().optional(),
-    pets: z.array(petSnapshotInputSchema.partial()).max(20).optional(),
+    pets: z.array(petSnapshotObjectSchema.partial()).max(20).optional(),
     location: mapLocationInputSchema.nullable().optional(),
     budget: draftMoneySchema.nullable().optional(),
     additionalCosts: z.array(draftAdditionalCostSchema).max(2).optional(),
@@ -504,7 +619,6 @@ export const needDraftPayloadSchema = z
       .object({
         intervalDays: z.number().int().positive().optional(),
         firstServiceDate: dateOnlySchema.nullable().optional(),
-        excludedDates: z.array(dateOnlySchema).optional(),
         visitsPerServiceDay: z.number().int().min(1).max(12).optional(),
         visitWindows: z.array(draftVisitWindowSchema).max(12).optional(),
         tasks: z.array(draftTaskSchema).max(200).optional(),

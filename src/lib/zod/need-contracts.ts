@@ -1,18 +1,10 @@
 import { z } from "zod";
+import { petTypeCodes } from "@/modules/need-publishing/domain/pet-types";
 
 import { mapLocationSchema, publicMapLocationSchema } from "./location";
 import { feeRuleSchema, moneyOfferSchema } from "./money";
 
-const petTypeSchema = z.enum([
-  "DOG",
-  "CAT",
-  "RABBIT",
-  "BIRD",
-  "CHINCHILLA",
-  "GUINEA_PIG",
-  "HAMSTER",
-  "OTHER",
-]);
+const petTypeSchema = z.enum(petTypeCodes);
 
 export const needPetInputSchema = z.discriminatedUnion("source", [
   z.object({ source: z.literal("PROFILE"), petId: z.string().cuid() }).strict(),

@@ -21,14 +21,18 @@ import UserAvatar from "@/components/shared/user-avatar";
 import { useAuthModal } from "@/modules/auth/client/auth-modal-provider";
 import type { Lang } from "@/domain/lang/types";
 import { messages } from "@/i18n/messages";
+import { getNeedPublishingMessages } from "@/modules/need-publishing/i18n/messages";
 import { trpc } from "@/utils/trpc";
 import cn from "@/lib/cn";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
+import { localizeTaskLabel } from "@/modules/need-publishing/domain/task-catalog";
 
 export type Mode = "HOME_VISIT" | "BOARDING" | "CUSTOM";
 
 export type PublicPet = {
   name: string | null;
   petType: string;
+  customPetType?: string | null;
   quantity: number;
   image: string | null;
 };
@@ -42,6 +46,7 @@ export type PublicTask = {
 
 export type MarketplaceNeedItem = {
   publicId: string;
+  source: "V2" | "LEGACY";
   title: string;
   mode: string;
   startsAt: Date | string;
@@ -52,7 +57,6 @@ export type MarketplaceNeedItem = {
       intervalDays: number | null;
       firstServiceDate: Date | string | null;
       visitsPerServiceDay: number | null;
-      excludedDates: Array<Date | string>;
     } | null;
     boarding?: {
       transportMode: string | null;
@@ -82,6 +86,12 @@ export type MarketplaceNeedItem = {
   };
   pets: PublicPet[];
 };
+
+export function localizedNeedTitle(need: MarketplaceNeedItem, lang: Lang) {
+  return need.source === "V2"
+    ? buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, lang })
+    : need.title;
+}
 
 const requestModeIcons: Record<Mode, ElementType> = {
   HOME_VISIT: PiHouseLine,
@@ -175,7 +185,6 @@ function totalHomeVisits(
     intervalDays: number | null;
     firstServiceDate: Date | string | null;
     visitsPerServiceDay: number | null;
-    excludedDates: Array<Date | string>;
   } | null,
 ) {
   if (!schedule) return null;
@@ -259,6 +268,7 @@ export function formatPetsSummary(
   pets: PublicPet[],
   lang: Lang,
   t: (typeof messages)[Lang],
+  needCopy: ReturnType<typeof getNeedPublishingMessages>,
 ): string {
   if (!pets || pets.length === 0) return "";
 
@@ -289,7 +299,7 @@ export function formatPetsSummary(
   const parts = typeEntries.map(([typeKey, count]) => {
     const typeLabel =
       t.core.pets[typeKey as keyof typeof t.core.pets] ||
-      (t.core.needPublishing.petTypes as Record<string, string>)[typeKey.toLowerCase()] ||
+      (needCopy.needPublishing.petTypes as Record<string, string>)[typeKey.toLowerCase()] ||
       typeKey;
     if (lang === "en") {
       return `${typeLabel} ×${count}`;
@@ -325,6 +335,7 @@ export function NeedCard({
   onMouseLeave?: () => void;
 }) {
   const t = messages[lang];
+  const needCopy = getNeedPublishingMessages(lang);
   const copy = t.core.marketplace;
   const pendingCopy = t.core.pendingAction;
   const mode = (need.mode as Mode) || "HOME_VISIT";
@@ -394,7 +405,7 @@ export function NeedCard({
     return pet.name?.trim() || petTypeLabel;
   };
   const featuredPet = need.pets.find((pet) => pet.image) ?? need.pets[0];
-  const petsSummary = formatPetsSummary(need.pets, lang, t);
+  const petsSummary = formatPetsSummary(need.pets, lang, t, needCopy);
 
   // 1. Date string calculation per mode
   const startDateStr = compactDate(need.startsAt, lang);
@@ -411,8 +422,8 @@ export function NeedCard({
     // 自定义需求: 时间 (同一天显示单日，加具体时间/时间段偏好)
     const timePrefKey = need.schedule.custom?.timePreference;
     const timePref = timePrefKey
-      ? (t.core.needPublishing.timeOptions[
-          timePrefKey as keyof typeof t.core.needPublishing.timeOptions
+      ? (needCopy.needPublishing.timeOptions[
+          timePrefKey as keyof typeof needCopy.needPublishing.timeOptions
         ] ??
         need.schedule.custom?.exactTime ??
         "")
@@ -443,12 +454,16 @@ export function NeedCard({
   } else if (mode === "CUSTOM") {
     // 自定义需求: 第一个任务
     const firstTask = need.tasks?.[0];
-    const taskCategory = firstTask?.category;
-    const localizedTask = taskCategory
-      ? (t.core.needPublishing.taskLabels[
-          taskCategory as keyof typeof t.core.needPublishing.taskLabels
-        ] ?? firstTask.label)
-      : (firstTask?.label || copy.careDetails);
+    const taskCategory = firstTask?.category ?? "";
+    const taskCategoryUpper = taskCategory.toUpperCase();
+    const localizedTask = firstTask
+      ? localizeTaskLabel(firstTask.label, lang, {
+          category: taskCategory,
+          custom:
+            taskCategoryUpper === "CUSTOM" ||
+            taskCategoryUpper.startsWith("CUSTOM-"),
+        })
+      : copy.careDetails;
     line4LeftIcon = PiHandHeart;
     line4LeftText = localizedTask;
   }

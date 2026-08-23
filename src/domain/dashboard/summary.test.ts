@@ -9,7 +9,7 @@ describe("dashboard owned-content summary", () => {
       byMode: { HOME_VISIT: 0, BOARDING: 0, CUSTOM: 0 },
       needByMode: { HOME_VISIT: 0, BOARDING: 0, CUSTOM: 0 },
       serviceByMode: { HOME_VISIT: 0, BOARDING: 0, CUSTOM: 0 },
-      needStates: { OPEN: 0, MATCHED: 0, CLOSED: 0, CANCELLED: 0 },
+      needStates: { OPEN: 0, MATCHED: 0, CLOSED: 0 },
       serviceStates: { ACTIVE: 0, PAUSED: 0, ARCHIVED: 0 },
     });
   });

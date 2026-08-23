@@ -13,9 +13,18 @@ import {
   listBrowseNeeds,
 } from "@/server/domains/needs/queries";
 import { legacyNeedCommandSchema } from "@/lib/zod/resource-commands";
-import { transitionNeed } from "@/domain/need/state-machine";
-import { DomainTransitionError } from "@/domain/shared/state-machine";
 import { requireOwnedNeed } from "@/server/domains/resource-ownership";
+
+// The legacy Need table retains its historical CANCELLED status. NeedV2 uses
+// the published-only state machine in domain/need/state-machine instead.
+const legacyNeedTransitions: Readonly<
+  Record<NeedStatus, Readonly<Partial<Record<"CLOSE" | "REOPEN" | "CANCEL", NeedStatus>>>>
+> = {
+  OPEN: { CLOSE: "CLOSED", CANCEL: "CANCELLED" },
+  MATCHED: { CLOSE: "CLOSED", REOPEN: "OPEN", CANCEL: "CANCELLED" },
+  CLOSED: { REOPEN: "OPEN", CANCEL: "CANCELLED" },
+  CANCELLED: {},
+};
 
 export const needRouter = router({
   listMine: protectedProcedure.query(async ({ ctx }) => {
@@ -286,20 +295,8 @@ export const needRouter = router({
       const userId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
         const existingNeed = await requireOwnedNeed(tx, input.id, userId);
-        let nextStatus;
-        try {
-          nextStatus = transitionNeed(existingNeed.status, input.command);
-        } catch (error) {
-          if (error instanceof DomainTransitionError) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: error.code,
-              cause: error,
-            });
-          }
-          throw error;
-        }
-        if (nextStatus === "DRAFT") {
+        const nextStatus = legacyNeedTransitions[existingNeed.status][input.command];
+        if (!nextStatus) {
           throw new TRPCError({
             code: "CONFLICT",
             message: "INVALID_STATE_TRANSITION",

@@ -21,8 +21,8 @@ function v2Fixture(): PublicNeedV2Source {
     ownerId: "owner-1",
     mode: "HOME_VISIT",
     state: "OPEN",
-    title: "Care for two cats",
     description: "Public description",
+    scheduleNotes: "Access after 18:00",
     startsAt: new Date("2026-08-10T00:00:00.000Z"),
     endsAt: new Date("2026-08-12T00:00:00.000Z"),
     timeZone: "Asia/Tokyo",
@@ -50,6 +50,7 @@ function v2Fixture(): PublicNeedV2Source {
     pets: [{
       name: "Mochi",
       petType: "CAT",
+      customPetType: null,
       quantity: 2,
       breed: "Ragdoll",
       birthDate: null,
@@ -74,6 +75,14 @@ function v2Fixture(): PublicNeedV2Source {
       priority: "MUST",
       scheduleKind: "EACH_VISIT",
       visitNumbers: [1],
+      order: 0,
+      visitOrders: [{
+        id: "visit-order-1",
+        needId: "need-1",
+        taskId: "task-1",
+        visitNumber: 1,
+        order: 3,
+      }],
       petLinks: [],
     }],
     homeVisitDetail: {
@@ -85,7 +94,6 @@ function v2Fixture(): PublicNeedV2Source {
     },
     boardingDetail: null,
     visitWindows: [{ id: "window-1", needId: "need-1", visitNumber: 1, kind: "PREFERRED", preferredLocalTime: "18:00" }],
-    dateExceptions: [],
     supplies: [],
     requirements: [],
     additionalCosts: [],
@@ -104,12 +112,14 @@ describe("public need DTO", () => {
     const dto = toPublicNeedV2Dto(v2Fixture(), 1250);
     expect(dto).toMatchObject({
       publicId: "v2:need-1",
+      scheduleNotes: "Access after 18:00",
       location: {
         regionLabel: "Chiyoda, Tokyo",
         displayPrecision: "DISTRICT",
         distanceMeters: 1250,
         mapPoint: { lat: 35.681236, lon: 139.767125 },
       },
+      title: "Mochi · Home visit care",
       pets: [
         {
           name: "Mochi",
@@ -132,12 +142,14 @@ describe("public need DTO", () => {
           priority: "MUST",
           scheduleKind: "EACH_VISIT",
           visitNumbers: [1],
+          orderByVisit: { 1: 3 },
           pets: [],
         },
       ],
       budget: { minAmountMinor: 8000 },
       attachments: [{ id: "photo-1", url: "/care.jpg" }],
     });
+    expect(dto.schedule.homeVisit).not.toHaveProperty("excludedDates");
     const serialized = JSON.stringify(dto);
     for (const privateValue of [
       "private-idempotency",
@@ -145,6 +157,26 @@ describe("public need DTO", () => {
       "private-saved-location",
       "sourcePetId",
     ]) expect(serialized).not.toContain(privateValue);
+  });
+
+  it("derives the V2 title from the current snapshot instead of a stored title", () => {
+    const dto = toPublicNeedV2Dto(
+      {
+        ...v2Fixture(),
+        mode: "BOARDING",
+        pets: [
+          {
+            ...v2Fixture().pets[0],
+            name: "",
+            petType: "OTHER",
+            customPetType: "Sugar glider",
+          },
+        ],
+      },
+      null,
+    );
+
+    expect(dto.title).toBe("Sugar glider · Pet boarding");
   });
 
   it("normalizes legacy display amounts to minor units without exposing raw address text", () => {

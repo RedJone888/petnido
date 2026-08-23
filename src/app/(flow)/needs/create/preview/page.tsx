@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { RequestDetailPreview } from "./request-detail-preview";
+import { RequestDetailPreview } from "@/modules/need-publishing/client";
 
 export default function NeedPreviewDetailPage() {
   return (

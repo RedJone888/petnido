@@ -17,12 +17,15 @@ import {
 
 import { trpc } from "@/utils/trpc";
 import { useLanguage } from "@/components/providers/language-provider";
+import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { mapNeedDraftPayloadToLegacyNeedDraftV3 } from "@/domain/publishing/legacy-need-draft-v3";
-import { NEED_DRAFT_STORAGE_KEY } from "@/app/(flow)/needs/create/preview/types";
+import { NEED_DRAFT_STORAGE_KEY } from "@/modules/need-publishing/client";
 import { AppImage } from "@/components/ui/app-image";
 import cn from "@/lib/cn";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
+import { localizeTaskLabel } from "@/modules/need-publishing/domain/task-catalog";
 
 const modeIcons: Record<string, React.ElementType> = {
   HOME_VISIT: PiHouseLine,
@@ -42,14 +45,12 @@ function StatusPill({ state, expired }: { state: string; expired?: boolean }) {
     EXPIRED: "bg-amber-50 text-amber-800 border border-amber-200",
     MATCHED: "bg-purple-50 text-purple-800 border border-purple-200",
     CLOSED: "bg-slate-100 text-slate-600 border border-slate-200",
-    CANCELLED: "bg-red-50 text-red-700 border border-red-200",
   };
   const dot: Record<string, string> = {
     OPEN: "bg-emerald-500",
     EXPIRED: "bg-amber-500",
     MATCHED: "bg-purple-500",
     CLOSED: "bg-slate-400",
-    CANCELLED: "bg-red-500",
   };
 
   return (
@@ -67,15 +68,16 @@ export default function NeedV2OwnerDetailPage({
 }) {
   const router = useRouter();
   const { t, lang } = useLanguage();
+  const needMessages = useNeedPublishingMessages();
   const actions = t.core.management.actions;
-  const copy = t.core.dashboardNeedDetail;
+  const copy = needMessages.dashboardNeedDetail;
   const confirm = useConfirm();
   const closeConfirm = useConfirmStore((state) => state.close);
   const setConfirmLoading = useConfirmStore((state) => state.setIsDeleting);
 
   const utils = trpc.useUtils();
   const need = trpc.needV2.getMine.useQuery({ id: params.id });
-  const beginEdit = trpc.needV2.beginEdit.useMutation();
+  const reuseNeed = trpc.needV2.reuse.useMutation();
   const command = trpc.needV2.executeCommand.useMutation({
     onSuccess: () => utils.needV2.getMine.invalidate({ id: params.id }),
   });
@@ -83,6 +85,9 @@ export default function NeedV2OwnerDetailPage({
   const [actionError, setActionError] = useState<string | null>(null);
 
   const item = need.data;
+  const displayTitle = item
+    ? buildNeedDisplayTitle({ mode: item.mode, pets: item.pets, lang })
+    : "";
   const isExpired =
     item?.state === "OPEN" &&
     (item.expired ?? new Date(item.endsAt) <= new Date());
@@ -90,7 +95,52 @@ export default function NeedV2OwnerDetailPage({
   const edit = () => {
     if (!item) return;
     setActionError(null);
+    if (item.state === "MATCHED") {
+      setActionError(actions.matchedEditBlocked);
+      return;
+    }
+    if (item.state !== "OPEN" && item.state !== "CLOSED") {
+      setActionError(actions.editUnavailable);
+      return;
+    }
     router.push(`/needs/edit/${item.id}`);
+  };
+
+  const handleCancelMatch = async () => {
+    if (!item) return;
+    setActionError(null);
+    const accepted = await confirm({
+      title: actions.cancelMatchQuestion,
+      confirmText: actions.cancelMatch,
+      cancelText: t.core.common.cancel,
+      variant: "danger",
+      content: <p>{actions.cancelMatchDetail}</p>,
+    });
+    if (!accepted) return;
+    setConfirmLoading(true);
+    try {
+      await command.mutateAsync({ id: item.id, command: "CANCEL_MATCH", expectedUpdatedAt: new Date(item.updatedAt) });
+    } catch {
+      setActionError(actions.changedElsewhere);
+    } finally {
+      setConfirmLoading(false);
+      closeConfirm();
+    }
+  };
+
+  const handleReuse = async () => {
+    if (!item) return;
+    setActionError(null);
+    const draftId = crypto.randomUUID();
+    try {
+      const input = { id: item.id, draftId };
+      const draft = await reuseNeed.mutateAsync(input).catch(() =>
+        reuseNeed.mutateAsync(input),
+      );
+      router.push(`/needs/create?draftId=${encodeURIComponent(draft.id)}`);
+    } catch {
+      setActionError(actions.changedElsewhere);
+    }
   };
 
   const handleClose = async () => {
@@ -139,7 +189,7 @@ export default function NeedV2OwnerDetailPage({
     if (!accepted) return;
     setConfirmLoading(true);
     try {
-      await command.mutateAsync({ id: item.id, command: "CANCEL", expectedUpdatedAt: new Date(item.updatedAt) });
+      await command.mutateAsync({ id: item.id, command: "ARCHIVE", expectedUpdatedAt: new Date(item.updatedAt) });
       window.location.assign("/dashboard/needs");
     } catch {
       setActionError(actions.changedElsewhere);
@@ -191,7 +241,7 @@ export default function NeedV2OwnerDetailPage({
             )}
             <button
               type="button"
-              disabled={beginEdit.isLoading || command.isLoading}
+              disabled={command.isLoading || reuseNeed.isLoading}
               onClick={() => void edit()}
               className="rounded-xl bg-[var(--primary)] px-4 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
             >
@@ -205,6 +255,15 @@ export default function NeedV2OwnerDetailPage({
                 className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {actions.reopen}
+              </button>
+            ) : item.state === "MATCHED" ? (
+              <button
+                type="button"
+                disabled={command.isLoading}
+                onClick={() => void handleCancelMatch()}
+                className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-100 disabled:opacity-40"
+              >
+                {actions.cancelMatch}
               </button>
             ) : (
               <button
@@ -224,6 +283,14 @@ export default function NeedV2OwnerDetailPage({
             >
               {actions.delete}
             </button>
+            <button
+              type="button"
+              disabled={reuseNeed.isLoading || command.isLoading}
+              onClick={() => void handleReuse()}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary disabled:opacity-50"
+            >
+              {actions.reuse}
+            </button>
           </div>
         </div>
       </div>
@@ -237,7 +304,7 @@ export default function NeedV2OwnerDetailPage({
         {/* Cover photo */}
         <div className="relative h-52 w-full bg-[#fff8e8]">
           {coverPhoto ? (
-            <AppImage src={coverPhoto} alt={item.title} width={800} height={400} className="h-full w-full object-cover" />
+            <AppImage src={coverPhoto} alt={displayTitle} width={800} height={400} className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-[#f5f0ff] to-[#e8f5e9]" />
           )}
@@ -256,9 +323,9 @@ export default function NeedV2OwnerDetailPage({
         {/* Title row */}
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-slate-900">{item.title}</h1>
+            <h1 className="text-xl font-bold text-slate-900">{displayTitle}</h1>
             <p className="mt-1 text-xs text-slate-400">
-              {t.core.dashboardNeeds.publishedAt}{publishedDate}
+              {needMessages.dashboardNeeds.publishedAt}{publishedDate}
             </p>
           </div>
           <StatusPill state={item.state} expired={isExpired} />
@@ -277,8 +344,8 @@ export default function NeedV2OwnerDetailPage({
             )}
             {item.mode === "CUSTOM" && item.customTimePreference ? (
               <p className="mt-1 text-xs text-slate-500">
-                {t.core.needPublishing.timeOptions[
-                  item.customTimePreference.toLowerCase() as keyof typeof t.core.needPublishing.timeOptions
+                {needMessages.needPublishing.timeOptions[
+                  item.customTimePreference.toLowerCase() as keyof typeof needMessages.needPublishing.timeOptions
                 ] ?? item.customTimePreference}
                 {item.customExactTime ? ` · ${item.customExactTime}` : ""}
               </p>
@@ -315,6 +382,17 @@ export default function NeedV2OwnerDetailPage({
           </div>
         </div>
       </div>
+
+      {item.scheduleNotes ? (
+        <div className="rounded-2xl border border-slate-100 bg-white p-5">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
+            {lang === "zh" ? "时间备注" : lang === "ja" ? "時間に関するメモ" : "Schedule notes"}
+          </h2>
+          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">
+            {item.scheduleNotes}
+          </p>
+        </div>
+      ) : null}
 
       {/* Description */}
       {item.description ? (
@@ -374,7 +452,14 @@ export default function NeedV2OwnerDetailPage({
             {item.tasks.map((task) => (
               <div key={task.id} className="rounded-xl border border-slate-100 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-bold text-slate-900">{task.label}</p>
+                  <p className="font-bold text-slate-900">
+                    {localizeTaskLabel(task.label, lang, {
+                      category: task.category,
+                      custom:
+                        task.category.toUpperCase() === "CUSTOM" ||
+                        task.category.toUpperCase().startsWith("CUSTOM-"),
+                    })}
+                  </p>
                   <span className="text-xs font-bold text-[#8a5d34]">
                     {task.scheduleKind} · {task.priority}
                   </span>

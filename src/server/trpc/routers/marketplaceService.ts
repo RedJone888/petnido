@@ -1,5 +1,6 @@
 import type { PetType, Prisma, PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { petTypeCodes } from "@/modules/need-publishing/domain/pet-types";
 import { z } from "zod";
 import { bookingLocalDateKeys } from "@/domain/booking/service-booking";
 
@@ -91,7 +92,7 @@ async function fetchV2(prisma: Database, filter: Filter, cursor: MarketplaceCurs
 
 async function fetchLegacy(prisma: Database, filter: Filter, cursor: MarketplaceCursor | null, take: number) {
   if (!("service" in prisma)) return [];
-  const known = new Set(["DOG", "CAT", "RABBIT", "BIRD", "CHINCHILLA", "GUINEA_PIG", "HAMSTER", "OTHER"]);
+  const known = new Set<string>(petTypeCodes);
   const petTypes = filter.petTypes.filter((item): item is PetType => known.has(item));
   if (filter.petTypes.length && !petTypes.length) return [];
   return prisma.service.findMany({

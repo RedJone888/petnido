@@ -19,7 +19,7 @@ import { petRouter } from "@/server/trpc/routers/pet";
 import { savedLocationRouter } from "@/server/trpc/routers/savedLocation";
 import { notificationPreferenceRouter } from "@/server/trpc/routers/notificationPreference";
 import { publishDraftRouter } from "@/server/trpc/routers/publishDraft";
-import { needV2Router } from "@/server/trpc/routers/needV2";
+import { needPublishingRouter } from "@/modules/need-publishing/api/router";
 import { matchingRouter } from "@/server/trpc/routers/matching";
 import { notificationRouter } from "@/server/trpc/routers/notification";
 import { dashboardSummaryRouter } from "@/server/trpc/routers/dashboardSummary";
@@ -43,7 +43,7 @@ export const appRouter = router({
   savedLocation: savedLocationRouter,
   notificationPreference: notificationPreferenceRouter,
   publishDraft: publishDraftRouter,
-  needV2: needV2Router,
+  needV2: needPublishingRouter,
   matching: matchingRouter,
   notification: notificationRouter,
   dashboardSummary: dashboardSummaryRouter,

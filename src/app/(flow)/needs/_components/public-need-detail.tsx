@@ -65,7 +65,9 @@ import { usePageLanguage } from "@/components/providers/language-provider";
 import type { Lang } from "@/domain/lang/types";
 import type { RouterOutputs } from "@/server/trpc";
 import { messages } from "@/i18n/messages";
+import { getNeedPublishingMessages } from "@/modules/need-publishing/i18n/messages";
 import { localizePetBreed } from "@/domain/pet/profile-options";
+import { localizeTaskLabel } from "@/modules/need-publishing/domain/task-catalog";
 import {
   calculateNeedPricing,
   formatMoneyAmount,
@@ -76,6 +78,7 @@ import {
 import { trpc } from "@/utils/trpc";
 import cn from "@/lib/cn";
 import { NeedDetailSkeleton } from "./need-detail-skeleton";
+import { localizedNeedTitle } from "./need-card";
 
 const modeBadgeThemes: Record<"HOME_VISIT" | "BOARDING" | "CUSTOM", string> = {
   HOME_VISIT: "bg-emerald-600 text-white shadow-emerald-950/20",
@@ -165,13 +168,14 @@ function customTimeLabel(
   preference: string | null | undefined,
   exactTime: string | null | undefined,
   t: (typeof messages)[Lang],
+  needCopy: ReturnType<typeof getNeedPublishingMessages>,
 ) {
   if (!preference) {
     if (exactTime) return exactTime;
-    return t.core.needPublishing.timeOptions.flexible;
+    return needCopy.needPublishing.timeOptions.flexible;
   }
-  const key = preference.toLowerCase() as keyof typeof t.core.needPublishing.timeOptions;
-  const prefLabel = t.core.needPublishing.timeOptions[key] ?? preference;
+  const key = preference.toLowerCase() as keyof typeof needCopy.needPublishing.timeOptions;
+  const prefLabel = needCopy.needPublishing.timeOptions[key] ?? preference;
   if (preference.toUpperCase() === "EXACT") {
     return exactTime ? `${prefLabel} · ${exactTime}` : prefLabel;
   }
@@ -599,6 +603,12 @@ function TaskItemCard({
 }) {
   const priority = taskPriorityInfo(task.priority, lang);
   const schedule = taskScheduleKindInfo(task.scheduleKind, lang);
+  const category = task.category ?? "";
+  const upperCategory = category.toUpperCase();
+  const taskLabel = localizeTaskLabel(task.label, lang, {
+    category,
+    custom: upperCategory === "CUSTOM" || upperCategory.startsWith("CUSTOM-"),
+  });
 
   return (
     <div className="rounded-xl border border-[#EDE8E1] bg-[#FAF8F5]/90 p-3 sm:p-3.5 transition hover:bg-white hover:shadow-2xs">
@@ -607,7 +617,7 @@ function TaskItemCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span className="font-bold text-sm text-[#2B231D]">
-              {task.label}
+              {taskLabel}
             </span>
 
             {priority ? (
@@ -688,14 +698,15 @@ function deduplicateTasks<
 function formatVisitWindowTime(
   window: { kind: string; preferredLocalTime: string | null } | undefined,
   lang: Lang,
-  t: (typeof messages)[Lang]
+  t: (typeof messages)[Lang],
+  needCopy: ReturnType<typeof getNeedPublishingMessages>,
 ) {
   if (!window || window.kind === "FLEXIBLE" || !window.preferredLocalTime) {
-    return t.core.needPublishing.timeOptions.flexible;
+    return needCopy.needPublishing.timeOptions.flexible;
   }
 
   const time = window.preferredLocalTime.toLowerCase();
-  const timeLabels = t.core.needPublishing.timeOptions;
+  const timeLabels = needCopy.needPublishing.timeOptions;
 
   if (time === "morning") return timeLabels.morning;
   if (time === "midday") return timeLabels.midday;
@@ -843,11 +854,12 @@ function customScheduleSummaryBadge(
   timePreference: string | null | undefined,
   exactTime: string | null | undefined,
   lang: Lang,
-  t: (typeof messages)[Lang]
+  t: (typeof messages)[Lang],
+  needCopy: ReturnType<typeof getNeedPublishingMessages>,
 ) {
   if (!startDate || !endDate) return "";
   const dateStr = formatDateSpan(startDate, endDate, lang);
-  const timeStr = customTimeLabel(timePreference, exactTime, t);
+  const timeStr = customTimeLabel(timePreference, exactTime, t, needCopy);
 
   const isSameDay =
     new Date(startDate).toDateString() === new Date(endDate).toDateString();
@@ -954,7 +966,12 @@ function PetGroupTaskDirectLayout({
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                   <Circle size={14} className="text-primary stroke-[2.4] shrink-0" />
                   <span className="font-bold text-sm text-[#2B231D] leading-snug">
-                    {task.label}
+                    {localizeTaskLabel(task.label, lang, {
+                      category: task.category,
+                      custom:
+                        task.category.toUpperCase() === "CUSTOM" ||
+                        task.category.toUpperCase().startsWith("CUSTOM-"),
+                    })}
                   </span>
 
                   {/* 2. Frequency (频率) */}
@@ -1058,6 +1075,7 @@ function NeedCalendarView({
 }) {
   const startDate = parseDateValue(item.startsAt);
   const endDate = parseDateValue(item.endsAt);
+  const needCopy = getNeedPublishingMessages(lang);
   const startMonth = startDate ? startOfMonth(startDate) : undefined;
   const endMonth = endDate ? startOfMonth(endDate) : undefined;
 
@@ -1270,8 +1288,9 @@ function NeedCalendarView({
           item.schedule.custom.timePreference,
           item.schedule.custom.exactTime,
           t,
+          needCopy,
         )
-      : t.core.needPublishing.timeOptions.flexible;
+      : needCopy.needPublishing.timeOptions.flexible;
 
   return (
     <div className="w-full">
@@ -1362,6 +1381,7 @@ export function PublicNeedDetail({
   const decodedPublicId = decodeURIComponent(publicId);
   const lang = usePageLanguage(initialLanguage);
   const t = messages[lang];
+  const needCopy = getNeedPublishingMessages(lang);
   const copy = t.core.marketplace;
   const prefix = initialLanguage ? `/${initialLanguage}` : "";
   const need = trpc.marketplaceNeed.get.useQuery({ publicId: decodedPublicId });
@@ -1403,6 +1423,7 @@ export function PublicNeedDetail({
   }
 
   const item = need.data;
+  const displayTitle = localizedNeedTitle(item, lang);
   const returnTo = `${prefix}/needs/${encodeURIComponent(publicId)}`;
   const daysTotal = inclusiveDayCount(item.startsAt, item.endsAt);
   const nightsTotal = calculateBoardingNights(item.startsAt, item.endsAt);
@@ -1472,7 +1493,7 @@ export function PublicNeedDetail({
               </Link>
               <ChevronRight size={12} className="text-slate-400 shrink-0" />
               <span className="font-bold text-slate-900 truncate max-w-[200px] sm:max-w-xs" aria-current="page">
-                {item.title}
+                {displayTitle}
               </span>
             </nav>
           </div>
@@ -1480,7 +1501,7 @@ export function PublicNeedDetail({
           {/* 2. Main Title with Mode Pill & Open for applications Pill */}
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             <h1 className="font-serif text-2xl font-bold tracking-tight text-[#2B231D] sm:text-3xl leading-tight">
-              {item.title}
+              {displayTitle}
             </h1>
             <span
               className={cn(
@@ -1761,6 +1782,17 @@ export function PublicNeedDetail({
               </h2>
             </div>
 
+            {item.source === "V2" && item.scheduleNotes ? (
+              <div className="rounded-2xl border border-[#EDE8E1] bg-[#FAF6F0] p-4 text-sm text-[#514956] shadow-2xs">
+                <p className="font-bold text-[#8A5D34]">
+                  {lang === "zh" ? "时间备注" : lang === "ja" ? "時間に関するメモ" : "Schedule notes"}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap leading-6 break-words">
+                  {item.scheduleNotes}
+                </p>
+              </div>
+            ) : null}
+
             {item.mode === "HOME_VISIT" ? (
               <div className="space-y-3.5">
                 {/* Top Macro Schedule Rhythm Bar */}
@@ -1814,13 +1846,19 @@ export function PublicNeedDetail({
                 <div className="space-y-3">
                   {Array.from({ length: visitsPerDay }).map((_, vIdx) => {
                     const window = visitWindows[vIdx];
-                    const windowTimeLabel = formatVisitWindowTime(window, lang, t);
+                    const windowTimeLabel = formatVisitWindowTime(window, lang, t, needCopy);
                     const isExpanded = expandedVisits[vIdx] ?? (vIdx === 0);
 
-                    const visitTasks = item.tasks.filter((task) => {
-                      if (!task.visitNumbers || task.visitNumbers.length === 0) return true;
-                      return task.visitNumbers.includes(vIdx + 1);
-                    });
+                    const visitTasks = item.tasks
+                      .filter((task) => {
+                        if (!task.visitNumbers || task.visitNumbers.length === 0) return true;
+                        return task.visitNumbers.includes(vIdx + 1);
+                      })
+                      .sort(
+                        (a, b) =>
+                          ((a.orderByVisit?.[vIdx + 1] ?? Number.MAX_SAFE_INTEGER) -
+                            (b.orderByVisit?.[vIdx + 1] ?? Number.MAX_SAFE_INTEGER)),
+                      );
 
                     const visitGroups = groupPetsAndTasks(item.pets, visitTasks, lang, t);
 
@@ -1928,7 +1966,8 @@ export function PublicNeedDetail({
                   item.source === "V2" ? item.schedule.custom?.timePreference : null,
                   item.source === "V2" ? item.schedule.custom?.exactTime : null,
                   lang,
-                  t
+                  t,
+                  needCopy,
                 ) ? (
                   <div className="rounded-xl bg-[#FAF6F0] p-3.5 border border-[#EFE7DC] text-xs font-bold text-[#8A5D34]">
                     {customScheduleSummaryBadge(
@@ -1937,7 +1976,8 @@ export function PublicNeedDetail({
                       item.source === "V2" ? item.schedule.custom?.timePreference : null,
                       item.source === "V2" ? item.schedule.custom?.exactTime : null,
                       lang,
-                      t
+                      t,
+                      needCopy,
                     )}
                   </div>
                 ) : null}

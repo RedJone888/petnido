@@ -9,13 +9,19 @@ function database(overrides: Record<string, unknown>) {
 
 describe("public detail metadata lookup", () => {
   it("only returns an open, unexpired need title", async () => {
-    const findFirst = vi.fn().mockResolvedValue({ title: "Evening cat visits" });
+    const findFirst = vi.fn().mockResolvedValue({
+      mode: "HOME_VISIT",
+      pets: [{ name: "Mochi", petType: "CAT", customPetType: null }],
+    });
     const now = new Date("2026-08-09T00:00:00.000Z");
     const result = await findPublicDetailSubject(database({ needV2: { findFirst } }), { kind: "need", publicId: "v2:need-1" }, now);
-    expect(result).toBe("Evening cat visits");
+    expect(result).toBe("Mochi · Home visit care");
     expect(findFirst).toHaveBeenCalledWith({
       where: { id: "need-1", state: "OPEN", archivedAt: null, endsAt: { gt: now } },
-      select: { title: true },
+      select: {
+        mode: true,
+        pets: { select: { name: true, petType: true, customPetType: true } },
+      },
     });
   });
 

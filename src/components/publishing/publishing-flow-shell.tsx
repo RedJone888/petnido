@@ -115,21 +115,38 @@ export function PublishingStepNavigation({
   steps,
   onStepSelect,
   className,
+  orientation = "responsive",
 }: {
   steps: PublishingStep[];
   onStepSelect?: (stepId: string) => void;
   className?: string;
+  orientation?: "responsive" | "vertical";
 }) {
   return (
     <nav
       aria-label="Publishing steps"
-      className={cn("overflow-x-auto lg:overflow-visible", className)}
+      className={cn(
+        orientation === "responsive" && "overflow-x-auto lg:overflow-visible",
+        className,
+      )}
     >
-      <ol className="flex min-w-max gap-2 pb-1 lg:min-w-0 lg:flex-col">
+      <ol
+        className={cn(
+          "flex gap-2 pb-1",
+          orientation === "responsive"
+            ? "min-w-max lg:min-w-0 lg:flex-col"
+            : "min-w-0 flex-col",
+        )}
+      >
         {steps.map((step, index) => {
           const selectable = step.state !== "locked" && Boolean(onStepSelect);
           return (
-            <li key={step.id} className="min-w-40 lg:min-w-0">
+            <li
+              key={step.id}
+              className={cn(
+                orientation === "responsive" ? "min-w-40 lg:min-w-0" : "min-w-0",
+              )}
+            >
               <button
                 type="button"
                 aria-current={step.state === "current" ? "step" : undefined}

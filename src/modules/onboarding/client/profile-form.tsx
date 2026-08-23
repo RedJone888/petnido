@@ -17,10 +17,12 @@ export function OnboardingProfileForm({
   initialNickname,
   initialAvatar,
   returnTo,
+  variant,
 }: {
   initialNickname: string;
   initialAvatar: string | null;
   returnTo: string;
+  variant?: "POST_NEED";
 }) {
   const { copy, lang } = useOnboardingMessages();
   const router = useRouter();
@@ -61,9 +63,12 @@ export function OnboardingProfileForm({
         avatarUrl: avatarUrl.trim() || null,
         preferredLocale: lang,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(variant === "POST_NEED" ? { initialIntent: "POST_NEED" as const } : {}),
       });
       router.replace(
-        `/onboarding/intent?returnTo=${encodeURIComponent(sanitizeReturnTo(returnTo))}`,
+        variant === "POST_NEED"
+          ? sanitizeReturnTo(returnTo, "/needs/create")
+          : `/onboarding/intent?returnTo=${encodeURIComponent(sanitizeReturnTo(returnTo))}`,
       );
     } catch {
       toast.error(copy.saveError);

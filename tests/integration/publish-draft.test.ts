@@ -53,6 +53,27 @@ describe("versioned publish drafts", () => {
     expect(await prisma.publishDraftV2.count()).toBe(1);
   });
 
+  it("coalesces concurrent first saves for the same draft id", async () => {
+    const user = await createUser("draft-concurrent@example.com");
+    const caller = publishDraftRouter.createCaller(context(user.id));
+    const input = {
+      id: "12121212-1212-4121-8121-121212121212",
+      kind: "NEED" as const,
+      mode: "HOME_VISIT" as const,
+      currentStep: "pets",
+      payload: { title: "Concurrent care request" },
+    };
+
+    const [first, second] = await Promise.all([
+      caller.create(input),
+      caller.create(input),
+    ]);
+
+    expect(first).toMatchObject({ id: input.id, revision: 0, payload: input.payload });
+    expect(second).toMatchObject({ id: input.id, revision: 0, payload: input.payload });
+    expect(await prisma.publishDraftV2.count({ where: { id: input.id } })).toBe(1);
+  });
+
   it("uses revision locking and rejects stale saves", async () => {
     const user = await createUser("draft-revision@example.com");
     const caller = publishDraftRouter.createCaller(context(user.id));
@@ -184,7 +205,6 @@ describe("versioned publish drafts", () => {
         revision: 3,
         idempotencyKey: "77777777-7777-4777-8777-777777777777",
         mode: "CUSTOM",
-        title: "Help Mochi",
         description: null,
         startsAt: "2026-08-10T00:00:00+09:00",
         endsAt: "2026-08-11T00:00:00+09:00",

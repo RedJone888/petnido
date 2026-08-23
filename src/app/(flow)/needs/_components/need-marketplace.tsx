@@ -9,6 +9,7 @@ import type { Lang } from "@/domain/lang/types";
 import { useDebounce } from "@/hooks/useDebounce";
 import { messages } from "@/i18n/messages";
 import cn from "@/lib/cn";
+import { isPetTypeCode } from "@/modules/need-publishing/domain/pet-types";
 import { trpc } from "@/utils/trpc";
 import { NeedCard, NeedCardSkeleton, type MarketplaceNeedItem, type Mode } from "./need-card";
 import { NeedMarketplaceHeader } from "./need-marketplace-header";
@@ -283,7 +284,7 @@ export function NeedMarketplace({ initialLanguage }: { initialLanguage?: Lang } 
   const filter = useMemo(
     () => ({
       modes: selectedModes,
-      petTypes: selectedPetTypes,
+      petTypes: selectedPetTypes.filter(isPetTypeCode),
       taskCategories: [],
       availableFrom: availableFrom
         ? new Date(`${availableFrom}T00:00:00`).toISOString()

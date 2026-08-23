@@ -14,7 +14,6 @@ import {
   PiHouseLine,
   PiMapPinLine,
   PiPawPrint,
-  PiSpinner,
   PiWarehouse,
 } from "react-icons/pi";
 
@@ -23,7 +22,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { trpc } from "@/utils/trpc";
 import { mapNeedDraftPayloadToLegacyNeedDraftV3 } from "@/domain/publishing/legacy-need-draft-v3";
-import { NEED_DRAFT_STORAGE_KEY } from "@/app/(flow)/needs/create/preview/types";
+import { NEED_DRAFT_STORAGE_KEY } from "@/modules/need-publishing/client";
 import { LegacyCompatibilityPanel } from "@/components/publishing/legacy-compatibility-panel";
 import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
@@ -47,6 +46,8 @@ import {
   type NeedPricingInput,
 } from "@/domain/marketplace/need-pricing";
 import { messages } from "@/i18n/messages";
+import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
 
 function petAvatarPosition(petType: string) {
   const normalized = petType.trim().toUpperCase();
@@ -159,11 +160,6 @@ const statusBadgeThemes: Record<
       "bg-slate-900/80 text-slate-100 border border-slate-700 shadow-sm backdrop-blur-md",
     dot: "bg-slate-400",
   },
-  CANCELLED: {
-    container:
-      "bg-white/95 text-rose-800 border border-rose-300/90 shadow-sm backdrop-blur-md",
-    dot: "bg-rose-500 ring-2 ring-rose-200",
-  },
 };
 
 function getNeedDisplayStatus(need: {
@@ -179,7 +175,6 @@ function getNeedDisplayStatus(need: {
   if (need.state === "OPEN") return "OPEN";
   if (need.state === "MATCHED") return "MATCHED";
   if (need.state === "CLOSED") return "CLOSED";
-  if (need.state === "CANCELLED") return "CANCELLED";
   return (need.state as NeedDisplayStatus) ?? "OPEN";
 }
 
@@ -195,10 +190,12 @@ export function NeedV2List({
   mutable: boolean;
 }) {
   const { t, lang } = useLanguage();
+  const needMessages = useNeedPublishingMessages();
   const router = useRouter();
   const confirm = useConfirm();
   const utils = trpc.useUtils();
   const needs = trpc.needV2.listMine.useQuery();
+  const reuseNeed = trpc.needV2.reuse.useMutation();
   const command = trpc.needV2.executeCommand.useMutation({
     onMutate: async (variables) => {
       await utils.needV2.listMine.cancel();
@@ -210,12 +207,15 @@ export function NeedV2List({
           let nextState = item.state;
           if (variables.command === "REOPEN") nextState = "OPEN";
           else if (variables.command === "CLOSE") nextState = "CLOSED";
-          else if (variables.command === "CANCEL") nextState = "CANCELLED";
+          else if (variables.command === "CANCEL_MATCH") nextState = "CLOSED";
+          else if (variables.command === "ARCHIVE" || variables.command === "CANCEL") {
+            return null;
+          }
           return {
             ...item,
             state: nextState,
           };
-        });
+        }).filter(Boolean) as typeof old;
       });
       return { previousData };
     },
@@ -228,11 +228,10 @@ export function NeedV2List({
       utils.needV2.listMine.invalidate();
     },
   });
-  const beginEdit = trpc.needV2.beginEdit.useMutation();
   const [actionError, setActionError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<VisibleNeedFilter>("ALL");
   const actions = t.core.management.actions;
-  const copy = t.core.dashboardNeeds;
+  const copy = needMessages.dashboardNeeds;
 
   const filterLabels: Record<VisibleNeedFilter, string> = useMemo(
     () => ({
@@ -245,10 +244,10 @@ export function NeedV2List({
     [copy],
   );
 
-  // 过滤掉已取消/作废的需求，并按照从最新发布日期排序
+  // Archived requests are not returned by the router. Sort the remaining
+  // published requests from newest to oldest.
   const activeNeeds = useMemo(() => {
     return (needs.data ?? [])
-      .filter((need) => need.state !== "CANCELLED")
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -265,7 +264,7 @@ export function NeedV2List({
     );
     activeNeeds.forEach((need) => {
       const key = getNeedDisplayStatus(need);
-      if (key !== "CANCELLED" && counts[key as VisibleNeedFilter] !== undefined) {
+      if (counts[key as VisibleNeedFilter] !== undefined) {
         counts[key as VisibleNeedFilter]++;
       }
       counts["ALL"]++;
@@ -287,7 +286,6 @@ export function NeedV2List({
 
   const closeConfirm = useConfirmStore((state) => state.close);
   const setConfirmLoading = useConfirmStore((state) => state.setIsDeleting);
-  const [editingNeedId, setEditingNeedId] = useState<string | null>(null);
 
   const handleClose = async (
     need: NonNullable<typeof needs.data>[number],
@@ -351,7 +349,7 @@ export function NeedV2List({
     try {
       await command.mutateAsync({
         id: need.id,
-        command: "CANCEL",
+        command: "ARCHIVE",
         expectedUpdatedAt: new Date(need.updatedAt),
       });
     } catch {
@@ -362,9 +360,54 @@ export function NeedV2List({
     }
   };
 
-  const edit = (needId: string) => {
+  const edit = (need: NonNullable<typeof needs.data>[number]) => {
     setActionError(null);
-    router.push(`/needs/edit/${needId}`);
+    if (need.state === "MATCHED") {
+      setActionError(actions.matchedEditBlocked);
+      return;
+    }
+    router.push(`/needs/edit/${need.id}`);
+  };
+
+  const handleCancelMatch = async (
+    need: NonNullable<typeof needs.data>[number],
+  ) => {
+    setActionError(null);
+    const accepted = await confirm({
+      title: actions.cancelMatchQuestion,
+      confirmText: actions.cancelMatch,
+      cancelText: t.core.common.cancel,
+      variant: "danger",
+      content: <p>{actions.cancelMatchDetail}</p>,
+    });
+    if (!accepted) return;
+    setConfirmLoading(true);
+    try {
+      await command.mutateAsync({
+        id: need.id,
+        command: "CANCEL_MATCH",
+        expectedUpdatedAt: new Date(need.updatedAt),
+      });
+    } catch {
+      setActionError(actions.changedElsewhere);
+    } finally {
+      setConfirmLoading(false);
+      closeConfirm();
+    }
+  };
+
+  const reuse = async (needId: string) => {
+    setActionError(null);
+    const draftId = crypto.randomUUID();
+    try {
+      const input = { id: needId, draftId };
+      const draft = await reuseNeed.mutateAsync(input).catch(() =>
+        reuseNeed.mutateAsync(input),
+      );
+      router.push(`/needs/create?draftId=${encodeURIComponent(draft.id)}`);
+    } catch {
+      setActionError(actions.changedElsewhere);
+    }
   };
 
   return (
@@ -500,13 +543,14 @@ export function NeedV2List({
               need.pets as any,
               lang,
               messages[lang],
+              needMessages,
             );
 
-            const cardTitle = formatNeedPetTitle(
-              need.pets as any,
+            const cardTitle = buildNeedDisplayTitle({
+              mode: need.mode,
+              pets: need.pets,
               lang,
-              messages[lang],
-            );
+            });
 
             // Date / Time schedule text
             const startDateStr = compactDate(need.startsAt, lang);
@@ -540,7 +584,6 @@ export function NeedV2List({
                   intervalDays: need.homeVisitDetail.intervalDays,
                   firstServiceDate: need.homeVisitDetail.firstServiceDate,
                   visitsPerServiceDay: need.homeVisitDetail.visitsPerServiceDay,
-                  excludedDates: need.dateExceptions.map((d) => d.date),
                 },
               ).totalVisits;
               const visitsLabel = t.core.marketplace.visitsTotal.replace(
@@ -562,7 +605,6 @@ export function NeedV2List({
                       firstServiceDate: need.homeVisitDetail.firstServiceDate,
                       visitsPerServiceDay:
                         need.homeVisitDetail.visitsPerServiceDay,
-                      excludedDates: need.dateExceptions.map((d) => d.date),
                     }
                   : null,
                 boarding: need.boardingDetail
@@ -608,7 +650,7 @@ export function NeedV2List({
                       {coverImage ? (
                         <AppImage
                           src={coverImage}
-                          alt={need.title}
+                          alt={cardTitle}
                           width={480}
                           height={320}
                           className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
@@ -759,18 +801,11 @@ export function NeedV2List({
                     <div className="flex items-center gap-1.5 border-t border-slate-100 pt-2.5">
                       <button
                         type="button"
-                        disabled={editingNeedId === need.id || command.isLoading}
-                        onClick={() => void edit(need.id)}
+                        disabled={command.isLoading}
+                        onClick={() => void edit(need)}
                         className="flex-1 rounded-lg bg-primary hover:bg-primary/90 text-white px-2.5 py-1.5 text-xs font-bold shadow-xs transition disabled:opacity-50"
                       >
-                        {editingNeedId === need.id ? (
-                          <span className="inline-flex items-center justify-center gap-1.5">
-                            <PiSpinner className="animate-spin" size={14} />
-                            <span>{actions.edit}</span>
-                          </span>
-                        ) : (
-                          actions.edit
-                        )}
+                        {actions.edit}
                       </button>
                       {need.state === "CLOSED" ? (
                         <button
@@ -783,6 +818,15 @@ export function NeedV2List({
                           className="flex-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 shadow-2xs transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           {actions.reopen}
+                        </button>
+                      ) : need.state === "MATCHED" ? (
+                        <button
+                          type="button"
+                          disabled={command.isLoading}
+                          onClick={() => void handleCancelMatch(need)}
+                          className="flex-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs font-bold text-purple-700 shadow-2xs transition hover:bg-purple-100 disabled:opacity-40"
+                        >
+                          {actions.cancelMatch}
                         </button>
                       ) : (
                         <button
@@ -803,6 +847,14 @@ export function NeedV2List({
                         className="flex items-center justify-center rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 shadow-2xs transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
                       >
                         <Trash2 size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={reuseNeed.isLoading || command.isLoading}
+                        onClick={() => void reuse(need.id)}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-500 shadow-2xs transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary disabled:opacity-50"
+                      >
+                        {actions.reuse}
                       </button>
                     </div>
                   </div>

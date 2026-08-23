@@ -5,6 +5,7 @@ import {
   type ConversationContextTarget,
 } from "@/domain/messaging/conversation";
 import { createNotificationEvent } from "@/server/domains/notification/notification-v2";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
 
 export class ConversationCommandError extends Error {
   constructor(public readonly code: "RESOURCE_NOT_FOUND" | "FORBIDDEN_RESOURCE_ACTION") {
@@ -21,11 +22,19 @@ export async function resolveConsultationTarget(
   if (target.kind === "NEED" && target.source === "V2") {
     const need = await prisma.needV2.findFirst({
       where: { id: target.contextId, state: "OPEN", archivedAt: null, endsAt: { gt: now } },
-      select: { ownerId: true, title: true, mode: true },
+      select: {
+        ownerId: true,
+        mode: true,
+        pets: { select: { name: true, petType: true, customPetType: true } },
+      },
     });
     if (!need) throw new ConversationCommandError("RESOURCE_NOT_FOUND");
     if (need.ownerId === actorId) throw new ConversationCommandError("FORBIDDEN_RESOURCE_ACTION");
-    return { counterpartId: need.ownerId, contextTitle: need.title, contextMode: need.mode };
+    return {
+      counterpartId: need.ownerId,
+      contextTitle: buildNeedDisplayTitle({ mode: need.mode, pets: need.pets }),
+      contextMode: need.mode,
+    };
   }
   if (target.kind === "NEED") {
     const need = await prisma.need.findFirst({

@@ -1,6 +1,15 @@
 import { z } from "zod";
 
 import { resolveOtherPetTypeKey } from "@/domain/pet/profile-options";
+import {
+  normalizePetTypeSelection,
+  petTypeCodes,
+  type PetTypeCode,
+} from "@/modules/need-publishing/domain/pet-types";
+import {
+  normalizeTaskIdentity,
+  taskPersistenceLabel,
+} from "@/modules/need-publishing/domain/task-catalog";
 import { needDraftPayloadSchema } from "./contracts";
 
 export type CareType = "visit" | "boarding" | "custom";
@@ -28,6 +37,7 @@ export type PetDraft = {
   sourcePetId?: string;
   profileAction?: "create" | "update" | "none";
   type: string;
+  typeCode?: PetTypeCode;
   otherType: string;
   quantity: number;
   name: string;
@@ -51,6 +61,8 @@ export type TaskPlan = {
   custom: boolean;
   notes?: string;
   order?: number;
+  /** Home-visit display order keyed by visit number; never part of identity. */
+  orderByVisit?: Record<number, number>;
 };
 
 export type BoardingScheduleType = "daily" | "repeating" | "once" | "as-needed";
@@ -275,11 +287,14 @@ export function countBoardingSupplyArrangements(
     options.flatMap((option) => {
       if (plan[option.key] !== provision) return [];
       const pet = petsById.get(option.petId);
-      const groupKey = !pet
+      const normalizedPetType = pet
+        ? normalizePetTypeSelection(pet.typeCode ?? pet.type, pet.otherType)
+        : null;
+      const groupKey = !normalizedPetType
         ? "unknown"
-        : pet.type === "other"
-          ? `other:${resolveOtherPetTypeKey(pet.otherType) ?? pet.otherType.trim().toLowerCase()}`
-          : pet.type;
+        : normalizedPetType.petType === "OTHER"
+          ? `OTHER:${normalizedPetType.customPetType?.normalize("NFKC").trim().toLocaleLowerCase() ?? "unknown"}`
+          : normalizedPetType.petType;
       return [
         [
           groupKey,
@@ -354,6 +369,7 @@ export type NeedDraftSnapshotV3 = {
   boardingHomeNotes: string;
   customNeeds: string[];
   customWarnings: string[];
+  customRequirementsNotes?: string;
   transport: string;
   splitDirection: "owner-dropoff" | "sitter-dropoff";
   distance: string;
@@ -363,6 +379,9 @@ export type NeedDraftSnapshotV3 = {
   budget: BudgetDraft;
   attachments?: NeedAttachmentDraft[];
   visitedScreenIds: ScreenId[];
+  confirmedScreenIds?: ScreenId[];
+  /** Full browser workspace used to keep non-active care branches intact. */
+  draftByMode?: Partial<Record<CareType, Record<string, unknown>>>;
 };
 
 const careTypeSchema = z.enum(["visit", "boarding", "custom"]);
@@ -391,6 +410,7 @@ const taskPlanSchema = z
     custom: z.boolean(),
     notes: z.string().optional(),
     order: z.number().optional(),
+    orderByVisit: z.record(z.string(), z.number().int().nonnegative()).optional(),
   })
   .strict();
 const petDraftSchema = z
@@ -399,6 +419,7 @@ const petDraftSchema = z
     sourcePetId: z.string().optional(),
     profileAction: z.enum(["create", "update", "none"]).optional(),
     type: z.string(),
+    typeCode: z.enum(petTypeCodes).optional(),
     otherType: z.string(),
     quantity: z.number().int().positive().max(100),
     name: z.string(),
@@ -489,6 +510,7 @@ export const legacyNeedDraftV3Schema = z
     boardingHomeNotes: z.string(),
     customNeeds: z.array(z.string()),
     customWarnings: z.array(z.string()),
+    customRequirementsNotes: z.string().optional(),
     transport: z.string(),
     splitDirection: z.enum(["owner-dropoff", "sitter-dropoff"]),
     distance: z.string(),
@@ -530,6 +552,8 @@ export const legacyNeedDraftV3Schema = z
       .max(30)
       .optional(),
     visitedScreenIds: z.array(screenIdSchema),
+    confirmedScreenIds: z.array(screenIdSchema).optional(),
+    draftByMode: z.record(z.record(z.unknown())).optional(),
   })
   .strict();
 
@@ -603,7 +627,13 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
             ? "none"
             : "create",
       type: standardType ? normalizedType : "other",
-      otherType: standardType ? "" : (pet.petType ?? ""),
+      typeCode: pet.petType,
+      otherType:
+        pet.petType === "OTHER"
+          ? (pet.customPetType ?? "")
+          : standardType
+            ? ""
+            : (pet.petType?.toLowerCase().replaceAll("_", "-") ?? ""),
       quantity: pet.quantity ?? 1,
       name: pet.name ?? "",
       breed: pet.breed ?? "",
@@ -619,17 +649,38 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
   type DraftTask = NonNullable<
     NonNullable<NeedDraftPayload["custom"]>["tasks"]
   >[number];
-  const taskPlan = (task: DraftTask): TaskPlan => ({
-    id: task.clientTaskKey,
-    templateId: task.category?.toLowerCase() ?? "custom",
-    label: task.label ?? "Custom care task",
-    priority: task.priority === "NICE" ? "nice" : "must",
-    petIds: task.petKeys ?? [],
-    visitNumbers: task.visitNumbers ?? [],
-    custom: task.category === "CUSTOM",
-    notes: task.instructions ?? undefined,
-    order: task.order,
-  });
+  const taskPlan = (task: DraftTask): TaskPlan => {
+    const category = task.category ?? "";
+    const custom =
+      category.toUpperCase() === "CUSTOM" ||
+      category.toUpperCase().startsWith("CUSTOM-");
+    const identity = normalizeTaskIdentity({
+      category,
+      label: task.label,
+      custom,
+    });
+    return {
+      id: task.clientTaskKey,
+      templateId: identity.code ?? "custom",
+      label: identity.label || "Custom care task",
+      priority: task.priority === "NICE" ? "nice" : "must",
+      petIds: task.petKeys ?? [],
+      visitNumbers: task.visitNumbers ?? [],
+      custom: identity.custom,
+      notes: task.instructions ?? undefined,
+      ...(task.order == null ? {} : { order: task.order }),
+      ...(task.orderByVisit
+        ? {
+            orderByVisit: Object.fromEntries(
+              Object.entries(task.orderByVisit).map(([visit, order]) => [
+                Number(visit),
+                order,
+              ]),
+            ),
+          }
+        : {}),
+    };
+  };
   const startDate = payload.startsAt
     ? localDateAtInstant(payload.startsAt, timeZone)
     : "";
@@ -712,7 +763,7 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
     dates: {
       startDate,
       endDate,
-      notes: "",
+      notes: payload.scheduleNotes ?? "",
       ...(payload.custom?.timePreference
         ? { timeOfDay: payload.custom.timePreference.toLowerCase() }
         : {}),
@@ -723,7 +774,10 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
     visitFrequency,
     customInterval: interval,
     firstVisitDate: payload.homeVisit?.firstServiceDate ?? startDate,
-    excludedVisitDates: payload.homeVisit?.excludedDates ?? [],
+    // Excluded dates were removed from the publishing product. Ignore the
+    // legacy field while restoring older drafts so it cannot re-enter the new
+    // editor or be recreated on the next publish.
+    excludedVisitDates: [],
     visitsPerDay,
     visitTimes: Array.from({ length: visitsPerDay }, (_, index) => {
       const window = visitWindows[index];
@@ -745,28 +799,39 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
       },
     ),
     visitPlans: homeTasks.map(taskPlan),
-    boardingRoutines: boardingTasks.map((task) => ({
-      templateId: task.category?.toLowerCase() ?? "custom",
-      label: task.label ?? "Boarding care task",
-      custom: task.category === "CUSTOM",
-      routines: [
-        {
-          id: task.clientTaskKey,
-          petIds: task.petKeys ?? [],
-          priority: task.priority === "NICE" ? "nice" : "must",
-          scheduleType:
-            task.scheduleKind === "REPEATING"
-              ? "repeating"
-              : task.scheduleKind === "ONCE"
-                ? "once"
-                : task.scheduleKind === "AS_NEEDED"
-                  ? "as-needed"
-                  : "daily",
-          instructions: task.instructions ?? "",
-          order: task.order ?? 0,
-        },
-      ],
-    })),
+    boardingRoutines: boardingTasks.map((task) => {
+      const category = task.category ?? "";
+      const custom =
+        category.toUpperCase() === "CUSTOM" ||
+        category.toUpperCase().startsWith("CUSTOM-");
+      const identity = normalizeTaskIdentity({
+        category,
+        label: task.label,
+        custom,
+      });
+      return {
+        templateId: identity.code ?? "custom",
+        label: identity.label || "Boarding care task",
+        custom: identity.custom,
+        routines: [
+          {
+            id: task.clientTaskKey,
+            petIds: task.petKeys ?? [],
+            priority: task.priority === "NICE" ? "nice" : "must",
+            scheduleType:
+              task.scheduleKind === "REPEATING"
+                ? "repeating"
+                : task.scheduleKind === "ONCE"
+                  ? "once"
+                  : task.scheduleKind === "AS_NEEDED"
+                    ? "as-needed"
+                    : "daily",
+            instructions: task.instructions ?? "",
+            order: task.order ?? 0,
+          },
+        ],
+      };
+    }),
     boardingSupplies,
     customBoardingSupplies,
     boardingSupplyNotes: payload.boarding?.supplyNotes ?? "",
@@ -825,6 +890,7 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
     customWarnings: customRequirements
       .filter((item) => item.kind === "WARNING")
       .map((item) => item.label),
+    customRequirementsNotes: "",
     transport,
     splitDirection: "owner-dropoff",
     distance: payload.boarding?.maxProviderDistanceMeters
@@ -933,15 +999,18 @@ function petPayload(pet: PetDraft) {
         : pet.sourcePetId
           ? "UPDATE"
           : "CREATE";
+  const normalizedPetType = normalizePetTypeSelection(
+    pet.typeCode ?? pet.type,
+    pet.otherType,
+  );
   return {
     clientPetKey: pet.id,
     sourcePetId: pet.sourcePetId ?? null,
     profileAction,
     quantity: pet.quantity,
     ...(optionalText(pet.name) ? { name: pet.name.trim() } : {}),
-    ...(optionalText(pet.otherType || pet.type)
-      ? { petType: (pet.otherType || pet.type).trim().toUpperCase() }
-      : {}),
+    petType: normalizedPetType.petType,
+    customPetType: normalizedPetType.customPetType,
     breed: optionalText(pet.breed) ? pet.breed.trim() : null,
     birthDate: toInstant(pet.birthDate) ? pet.birthDate : null,
     weightGrams: weightGrams ?? null,
@@ -961,24 +1030,49 @@ function sanitizeTaskKey(id: string, petIds: string[] = []): string {
 }
 
 function basicTask(task: TaskPlan) {
+  const standardCode = task.custom
+    ? null
+    : normalizeTaskIdentity({
+        templateId: task.templateId,
+        label: task.label,
+        custom: false,
+      }).code;
+  const label = taskPersistenceLabel({
+    code: standardCode ?? task.templateId,
+    label: task.label,
+    custom: task.custom,
+  });
   return {
     clientTaskKey: sanitizeTaskKey(task.id, task.petIds),
-    category: (task.templateId || "CUSTOM").toUpperCase(),
-    label: task.label.trim() || "Custom care task",
+    category: (standardCode ?? "CUSTOM").toUpperCase(),
+    label: label || "Custom care task",
     instructions: optionalText(task.notes ?? "") ?? null,
     priority: task.priority === "must" ? ("MUST" as const) : ("NICE" as const),
     petKeys: task.petIds,
     scheduleKind: null,
     visitNumbers: task.visitNumbers,
     order: task.order ?? 0,
+    ...(task.orderByVisit ? { orderByVisit: task.orderByVisit } : {}),
   };
 }
 
 function customTask(task: TaskPlan) {
+  const standardCode = task.custom
+    ? null
+    : normalizeTaskIdentity({
+        templateId: task.templateId,
+        label: task.label,
+        custom: false,
+      }).code;
+  const label = taskPersistenceLabel({
+    code: standardCode ?? task.templateId,
+    label: task.label,
+    custom: task.custom,
+  });
   return {
     clientTaskKey: sanitizeTaskKey(task.id, task.petIds),
-    category: (task.templateId || "CUSTOM").toUpperCase(),
-    label: task.label.trim() || "Custom care task",
+    category: (standardCode ?? "CUSTOM").toUpperCase(),
+    label: label || "Custom care task",
     instructions: optionalText(task.notes ?? "") ?? null,
     priority: null,
     petKeys: task.petIds,
@@ -995,10 +1089,22 @@ function boardingTask(config: BoardingTaskConfig, routine: BoardingRoutine) {
     once: "ONCE",
     "as-needed": "AS_NEEDED",
   }[routine.scheduleType] as "DAILY" | "REPEATING" | "ONCE" | "AS_NEEDED";
+  const standardCode = config.custom
+    ? null
+    : normalizeTaskIdentity({
+        templateId: config.templateId,
+        label: config.label,
+        custom: false,
+      }).code;
+  const label = taskPersistenceLabel({
+    code: standardCode ?? config.templateId,
+    label: config.label,
+    custom: config.custom,
+  });
   return {
     clientTaskKey: sanitizeTaskKey(routine.id, routine.petIds),
-    category: (config.templateId || "CUSTOM").toUpperCase(),
-    label: config.label.trim() || "Boarding care task",
+    category: (standardCode ?? "CUSTOM").toUpperCase(),
+    label: label || "Boarding care task",
     instructions: optionalText(routine.instructions) ?? null,
     priority: null,
     petKeys: routine.petIds,
@@ -1066,10 +1172,62 @@ export function mapLegacyNeedDraftV3(
   const minAmount = toMinor(draft.budget.amount, currency);
   const maxAmount = toMinor(draft.budget.maximum, currency);
   const mode = modeFor(draft.careType);
+  const boardingOptions =
+    draft.careType === "boarding"
+      ? boardingSupplyOptions(draft.pets, draft.customBoardingSupplies)
+      : [];
+  const sitterSuppliesRequired = boardingOptions.some(
+    (supply) => draft.boardingSupplies[supply.key] === "sitter",
+  );
+  const travelCostApplies =
+    draft.careType === "visit"
+      ? draft.budget.travelMode !== "none"
+      : draft.careType === "boarding"
+        ? (draft.transport === "sitter" || draft.transport === "split") &&
+          draft.budget.travelMode !== "none"
+        : false;
+  const supplyCostApplies =
+    draft.careType === "boarding" && sitterSuppliesRequired;
+  const additionalCosts = [
+    ...(travelCostApplies
+      ? [
+          {
+            kind: "TRAVEL" as const,
+            mode: draft.budget.travelMode.toUpperCase() as
+              | "NONE"
+              | "FIXED"
+              | "ACTUAL"
+              | "DISCUSS",
+            amountMinor:
+              draft.budget.travelMode === "fixed"
+                ? toMinor(draft.budget.travelAmount, currency)
+                : null,
+          },
+        ]
+      : []),
+    ...(supplyCostApplies
+      ? [
+          {
+            kind: "SUPPLY" as const,
+            mode:
+              draft.supplyCostMode === "reimburse"
+                ? ("ACTUAL" as const)
+                : draft.supplyCostMode === "fixed"
+                  ? ("FIXED" as const)
+                  : ("DISCUSS" as const),
+            amountMinor:
+              draft.supplyCostMode === "fixed"
+                ? toMinor(draft.budget.supplyAmount, currency)
+                : null,
+          },
+        ]
+      : []),
+  ];
   const payload: NeedDraftPayload = {
     description: optionalText(draft.taskNotes)
       ? draft.taskNotes.trim()
       : null,
+    scheduleNotes: optionalText(draft.dates.notes) ?? null,
     ...(zonedMidnight(draft.dates.startDate, timeZone)
       ? { startsAt: zonedMidnight(draft.dates.startDate, timeZone) }
       : {}),
@@ -1098,52 +1256,7 @@ export function mapLegacyNeedDraftV3(
       currency,
       negotiable: draft.budget.exactNegotiable,
     },
-    additionalCosts: [
-      ...(draft.careType === "visit"
-        ? [
-            {
-              kind: "TRAVEL" as const,
-              mode: draft.budget.travelMode.toUpperCase() as
-                | "NONE"
-                | "FIXED"
-                | "ACTUAL"
-                | "DISCUSS",
-              amountMinor:
-                draft.budget.travelMode === "fixed"
-                  ? toMinor(draft.budget.travelAmount, currency)
-                  : null,
-            },
-          ]
-        : draft.careType === "boarding"
-          ? [
-              {
-                kind: "TRAVEL" as const,
-                mode: draft.budget.travelMode.toUpperCase() as
-                  | "NONE"
-                  | "FIXED"
-                  | "ACTUAL"
-                  | "DISCUSS",
-                amountMinor:
-                  draft.budget.travelMode === "fixed"
-                    ? toMinor(draft.budget.travelAmount, currency)
-                    : null,
-              },
-              {
-                kind: "SUPPLY" as const,
-                mode:
-                  draft.supplyCostMode === "reimburse"
-                    ? ("ACTUAL" as const)
-                    : draft.supplyCostMode === "fixed"
-                      ? ("FIXED" as const)
-                      : ("DISCUSS" as const),
-                amountMinor:
-                  draft.supplyCostMode === "fixed"
-                    ? toMinor(draft.budget.supplyAmount, currency)
-                    : null,
-              },
-            ]
-          : []),
-    ],
+    additionalCosts,
     attachmentIds: (draft.attachments ?? []).map((attachment) => attachment.id),
   };
 
@@ -1159,7 +1272,6 @@ export function mapLegacyNeedDraftV3(
     payload.homeVisit = {
       intervalDays,
       firstServiceDate: draft.firstVisitDate || draft.dates.startDate || null,
-      excludedDates: draft.excludedVisitDates ?? [],
       visitsPerServiceDay: Math.max(1, draft.visitsPerDay),
       visitWindows: Array.from({ length: Math.max(1, draft.visitsPerDay) }, (_, index) => {
         const timeChoice = (draft.visitTimes[index] || "flexible").toLowerCase();
@@ -1254,6 +1366,9 @@ export function mapLegacyNeedDraftV3(
       requirements: requirementList([
         ...draft.customNeeds.map((label) => ({ kind: "OTHER_NEED" as const, label })),
         ...draft.customWarnings.map((label) => ({ kind: "WARNING" as const, label })),
+        ...(draft.customRequirementsNotes?.trim()
+          ? [{ kind: "OTHER_NEED" as const, label: draft.customRequirementsNotes.trim() }]
+          : []),
       ]),
       timePreference: toTimePreference(draft.dates.timeOfDay),
       exactTime: optionalText(draft.dates.exactTime),

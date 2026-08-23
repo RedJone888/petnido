@@ -19,6 +19,13 @@ export const onboardingProfileSchema = profileUpdateSchema.pick({
   avatarUrl: true,
   preferredLocale: true,
   timeZone: true,
+}).extend({
+  /**
+   * A new account that arrived from the need publisher has already made its
+   * intent clear.  Keep this as an explicit server-validated value instead of
+   * inferring intent from a return URL in the mutation.
+   */
+  initialIntent: z.literal("POST_NEED").optional(),
 });
 
 export const onboardingIntentInputSchema = z

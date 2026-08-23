@@ -25,7 +25,6 @@ export type NeedMatchInput = {
   minAmountMinor: number | null;
   maxAmountMinor: number | null;
   homeVisitIntervalDays?: number | null;
-  excludedDates?: string[];
   maxProviderDistanceMeters?: number | null;
   isPublic: boolean;
 };
@@ -93,12 +92,11 @@ function requiredDateKeys(need: NeedMatchInput) {
   const interval = need.mode === "HOME_VISIT"
     ? Math.max(1, need.homeVisitIntervalDays ?? 1)
     : 1;
-  const excluded = new Set(need.excludedDates ?? []);
   const dates: string[] = [];
   let offset = 0;
   for (let cursor = start; cursor <= end; cursor = new Date(cursor.getTime() + 86_400_000)) {
     const key = dateKey(cursor);
-    if (offset % interval === 0 && !excluded.has(key)) dates.push(key);
+    if (offset % interval === 0) dates.push(key);
     offset += 1;
   }
   return dates;

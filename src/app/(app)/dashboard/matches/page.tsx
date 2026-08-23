@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import { RecommendationPanel } from "@/components/matching/recommendation-panel";
 import { useLanguage } from "@/components/providers/language-provider";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
 import { trpc } from "@/utils/trpc";
 
 export default function DashboardMatches() {
@@ -38,7 +39,7 @@ export default function DashboardMatches() {
             <div className="mt-4 space-y-3">
               {needs.data?.filter((need) => need.state === "OPEN" && !need.expired).map((need) => (
                 <Link key={need.id} href={`/dashboard/matches?needId=${encodeURIComponent(need.id)}`} className="block rounded-xl border border-slate-200 p-4 hover:border-primary">
-                  <p className="font-black text-slate-900">{need.title}</p><p className="mt-1 text-xs text-slate-500">{t.core.modes[need.mode as keyof typeof t.core.modes] ?? need.mode} · {copy.requestDeadline} {new Date(need.endsAt).toLocaleDateString(lang)}</p>
+                  <p className="font-black text-slate-900">{buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, lang })}</p><p className="mt-1 text-xs text-slate-500">{t.core.modes[need.mode as keyof typeof t.core.modes] ?? need.mode} · {copy.requestDeadline} {new Date(need.endsAt).toLocaleDateString(lang)}</p>
                 </Link>
               ))}
               {!needs.isLoading && !needs.data?.some((need) => need.state === "OPEN" && !need.expired) ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">{copy.noRequests}<Link href="/needs/create" className="ml-1 font-black text-primary underline">{copy.postRequest}</Link></p> : null}

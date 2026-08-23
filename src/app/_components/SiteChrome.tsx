@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-import { NEED_ENTRY_STORAGE_KEY } from "@/app/(flow)/needs/create/preview/types";
+import { NEED_ENTRY_STORAGE_KEY } from "@/modules/need-publishing/client";
 import Navbar from "./Navbar";
 import { useLanguage } from "@/components/providers/language-provider";
 
@@ -25,11 +25,8 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       >
         {t.nav.skipToContent}
       </a>
-      {!isNeedCreationFlow && <Navbar />}
-      <div
-        id="main-content"
-        className={isNeedCreationFlow ? "flex min-h-screen flex-1 flex-col" : "flex flex-1 flex-col pt-16"}
-      >
+      <Navbar />
+      <div id="main-content" className="flex flex-1 flex-col pt-16">
         {children}
       </div>
     </>

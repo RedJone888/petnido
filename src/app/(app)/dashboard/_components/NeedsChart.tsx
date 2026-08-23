@@ -21,7 +21,6 @@ export default function NeedsChart() {
     { name: "募集中", value: data.needStates.OPEN },
     { name: "決定済み", value: data.needStates.MATCHED },
     { name: "終了", value: data.needStates.CLOSED },
-    { name: "キャンセル", value: data.needStates.CANCELLED },
   ].filter((item) => item.value > 0);
   return <section className="rounded-2xl border border-neutral-200 bg-white px-6 py-4"><div className="mb-3 flex items-end justify-between"><h2 className="font-bold text-neutral-800">依頼状況</h2><span className="text-xs text-neutral-500">合計 {data.totals.needs} 件</span></div><div className="grid grid-cols-1 gap-2 md:grid-cols-2"><CommonPieChart height="250px" title="依頼カテゴリー" data={typeData} colors={["#F6658C", "#008E94", "#FFBF00"]} /><CommonPieChart height="250px" title="依頼ステータス" data={statusData} colors={["#0BDA51", "#B069DB", "#6D8196", "#FA5053"]} /></div></section>;
 }

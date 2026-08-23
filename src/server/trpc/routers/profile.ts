@@ -234,7 +234,9 @@ export const profileRouter = router({
           data: {
             preferredLocale: input.preferredLocale,
             timeZone: input.timeZone,
-            onboardingStep: "INTENT",
+            ...(input.initialIntent
+              ? { initialIntent: input.initialIntent, onboardingStep: "COMPLETE" }
+              : { onboardingStep: "INTENT" }),
           },
         });
         if (profile.count !== 1) {
@@ -247,7 +249,9 @@ export const profileRouter = router({
           where: { id: userId },
           data: { name: input.nickname, image: input.avatarUrl },
         });
-        return { nextStep: "INTENT" as const };
+        return {
+          nextStep: input.initialIntent ? ("COMPLETE" as const) : ("INTENT" as const),
+        };
       });
     }),
 

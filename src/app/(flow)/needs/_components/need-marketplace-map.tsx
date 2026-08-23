@@ -4,6 +4,8 @@ import MapLibreMap from "@/components/location/MapLibreMap";
 import type { Lang } from "@/domain/lang/types";
 import cn from "@/lib/cn";
 import { messages } from "@/i18n/messages";
+import { getNeedPublishingMessages } from "@/modules/need-publishing/i18n/messages";
+import { localizedNeedTitle } from "./need-card";
 import {
   compactDate,
   formatBudget,
@@ -85,7 +87,8 @@ export function NeedMarketplaceMap({
         const featuredPet = need.pets?.find((p) => p.image) ?? need.pets?.[0];
         const petImg = featuredPet?.image;
         const t = (lang && messages[lang]) ? messages[lang] : messages.en;
-        const petSummary = formatPetsSummary(need.pets || [], lang || "en", t);
+        const needCopy = getNeedPublishingMessages(lang || "en");
+        const petSummary = formatPetsSummary(need.pets || [], lang || "en", t, needCopy);
         const budgetText = formatNeedCardBudget(need, t.core.common.openToOffers);
         const startDateStr = need.startsAt ? compactDate(need.startsAt, lang || "en") : "";
         const endDateStr = need.endsAt ? compactDate(need.endsAt, lang || "en") : "";
@@ -101,6 +104,7 @@ export function NeedMarketplaceMap({
           CUSTOM: `✨ ${labels.modes.custom}`,
         };
         const modeLabel = localizedModes[need.mode] || need.mode;
+        const displayTitle = localizedNeedTitle(need, lang || "en");
         const modeColor = modeColorMap[need.mode] || "#059669";
         const locationText = need.location?.regionLabel || labels.approximateLocation;
         const detailHref = `${detailPrefix}/needs/${encodeURIComponent(need.publicId)}`;
@@ -175,8 +179,8 @@ export function NeedMarketplaceMap({
           lat: need.location.mapPoint.lat,
           lon: need.location.mapPoint.lon,
           color: modeColor,
-          label: `${labels.needLocation}: ${need.title}`,
-          title: need.title,
+          label: `${labels.needLocation}: ${displayTitle}`,
+          title: displayTitle,
           description: locationText,
           href: detailHref,
           hrefLabel: labels.viewDetails,

@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: { lang: string; id:
   if (!isSupportedLanguage(params.lang)) return {};
   const decodedId = decodeURIComponent(params.id);
   const path = `/needs/${encodeURIComponent(decodedId)}`;
-  const subject = await resolvePublicDetailSubject({ kind: "need", publicId: decodedId });
+  const subject = await resolvePublicDetailSubject({ kind: "need", publicId: decodedId }, params.lang);
   return subject ? publicDetailMetadata("need", params.lang, path, subject) : localizedPageMetadata("needs", params.lang, path);
 }
 

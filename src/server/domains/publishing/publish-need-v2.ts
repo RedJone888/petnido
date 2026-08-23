@@ -2,11 +2,71 @@ import { Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 
 import type { NeedPublishInput } from "@/domain/publishing/contracts";
+import {
+  boardingTaskFingerprint,
+  customTaskFingerprint,
+  homeVisitTaskFingerprint,
+} from "@/modules/need-publishing/domain/task-fingerprint";
+import { normalizeTaskIdentity } from "@/modules/need-publishing/domain/task-catalog";
 
 type Transaction = Prisma.TransactionClient;
 
 function dateOnly(value: string | null) {
   return value ? new Date(`${value}T00:00:00.000Z`) : null;
+}
+
+function taskSemanticFingerprint(
+  mode: NeedPublishInput["mode"],
+  task: {
+    petKeys: string[];
+    category?: string | null;
+    label: string;
+    priority?: "MUST" | "NICE" | null;
+    scheduleKind?:
+      | "EACH_VISIT"
+      | "DAILY"
+      | "REPEATING"
+      | "ONCE"
+      | "AS_NEEDED"
+      | null;
+    instructions?: string | null;
+  },
+) {
+  const category = task.category ?? "";
+  const upperCategory = category.toUpperCase();
+  const custom = upperCategory === "CUSTOM" || upperCategory.startsWith("CUSTOM-");
+  const identity = normalizeTaskIdentity({
+    category,
+    label: task.label,
+    custom,
+  });
+  if (mode === "HOME_VISIT") {
+    return homeVisitTaskFingerprint({
+      assignmentPetKeys: task.petKeys,
+      taskName: identity.label,
+      taskCode: identity.code,
+      custom: identity.custom,
+      priority: task.priority ?? "",
+      notes: task.instructions,
+    });
+  }
+  if (mode === "BOARDING") {
+    return boardingTaskFingerprint({
+      assignmentPetKeys: task.petKeys,
+      taskName: identity.label,
+      taskCode: identity.code,
+      custom: identity.custom,
+      frequency: task.scheduleKind ?? "",
+      notes: task.instructions,
+    });
+  }
+  return customTaskFingerprint({
+    assignmentPetKeys: task.petKeys,
+    taskName: identity.label,
+    taskCode: identity.code,
+    custom: identity.custom,
+    notes: task.instructions,
+  });
 }
 
 async function verifyOwnedReferences(
@@ -103,6 +163,80 @@ async function saveLocationDefault(
   };
 }
 
+/**
+ * Apply the explicit pet-profile choice made in the Pets step before taking
+ * the immutable Need snapshot. A CREATE action always makes a new profile
+ * (including when the draft was copied from an existing profile); UPDATE
+ * changes the owned source profile; NONE deliberately keeps this request
+ * snapshot-only. The returned map is the only source used for snapshot links.
+ */
+async function syncPetProfiles(
+  tx: Transaction,
+  ownerId: string,
+  pets: NeedPublishInput["pets"],
+) {
+  const sourceIds = new Map<string, string | null>();
+  for (const pet of pets) {
+    const action = pet.profileAction ?? (pet.sourcePetId ? "UPDATE" : "CREATE");
+    if (action === "UPDATE") {
+      if (!pet.sourcePetId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "PET_PROFILE_UPDATE_REQUIRES_SOURCE",
+        });
+      }
+      const updated = await tx.pet.updateMany({
+        where: {
+          id: pet.sourcePetId,
+          ownerId,
+          archivedAt: null,
+        },
+        data: {
+          name: pet.name,
+          type: pet.petType,
+          customType: pet.customPetType,
+          quantity: pet.quantity,
+          breed: pet.breed,
+          birthDate: dateOnly(pet.birthDate),
+          weightGrams: pet.weightGrams,
+          sex: pet.sex,
+          neutered: pet.neutered,
+          notes: pet.careNotes,
+        },
+      });
+      if (updated.count !== 1) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
+      }
+      sourceIds.set(pet.clientPetKey, pet.sourcePetId);
+      continue;
+    }
+
+    if (action === "CREATE") {
+      const created = await tx.pet.create({
+        data: {
+          ownerId,
+          name: pet.name,
+          type: pet.petType,
+          customType: pet.customPetType,
+          quantity: pet.quantity,
+          breed: pet.breed,
+          birthDate: dateOnly(pet.birthDate),
+          weightGrams: pet.weightGrams,
+          sex: pet.sex,
+          neutered: pet.neutered,
+          notes: pet.careNotes,
+        },
+        select: { id: true },
+      });
+      sourceIds.set(pet.clientPetKey, created.id);
+      continue;
+    }
+
+    sourceIds.set(pet.clientPetKey, null);
+  }
+  return sourceIds;
+}
+
 export async function publishNeedV2Transaction(
   tx: Transaction,
   ownerId: string,
@@ -157,13 +291,19 @@ export async function publishNeedV2Transaction(
           id: draft.editingNeedId,
           ownerId,
           archivedAt: null,
-          state: { not: "CANCELLED" },
+          state: { in: ["OPEN", "CLOSED", "MATCHED"] },
         },
-        select: { id: true, locationSnapshotId: true },
+        select: { id: true, locationSnapshotId: true, state: true },
       })
     : null;
   if (draft.editingNeedId && !editTarget) {
     throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
+  }
+  if (editTarget?.state === "MATCHED") {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "NEED_MATCHED_EDIT_REQUIRES_CANCEL_MATCH",
+    });
   }
 
   const existingNeed = draft.editingNeedId
@@ -187,11 +327,12 @@ export async function publishNeedV2Transaction(
   }
 
   const profileDefaults = await saveLocationDefault(tx, ownerId, input);
+  const petSourceIds = await syncPetProfiles(tx, ownerId, input.pets);
 
   const commonNeedData = {
     mode: input.mode,
-    title: input.title,
     description: input.description,
+    scheduleNotes: input.scheduleNotes ?? null,
     startsAt: new Date(input.startsAt),
     endsAt: new Date(input.endsAt),
     timeZone: input.timeZone,
@@ -230,7 +371,6 @@ export async function publishNeedV2Transaction(
     await tx.needSupplyV2.deleteMany({ where: { needId: editTarget.id } });
     await tx.needRequirementV2.deleteMany({ where: { needId: editTarget.id } });
     await tx.needPetSnapshotV2.deleteMany({ where: { needId: editTarget.id } });
-    await tx.needDateExceptionV2.deleteMany({ where: { needId: editTarget.id } });
     await tx.needVisitWindowV2.deleteMany({ where: { needId: editTarget.id } });
     await tx.homeVisitNeedDetailV2.deleteMany({ where: { needId: editTarget.id } });
     await tx.boardingNeedDetailV2.deleteMany({ where: { needId: editTarget.id } });
@@ -267,13 +407,11 @@ export async function publishNeedV2Transaction(
     data: input.pets.map((pet) => ({
       needId: need.id,
       clientPetKey: pet.clientPetKey,
-      sourcePetId:
-        (pet.profileAction ?? (pet.sourcePetId ? "UPDATE" : "CREATE")) === "CREATE"
-          ? null
-          : pet.sourcePetId,
+      sourcePetId: petSourceIds.get(pet.clientPetKey) ?? null,
       quantity: pet.quantity,
       name: pet.name,
       petType: pet.petType,
+      customPetType: pet.customPetType,
       breed: pet.breed,
       birthDate: dateOnly(pet.birthDate),
       weightGrams: pet.weightGrams,
@@ -294,19 +432,61 @@ export async function publishNeedV2Transaction(
         ? input.boarding.tasks
         : input.custom.tasks;
   for (const task of tasks) {
+    const category = task.category ?? "";
+    const upperCategory = category.toUpperCase();
+    const custom = upperCategory === "CUSTOM" || upperCategory.startsWith("CUSTOM-");
+    const identity = normalizeTaskIdentity({
+      category,
+      label: task.label,
+      custom,
+    });
+    const visitOrders =
+      input.mode === "HOME_VISIT"
+        ? task.visitNumbers.map((visitNumber, visitIndex) => ({
+            needId: need.id,
+            visitNumber,
+            // Older clients only sent the global task order. Keep that value
+            // as a deterministic fallback while new clients provide an order
+            // for every visit independently.
+            order:
+              task.orderByVisit?.[String(visitNumber)] ??
+              task.order ??
+              visitIndex,
+          }))
+        : [];
     await tx.needTaskV2.create({
       data: {
         needId: need.id,
         clientTaskKey: task.clientTaskKey,
-        category: task.category,
-        label: task.label,
+        semanticFingerprint: taskSemanticFingerprint(input.mode, {
+          ...task,
+          category: identity.custom ? "CUSTOM" : identity.code,
+          label: identity.label,
+        }),
+        fingerprintVersion: 1,
+        category: identity.custom ? "CUSTOM" : identity.code.toUpperCase(),
+        label: identity.label,
         instructions: task.instructions,
-        priority: task.priority,
-        scheduleKind: task.scheduleKind,
+        // Persist only fields that belong to the active mode. Older clients
+        // may still send generic defaults, but those defaults must never leak
+        // into a boarding/custom NeedTaskV2 row.
+        priority: input.mode === "HOME_VISIT" ? task.priority ?? null : null,
+        scheduleKind:
+          input.mode === "BOARDING" ? task.scheduleKind ?? null : null,
         visitNumbers: (options.validationArrayEncoding
-          ? JSON.stringify(task.visitNumbers)
-          : task.visitNumbers) as never,
-        order: task.order,
+          ? JSON.stringify(
+              input.mode === "HOME_VISIT" ? task.visitNumbers : [],
+            )
+          : input.mode === "HOME_VISIT"
+            ? task.visitNumbers
+            : []) as never,
+        // Home-visit order is scoped to each visit and is persisted in
+        // HomeVisitTaskOrderV2. Never retain a misleading global default on
+        // the task row; boarding/custom keep their mode-level order.
+        order: input.mode === "HOME_VISIT" ? null : task.order,
+        ...(visitOrders.length
+          ? { visitOrders: { create: visitOrders } }
+          : {}),
         petLinks: {
           create: task.petKeys.map((petKey) => ({
             pet: { connect: { id: petIds.get(petKey)! } },
@@ -325,14 +505,6 @@ export async function publishNeedV2Transaction(
         visitsPerServiceDay: input.homeVisit.visitsPerServiceDay,
       },
     });
-    if (input.homeVisit.excludedDates.length) {
-      await tx.needDateExceptionV2.createMany({
-        data: input.homeVisit.excludedDates.map((date) => ({
-          needId: need.id,
-          date: dateOnly(date)!,
-        })),
-      });
-    }
     await tx.needVisitWindowV2.createMany({
       data: input.homeVisit.visitWindows.map((window) => ({
         needId: need.id,

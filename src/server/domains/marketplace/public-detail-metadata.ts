@@ -1,6 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { PublicDetailKind } from "@/domain/content/public-detail-metadata";
+import type { Lang } from "@/domain/lang/types";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
 import prisma from "@/lib/prisma";
 
 type Lookup = { kind: PublicDetailKind; publicId: string };
@@ -13,7 +15,12 @@ function splitPublicId(publicId: string) {
   return id && (source === "v2" || source === "legacy") ? { source, id } : null;
 }
 
-export async function findPublicDetailSubject(database: PrismaClient, lookup: Lookup, now = new Date()) {
+export async function findPublicDetailSubject(
+  database: PrismaClient,
+  lookup: Lookup,
+  now = new Date(),
+  lang: Lang = "en",
+) {
   if (lookup.kind === "provider") {
     const hasLegacyModels = "service" in database;
     const profile = await database.serviceProfile.findFirst({
@@ -43,9 +50,12 @@ export async function findPublicDetailSubject(database: PrismaClient, lookup: Lo
     if (parsed.source === "v2") {
       const record = await database.needV2.findFirst({
         where: { id: parsed.id, state: "OPEN", archivedAt: null, endsAt: { gt: now } },
-        select: { title: true },
+        select: {
+          mode: true,
+          pets: { select: { name: true, petType: true, customPetType: true } },
+        },
       });
-      return record?.title ?? null;
+      return record ? buildNeedDisplayTitle({ mode: record.mode, pets: record.pets, lang }) : null;
     }
     if (!("need" in database)) return null;
     const record = await database.need.findFirst({
@@ -78,9 +88,9 @@ async function publicMetadataDatabase() {
   return prisma;
 }
 
-export async function resolvePublicDetailSubject(lookup: Lookup) {
+export async function resolvePublicDetailSubject(lookup: Lookup, lang: Lang = "en") {
   try {
-    return await findPublicDetailSubject(await publicMetadataDatabase(), lookup);
+    return await findPublicDetailSubject(await publicMetadataDatabase(), lookup, new Date(), lang);
   } catch {
     return null;
   }

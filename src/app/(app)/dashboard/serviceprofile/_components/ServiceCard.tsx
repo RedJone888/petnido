@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
 import { useLanguage } from "@/components/providers/language-provider";
+import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
 
 export default function ServiceCard({
   service,
@@ -33,6 +34,7 @@ export default function ServiceCard({
 }) {
   const router = useRouter();
   const { t } = useLanguage();
+  const needMessages = useNeedPublishingMessages();
   const management = t.core.management.actions;
   const providerCopy = t.settings.provider;
   const { executeCommand, deleteService } = useService();
@@ -81,7 +83,7 @@ export default function ServiceCard({
   );
   const fallbackImage = PET_META[petTypes[0]].placeImg;
   const isLoading = executeCommand.isLoading;
-  const priceUnitLabel = priceUnit === "DAY" ? t.core.needPublishingAdvanced.preview.pricePerNight : priceUnit === "HOUR" ? t.core.servicePublishing.amount : t.core.needPublishingAdvanced.preview.pricePerVisit;
+  const priceUnitLabel = priceUnit === "DAY" ? needMessages.needPublishingAdvanced.preview.pricePerNight : priceUnit === "HOUR" ? t.core.servicePublishing.amount : needMessages.needPublishingAdvanced.preview.pricePerVisit;
   const handleToggle = async (checked: boolean) => {
     executeCommand.mutate({
       id: service.id,

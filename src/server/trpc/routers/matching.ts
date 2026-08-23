@@ -67,7 +67,6 @@ function toNeedMatchV2(need: PublicNeedV2Source, now: Date): NeedMatchInput {
     minAmountMinor: need.minAmountMinor === null ? null : Number(need.minAmountMinor),
     maxAmountMinor: need.maxAmountMinor === null ? null : Number(need.maxAmountMinor),
     homeVisitIntervalDays: need.homeVisitDetail?.intervalDays ?? null,
-    excludedDates: need.dateExceptions.map((item) => dateOnly(item.date)!),
     maxProviderDistanceMeters: need.boardingDetail?.maxProviderDistanceMeters ?? null,
     isPublic: need.state === "OPEN" && need.archivedAt === null && need.endsAt > now,
   };
