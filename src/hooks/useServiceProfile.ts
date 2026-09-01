@@ -14,7 +14,9 @@ export function useServiceProfile() {
         if (!old) return old;
         return {
           ...old,
-          profile: { ...old.profile, isSitter: variables.active },
+          serviceProfile: old.serviceProfile
+            ? { ...old.serviceProfile, isAccepting: variables.active }
+            : old.serviceProfile,
         };
       });
       return { previousData };
@@ -33,13 +35,6 @@ export function useServiceProfile() {
     },
   });
 
-  const updateInfo = trpc.serviceProfile.updateInfo.useMutation({
-    onSuccess: async () => {
-      await utils.serviceProfile.getMine.invalidate();
-      toast.success("自己紹介・プロフィールを更新しました 🐾");
-    },
-  });
-
   return {
     getServiceProfile,
     getLocationAndCurrency,
@@ -47,6 +42,5 @@ export function useServiceProfile() {
     isGetServiceProfileLoading: getServiceProfile.isLoading,
     refetchServiceProfile: getServiceProfile.refetch,
     toggleSitter,
-    updateInfo,
   };
 }

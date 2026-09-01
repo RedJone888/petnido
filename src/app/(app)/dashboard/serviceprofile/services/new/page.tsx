@@ -1,41 +1,5 @@
-"use client";
-
-import { useMemo } from "react";
-import { useService } from "@/hooks/useService";
-import { useServiceProfile } from "@/hooks/useServiceProfile";
-import { ServiceForm } from "../_components/form";
-import { createEmptyService } from "@/domain/service/defaults";
-import type { ServiceCreateInput } from "@/lib/zod/services";
-import LoadingPage from "@/components/shared/loading-page";
+import { ServicePublishingV2Flow } from "./service-publishing-v2-flow";
 
 export default function ServiceNewPage() {
-  const { getLocationAndCurrency } = useServiceProfile();
-  const serviceProfile = getLocationAndCurrency.data;
-  const INITIAL_VALUES = useMemo(() => {
-    return createEmptyService({
-      baseAreaRaw: serviceProfile?.baseAreaRaw || null,
-      baseLat: serviceProfile?.baseLat || null,
-      baseLon: serviceProfile?.baseLon || null,
-      baseCurrency: serviceProfile?.baseCurrency || null,
-    });
-  }, [serviceProfile]);
-  const { createService } = useService();
-  const handleSubmit = async (data: ServiceCreateInput) => {
-    try {
-      await createService.mutateAsync(data);
-      console.log("createService", data);
-    } catch (error) {
-      console.error("提交失败：", error);
-    }
-  };
-  if (getLocationAndCurrency.isLoading) {
-    return <LoadingPage title="読み込み中..." />;
-  }
-  return (
-    <ServiceForm
-      onSubmit={handleSubmit}
-      initialData={INITIAL_VALUES}
-      isLoading={createService.isLoading}
-    />
-  );
+  return <ServicePublishingV2Flow />;
 }

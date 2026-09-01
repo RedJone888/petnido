@@ -1,0 +1,837 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../.generated/validation-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("VALIDATION_DATABASE_URL")
+}
+
+model User {
+  id                     String                  @id @default(cuid())
+  email                  String?                 @unique
+  emailVerified          DateTime?
+  name                   String?
+  image                  String?
+  avatarAttachmentId     String?                 @unique
+  avatarAttachment       Attachment?             @relation("UserAvatar", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
+  passwordHash           String?                 @map("password")
+  deletedAt              DateTime?
+  profile                Profile?
+  pets                   Pet[]
+  locations              UserLocation[]
+  serviceProfile         ServiceProfile?
+  notificationPreference NotificationPreference?
+  attachments            Attachment[]            @relation("AttachmentOwner")
+  publishDraftsV2        PublishDraftV2[]
+  needsV2                NeedV2[]
+  favoritesV2            FavoriteV2[]
+  conversationsCreatedV2 ConversationV2[]            @relation("ConversationCreatedByV2")
+  conversationMembersV2  ConversationParticipantV2[]
+  messagesV2             MessageV2[]                 @relation("MessageSenderV2")
+  applicationsSubmittedV2 NeedApplicationV2[]        @relation("ApplicationV2Applicant")
+  applicationsReceivedV2  NeedApplicationV2[]        @relation("ApplicationV2Owner")
+  bookingsRequestedV2     ServiceBookingV2[]         @relation("BookingV2Customer")
+  bookingsReceivedV2      ServiceBookingV2[]         @relation("BookingV2Provider")
+  notificationsV2         NotificationV2[]
+  emailOutboxV2            EmailOutboxV2[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+}
+
+model FavoriteV2 {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetKind   String
+  targetSource String
+  targetId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, targetKind, targetSource, targetId])
+  @@index([userId, createdAt])
+  @@index([targetKind, targetSource, targetId])
+}
+
+model ConversationV2 {
+  id                 String                      @id @default(cuid())
+  contextKind        String
+  contextSource      String
+  contextId          String
+  contextTitle       String
+  contextMode        String?
+  participantPairKey String
+  createdById        String
+  createdBy          User                        @relation("ConversationCreatedByV2", fields: [createdById], references: [id], onDelete: Restrict)
+  lastMessageAt      DateTime?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  participants       ConversationParticipantV2[]
+  messages           MessageV2[]
+  needApplications   NeedApplicationV2[]
+  serviceBookings    ServiceBookingV2[]
+
+  @@unique([contextKind, contextSource, contextId, participantPairKey])
+  @@index([lastMessageAt, id])
+  @@index([contextKind, contextSource, contextId])
+}
+
+model ConversationParticipantV2 {
+  conversationId String
+  conversation   ConversationV2 @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  joinedAt       DateTime       @default(now())
+  lastReadAt     DateTime?
+  archivedAt     DateTime?
+
+  @@id([conversationId, userId])
+  @@index([userId, archivedAt, conversationId])
+}
+
+model MessageV2 {
+  id              String         @id @default(cuid())
+  conversationId  String
+  conversation    ConversationV2 @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String?
+  sender          User?          @relation("MessageSenderV2", fields: [senderId], references: [id], onDelete: SetNull)
+  kind            String         @default("USER")
+  body            String
+  systemCode      String?
+  clientMessageId String
+  createdAt       DateTime       @default(now())
+
+  @@unique([conversationId, clientMessageId])
+  @@index([conversationId, createdAt, id])
+  @@index([senderId, createdAt])
+}
+
+model NeedApplicationV2 {
+  id                String         @id @default(cuid())
+  idempotencyKey    String         @unique
+  needSource        String
+  needId            String
+  needTitleSnapshot String
+  needModeSnapshot  String
+  ownerId           String
+  owner             User           @relation("ApplicationV2Owner", fields: [ownerId], references: [id], onDelete: Restrict)
+  applicantId       String
+  applicant         User           @relation("ApplicationV2Applicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  conversationId    String
+  conversation      ConversationV2 @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  state             String         @default("PENDING")
+  decidedAt         DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([needSource, needId, applicantId])
+  @@index([ownerId, state, createdAt])
+  @@index([applicantId, state, createdAt])
+  @@index([needSource, needId, state])
+  @@index([conversationId])
+}
+
+model ServiceBookingV2 {
+  id                   String         @id @default(cuid())
+  idempotencyKey       String         @unique
+  requestKey           String         @unique
+  serviceSource        String
+  serviceId            String
+  serviceTitleSnapshot String
+  serviceModeSnapshot  String
+  providerId           String
+  provider             User           @relation("BookingV2Provider", fields: [providerId], references: [id], onDelete: Restrict)
+  customerId           String
+  customer             User           @relation("BookingV2Customer", fields: [customerId], references: [id], onDelete: Restrict)
+  conversationId       String
+  conversation         ConversationV2 @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  state                String         @default("PENDING")
+  startsAt             DateTime
+  endsAt               DateTime
+  timeZone             String
+  petCount              Int
+  decidedAt            DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  pets                  ServiceBookingPetV2[]
+
+  @@index([providerId, state, startsAt])
+  @@index([customerId, state, startsAt])
+  @@index([serviceSource, serviceId, state, startsAt, endsAt])
+  @@index([conversationId])
+}
+
+model ServiceBookingPetV2 {
+  id          String           @id @default(cuid())
+  bookingId   String
+  booking     ServiceBookingV2 @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sourcePetId String?
+  sourcePet   Pet?             @relation(fields: [sourcePetId], references: [id], onDelete: SetNull)
+  name        String
+  petType     String
+  quantity    Int
+
+  @@index([bookingId])
+  @@index([sourcePetId])
+}
+
+model NotificationV2 {
+  id           String   @id @default(cuid())
+  eventKey     String   @unique
+  recipientId  String
+  recipient    User     @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId      String?
+  type         String
+  resourceKind String
+  resourceId   String
+  subject      String
+  readAt       DateTime?
+  createdAt    DateTime @default(now())
+  emailOutbox  EmailOutboxV2?
+
+  @@index([recipientId, readAt, createdAt, id])
+  @@index([resourceKind, resourceId])
+}
+
+model EmailOutboxV2 {
+  id             String         @id @default(cuid())
+  notificationId String         @unique
+  notification   NotificationV2 @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  recipientId    String
+  recipient      User           @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  state          String         @default("PENDING")
+  locale         String
+  attempts       Int            @default(0)
+  availableAt    DateTime       @default(now())
+  lockedAt       DateTime?
+  sentAt         DateTime?
+  lastErrorCode  String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([state, availableAt, createdAt])
+  @@index([recipientId, state, createdAt])
+}
+
+model Profile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isOwner         Boolean @default(true)
+  isSitter        Boolean @default(false)
+  bio             String?
+  onboardingStep  String  @default("PROFILE")
+  initialIntent   String?
+  preferredLocale String  @default("ja")
+  timeZone        String  @default("Asia/Tokyo")
+  preferredCurrency String @default("JPY")
+  lineFirstUseCompletedAt DateTime?
+}
+
+model Pet {
+  id              String              @id @default(cuid())
+  ownerId         String
+  owner           User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name            String?
+  type            String
+  customType      String?
+  quantity        Int                 @default(1)
+  breed           String?
+  age             Int?
+  birthDate       DateTime?
+  weightGrams     Int?
+  sex             String?
+  neutered        String?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  archivedAt      DateTime?
+  needSnapshotsV2 NeedPetSnapshotV2[]
+  bookingSnapshotsV2 ServiceBookingPetV2[]
+  photos          Attachment[]
+
+  @@index([ownerId, archivedAt])
+}
+
+model UserLocation {
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label            String?
+  lat              Float
+  lon              Float
+  regionLabel      String?
+  displayPrecision String           @default("MAP_POINT")
+  isDefault        Boolean          @default(false)
+  archivedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  providerDefaults ServiceProfile[]
+
+  @@index([userId, isDefault])
+  @@index([userId, archivedAt])
+}
+
+model ServiceProfile {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  introduction      String?
+  monthsExperience  Int?
+  baseCurrency      String?
+  defaultLocationId String?
+  defaultLocation   UserLocation? @relation(fields: [defaultLocationId], references: [id], onDelete: SetNull)
+  isAccepting       Boolean       @default(true)
+  rating            Float         @default(0)
+  reviewCount       Int           @default(0)
+  servicesV2        ServiceV2[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model NotificationPreference {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailInstant Boolean  @default(false)
+  emailPromptedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Attachment {
+  id             String                @id @default(cuid())
+  userId         String
+  user           User                  @relation("AttachmentOwner", fields: [userId], references: [id], onDelete: Cascade)
+  avatarFor      User?                 @relation("UserAvatar")
+  url            String
+  fileKey        String
+  signature      String
+  status         Int                   @default(0)
+  order          Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  needV2Links    NeedV2Attachment[]
+  needPetSnapshotV2Links NeedPetSnapshotV2Attachment[]
+  serviceV2Links ServiceV2Attachment[]
+  petId          String?
+  pet            Pet?                  @relation(fields: [petId], references: [id], onDelete: Cascade)
+}
+
+model PublishDraftV2 {
+  id                 String     @id
+  ownerId            String
+  owner              User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  kind               String
+  mode               String?
+  schemaVersion      Int
+  revision           Int        @default(0)
+  currentStep        String
+  payloadJson        String
+  status             String     @default("ACTIVE")
+  publishedNeedId    String?    @unique
+  publishedNeed      NeedV2?    @relation("NeedPublishedDraft", fields: [publishedNeedId], references: [id], onDelete: SetNull)
+  editingNeedId      String?
+  editingBaselineJson String?
+  isDirty            Boolean    @default(false)
+  clonedFromNeedId   String?
+  publishedServiceId String?    @unique
+  publishedService   ServiceV2? @relation("ServicePublishedDraft", fields: [publishedServiceId], references: [id], onDelete: SetNull)
+  editingServiceId   String?
+  lastValidatedAt    DateTime?
+  publishedAt        DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([ownerId, status, updatedAt])
+  @@index([kind, mode, status])
+  @@index([ownerId, editingNeedId, status])
+  @@index([ownerId, editingServiceId, status])
+}
+
+model LocationSnapshotV2 {
+  id               String     @id @default(cuid())
+  sourceLocationId String?
+  lat              Float
+  lon              Float
+  label            String?
+  regionLabel      String?
+  displayPrecision String
+  need             NeedV2?
+  service          ServiceV2?
+  createdAt        DateTime   @default(now())
+}
+
+model NeedV2 {
+  id                 String                 @id @default(cuid())
+  idempotencyKey     String                 @unique
+  ownerId            String
+  owner              User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  mode               String
+  state              String                 @default("OPEN")
+  description        String?
+  scheduleNotes      String?
+  startsAt           DateTime
+  endsAt             DateTime
+  timeZone           String
+  customTimePreference String?
+  customExactTime      String?
+  locationSnapshotId String                 @unique
+  locationSnapshot   LocationSnapshotV2     @relation(fields: [locationSnapshotId], references: [id], onDelete: Restrict)
+  budgetKind         String
+  minAmountMinor     BigInt?
+  maxAmountMinor     BigInt?
+  currency           String
+  negotiable         Boolean                @default(false)
+  archivedAt         DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  sourceDraft        PublishDraftV2?        @relation("NeedPublishedDraft")
+  homeVisitDetail    HomeVisitNeedDetailV2?
+  boardingDetail     BoardingNeedDetailV2?
+  pets               NeedPetSnapshotV2[]
+  tasks              NeedTaskV2[]
+  homeVisitTaskOrders HomeVisitTaskOrderV2[]
+  visitWindows       NeedVisitWindowV2[]
+  supplies           NeedSupplyV2[]
+  requirements       NeedRequirementV2[]
+  additionalCosts    NeedAdditionalCostV2[]
+  attachments        NeedV2Attachment[]
+
+  @@index([state, endsAt, createdAt])
+  @@index([mode, state, endsAt])
+  @@index([ownerId, createdAt])
+}
+
+model HomeVisitNeedDetailV2 {
+  id                  String   @id @default(cuid())
+  needId              String   @unique
+  need                NeedV2   @relation(fields: [needId], references: [id], onDelete: Cascade)
+  intervalDays        Int
+  firstServiceDate    DateTime
+  visitsPerServiceDay Int
+}
+
+model BoardingNeedDetailV2 {
+  id                        String @id @default(cuid())
+  needId                    String @unique
+  need                      NeedV2 @relation(fields: [needId], references: [id], onDelete: Cascade)
+  transportMode             String
+  handoffDirection          String
+  maxProviderDistanceMeters Int?
+  supplyNotes               String?
+}
+
+model NeedVisitWindowV2 {
+  id                 String  @id @default(cuid())
+  needId             String
+  need               NeedV2  @relation(fields: [needId], references: [id], onDelete: Cascade)
+  visitNumber        Int
+  kind               String
+  preferredLocalTime String?
+
+  @@unique([needId, visitNumber])
+}
+
+model NeedPetSnapshotV2 {
+  id           String              @id @default(cuid())
+  needId       String
+  need         NeedV2              @relation(fields: [needId], references: [id], onDelete: Cascade)
+  clientPetKey String
+  order        Int                 @default(0)
+  sourcePetId  String?
+  sourcePet    Pet?                @relation(fields: [sourcePetId], references: [id], onDelete: SetNull)
+  quantity     Int                 @default(1)
+  name         String
+  petType      String
+  customPetType String?
+  breed        String?
+  birthDate    DateTime?
+  weightGrams  Int?
+  sex          String
+  neutered     String
+  careNotes    String?
+  taskLinks    NeedTaskPetV2[]
+  supplies     NeedSupplyV2[]
+  requirements NeedRequirementV2[]
+  attachments  NeedPetSnapshotV2Attachment[]
+
+  @@unique([needId, clientPetKey])
+  @@index([needId, order])
+  @@index([sourcePetId])
+}
+
+model NeedPetSnapshotV2Attachment {
+  petSnapshotId String
+  petSnapshot   NeedPetSnapshotV2 @relation(fields: [petSnapshotId], references: [id], onDelete: Cascade)
+  attachmentId  String
+  attachment    Attachment        @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  order         Int               @default(0)
+
+  @@id([petSnapshotId, attachmentId])
+  @@unique([petSnapshotId, order])
+  @@index([attachmentId])
+}
+
+model NeedTaskV2 {
+  id            String          @id @default(cuid())
+  needId        String
+  need          NeedV2          @relation(fields: [needId], references: [id], onDelete: Cascade)
+  clientTaskKey String
+  semanticFingerprint String      @default("")
+  fingerprintVersion Int          @default(1)
+  category      String
+  label         String
+  instructions  String?
+  priority      String?
+  scheduleKind  String?
+  visitNumbers  String
+  // Home-visit ordering lives in HomeVisitTaskOrderV2 per visit. Boarding and
+  // custom tasks retain a single mode-level order here.
+  order         Int?
+  petLinks      NeedTaskPetV2[]
+  visitOrders   HomeVisitTaskOrderV2[]
+
+  @@unique([needId, clientTaskKey])
+  @@unique([needId, semanticFingerprint])
+}
+
+model HomeVisitTaskOrderV2 {
+  id          String     @id @default(cuid())
+  needId      String
+  need        NeedV2     @relation(fields: [needId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        NeedTaskV2 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  visitNumber Int
+  order       Int
+
+  @@unique([needId, taskId, visitNumber])
+  @@index([needId, visitNumber, order])
+  @@index([taskId, visitNumber])
+}
+
+model NeedTaskPetV2 {
+  taskId String
+  task   NeedTaskV2        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  petId  String
+  pet    NeedPetSnapshotV2 @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, petId])
+}
+
+model NeedSupplyV2 {
+  id              String             @id @default(cuid())
+  needId          String
+  need            NeedV2             @relation(fields: [needId], references: [id], onDelete: Cascade)
+  clientSupplyKey String
+  petId           String?
+  pet             NeedPetSnapshotV2? @relation(fields: [petId], references: [id], onDelete: Cascade)
+  category        String
+  label           String
+  providedBy      String
+
+  @@unique([needId, clientSupplyKey])
+}
+
+model NeedRequirementV2 {
+  id     String             @id @default(cuid())
+  needId String
+  need   NeedV2             @relation(fields: [needId], references: [id], onDelete: Cascade)
+  petId  String?
+  pet    NeedPetSnapshotV2? @relation(fields: [petId], references: [id], onDelete: Cascade)
+  kind   String
+  label  String
+}
+
+model NeedAdditionalCostV2 {
+  id          String  @id @default(cuid())
+  needId      String
+  need        NeedV2  @relation(fields: [needId], references: [id], onDelete: Cascade)
+  kind        String
+  mode        String
+  amountMinor BigInt?
+
+  @@unique([needId, kind])
+}
+
+model NeedV2Attachment {
+  needId       String
+  need         NeedV2     @relation(fields: [needId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  purpose      String     @default("GENERAL")
+  order        Int        @default(0)
+
+  @@id([needId, attachmentId])
+}
+
+model ServiceV2 {
+  id                     String                           @id @default(cuid())
+  idempotencyKey         String                           @unique
+  serviceProfileId       String
+  serviceProfile         ServiceProfile                   @relation(fields: [serviceProfileId], references: [id], onDelete: Restrict)
+  mode                   String
+  state                  String                           @default("DRAFT")
+  title                  String
+  description            String?
+  timeZone               String
+  locationSnapshotId     String                           @unique
+  locationSnapshot       LocationSnapshotV2               @relation(fields: [locationSnapshotId], references: [id], onDelete: Restrict)
+  currency               String
+  serviceRadiusMeters    Int?
+  maxPetCapacity         Int?
+  archivedAt             DateTime?
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  sourceDraft            PublishDraftV2?                  @relation("ServicePublishedDraft")
+  boardingDetail         BoardingServiceDetailV2?
+  availabilityRules      ServiceAvailabilityRuleV2[]
+  availabilityExceptions ServiceAvailabilityExceptionV2[]
+  petPolicies            ServicePetPolicyV2[]
+  offerings              ServiceOfferingV2[]
+  priceRules             ServicePriceRuleV2[]
+  discounts              ServiceDiscountRuleV2[]
+  attachments            ServiceV2Attachment[]
+
+  @@index([state, mode, createdAt])
+  @@index([serviceProfileId, state])
+}
+
+model BoardingServiceDetailV2 {
+  id                     String    @id @default(cuid())
+  serviceId              String    @unique
+  service                ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  environmentDescription String
+  residentPetNotes       String?
+  suppliedItems          String
+}
+
+model ServiceAvailabilityRuleV2 {
+  id               String    @id @default(cuid())
+  serviceId        String
+  service          ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  kind             String
+  weekdays         String
+  startsOn         DateTime?
+  endsOn           DateTime?
+  includesHolidays Boolean   @default(false)
+
+  @@index([serviceId, kind])
+}
+
+model ServiceAvailabilityExceptionV2 {
+  id        String    @id @default(cuid())
+  serviceId String
+  service   ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  date      DateTime
+  available Boolean
+  note      String?
+
+  @@unique([serviceId, date])
+}
+
+model ServicePetPolicyV2 {
+  id        String    @id @default(cuid())
+  serviceId String
+  service   ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  petType   String
+  size      String
+  ageBand   String
+  accepted  Boolean
+  notes     String?
+
+  @@unique([serviceId, petType, size, ageBand])
+  @@index([petType, accepted, serviceId])
+}
+
+model ServiceOfferingV2 {
+  id          String    @id @default(cuid())
+  serviceId   String
+  service     ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  category    String
+  label       String
+  description String?
+
+  @@index([category, serviceId])
+}
+
+model ServicePriceRuleV2 {
+  id          String    @id @default(cuid())
+  serviceId   String
+  service     ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  label       String
+  unit        String
+  amountMinor BigInt
+}
+
+model ServiceDiscountRuleV2 {
+  id        String    @id @default(cuid())
+  serviceId String
+  service   ServiceV2 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  label     String
+  kind      String
+  value     Int
+  condition String?
+}
+
+model ServiceV2Attachment {
+  serviceId    String
+  service      ServiceV2  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+  purpose      String     @default("GENERAL")
+  order        Int        @default(0)
+
+  @@id([serviceId, attachmentId])
+  @@index([attachmentId])
+}
+
+model EmailVerificationChallenge {
+  id              String    @id @default(cuid())
+  identifier      String
+  purpose         String
+  codeHash        String
+  expiresAt       DateTime
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(5)
+  windowStartedAt DateTime
+  sendCount       Int       @default(1)
+  lastSentAt      DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([identifier, purpose])
+  @@index([expiresAt])
+}
+
+model AuthRateLimitBucket {
+  keyHash         String   @id
+  action          String
+  count           Int      @default(1)
+  windowStartedAt DateTime
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([action, expiresAt])
+}
+
+model ValidationUser {
+  id              String              @id @default(cuid())
+  email           String              @unique
+  pets            ValidationPet[]
+  defaultLocation ValidationLocation?
+  needs           ValidationNeed[]
+}
+
+model ValidationPet {
+  id        String                  @id @default(cuid())
+  ownerId   String
+  owner     ValidationUser          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  petType   String
+  careNotes String?
+  snapshots ValidationPetSnapshot[]
+
+  @@index([ownerId])
+}
+
+model ValidationLocation {
+  id               String         @id @default(cuid())
+  userId           String         @unique
+  user             ValidationUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lat              Float
+  lon              Float
+  regionLabel      String?
+  displayPrecision String
+  updatedAt        DateTime       @updatedAt
+}
+
+model ValidationNeed {
+  id             String                  @id @default(cuid())
+  ownerId        String
+  owner          ValidationUser          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  idempotencyKey String                  @unique
+  mode           String
+  state          String                  @default("OPEN")
+  title          String
+  startsAt       DateTime
+  endsAt         DateTime
+  timeZone       String
+  lat            Float
+  lon            Float
+  regionLabel    String?
+  budgetKind     String
+  minAmountMinor Int?
+  maxAmountMinor Int?
+  currency       String
+  pets           ValidationPetSnapshot[]
+  tasks          ValidationNeedTask[]
+  createdAt      DateTime                @default(now())
+
+  @@index([state, endsAt, createdAt])
+}
+
+model ValidationPetSnapshot {
+  id        String         @id @default(cuid())
+  needId    String
+  need      ValidationNeed @relation(fields: [needId], references: [id], onDelete: Cascade)
+  petId     String?
+  pet       ValidationPet? @relation(fields: [petId], references: [id], onDelete: SetNull)
+  name      String
+  petType   String
+  careNotes String?
+
+  @@unique([needId, petId])
+}
+
+model ValidationNeedTask {
+  id           String         @id @default(cuid())
+  needId       String
+  need         ValidationNeed @relation(fields: [needId], references: [id], onDelete: Cascade)
+  scheduledAt  DateTime
+  petRef       String
+  category     String
+  instructions String
+
+  @@index([needId, scheduledAt])
+}
+
+model ValidationService {
+  id              String                     @id @default(cuid())
+  mode            String
+  state           String                     @default("ACTIVE")
+  maxPetCapacity  Int?
+  capacityBuckets ValidationCapacityBucket[]
+  bookings        ValidationBooking[]
+}
+
+model ValidationCapacityBucket {
+  id             String            @id @default(cuid())
+  serviceId      String
+  service        ValidationService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  dateKey        String
+  maxPetCapacity Int
+  bookedPetCount Int               @default(0)
+
+  @@unique([serviceId, dateKey])
+}
+
+model ValidationBooking {
+  id             String            @id @default(cuid())
+  serviceId      String
+  service        ValidationService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  idempotencyKey String            @unique
+  state          String            @default("PENDING")
+  startsAt       DateTime
+  endsAt         DateTime
+  dateKey        String
+  petCount       Int
+  createdAt      DateTime          @default(now())
+
+  @@index([serviceId, startsAt, endsAt, state])
+}

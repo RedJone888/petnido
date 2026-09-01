@@ -7,6 +7,7 @@ import { getFileSignature } from "@/domain/attachment/getFileSignature";
 import { uploadSingleImage } from "@/domain/attachment/upload";
 import { ImageItem } from "@/domain/attachment/type";
 import Spinner from "@/components/Spinner";
+import { AppImage } from "@/components/ui/app-image";
 import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -16,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import cn from "@/lib/cn";
+import { useLanguage } from "@/components/providers/language-provider";
 
 function SortableImage({
   img,
@@ -26,6 +28,8 @@ function SortableImage({
   onRemove: (id: string) => void;
   size?: "sm" | "md";
 }) {
+  const { t } = useLanguage();
+  const copy = t.media;
   const {
     attributes,
     listeners,
@@ -51,9 +55,11 @@ function SortableImage({
         size === "sm" ? "w-16 h-16" : "w-24 h-24",
       )}
     >
-      <img
+      <AppImage
         src={img.url}
-        alt="Uploaded"
+        alt={copy.uploadedAlt}
+        loading="lazy"
+        decoding="async"
         className={`h-full w-full object-cover ${img.isUploading ? "opacity-50" : ""}`}
       />
       {img.isUploading && (
@@ -66,8 +72,9 @@ function SortableImage({
           type="button"
           {...attributes}
           {...listeners}
+          aria-label={copy.reorder}
           className="absolute top-1 left-1 cursor-grab active:cursor-grabbing rounded-full bg-white/90 p-1 text-gray-600 shadow-sm opacity-0 transition-opacity group-hover/img:opacity-100 hover:text-purple-600"
-          title="並び替え"
+          title={copy.reorder}
         >
           <GripVertical size={16} />
         </button>
@@ -79,8 +86,9 @@ function SortableImage({
           e.stopPropagation();
           onRemove(img.id);
         }}
+        aria-label={copy.remove}
         className="absolute top-1 right-1 cursor-pointer bg-white/90 text-gray-600 shadow-sm p-1 rounded-full opacity-0 transition-opacity group-hover/img:opacity-100 hover:text-purple-600"
-        title="削除"
+        title={copy.remove}
       >
         <X size={16} />
       </button>
@@ -97,6 +105,7 @@ interface Props {
   addClassName?: string;
   size?: "sm" | "md";
   onRemove: (id: string) => void;
+  localOnly?: boolean;
 }
 
 export default function ImageUploader({
@@ -108,7 +117,10 @@ export default function ImageUploader({
   addClassName = "",
   size = "md",
   onRemove,
+  localOnly = false,
 }: Props) {
+  const { t } = useLanguage();
+  const copy = t.media;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -118,7 +130,7 @@ export default function ImageUploader({
     const currentCount = value.length;
     const remainingSlots = maxCount - currentCount;
     if (remainingSlots <= 0) {
-      toast.info(`最多只能上传 ${maxCount} 张图片`);
+      toast.info(copy.maxCount.replace("{n}", String(maxCount)));
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
@@ -139,7 +151,7 @@ export default function ImageUploader({
       }
     });
     if (duplicateCount > 0) {
-      toast.info(`已自动过滤 ${duplicateCount} 张重复或已存在的图片`);
+      toast.info(copy.duplicate.replace("{n}", String(duplicateCount)));
     }
     if (validFiles.length === 0) {
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -148,9 +160,7 @@ export default function ImageUploader({
     // C. 截断逻辑 (如果有超出最大张数的)
     const filesToUpload = validFiles.slice(0, remainingSlots);
     if (validFiles.length > remainingSlots) {
-      toast.info(
-        `剩余名额只有 ${remainingSlots} 张，已自动截取前 ${remainingSlots} 张。`,
-      );
+      toast.info(copy.remaining.replace("{n}", String(remainingSlots)));
     }
     // 2. 乐观更新
     // A. 立即生成预览图
@@ -167,6 +177,38 @@ export default function ImageUploader({
     // B. 先把这些图加到列表里展示给用户看
     const currentList = [...value, ...newLocalImages];
     onChange(currentList);
+    if (localOnly) {
+      const localImages = await Promise.all(
+        newLocalImages.map(
+          (image) =>
+            new Promise<ImageItem>((resolve) => {
+              if (!image.file) {
+                resolve({ ...image, isUploading: false });
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () =>
+                resolve({
+                  ...image,
+                  url: String(reader.result ?? image.url),
+                  isUploading: false,
+                  file: undefined,
+                });
+              reader.onerror = () =>
+                resolve({ ...image, isUploading: false });
+              reader.readAsDataURL(image.file);
+            }),
+        ),
+      );
+      const replacements = new Map(
+        localImages.map((image) => [image.id, image]),
+      );
+      onChange(
+        currentList.map((image) => replacements.get(image.id) ?? image),
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     // C. 后台静默上传
     // a. 创建一个 Promise 数组，但给每个 Promise 加一个 catch
     const uploadPromises = newLocalImages.map(async (localImg, index) => {
@@ -190,6 +232,7 @@ export default function ImageUploader({
 
     // b. 并发执行所有任务，等所有请求结束，把“临时卡片”替换成“真实数据”
     const results = await Promise.all(uploadPromises);
+    if (results.some((result) => result?.error)) toast.error(copy.uploadFailed);
     const finalImages = currentList.map((img) => {
       const result = results.find((r) => r && r.tempId === img.id);
       if (result && result.realRecord) {
@@ -244,6 +287,7 @@ export default function ImageUploader({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              aria-label={copy.addPhoto}
               className={cn(
                 "shrink-0 rounded-xl",
                 "border-2 border-gray-200 border-dashed cursor-pointer",
@@ -258,7 +302,7 @@ export default function ImageUploader({
               ) : (
                 <div className="flex flex-col items-center justify-center">
                   <Camera size={20} />
-                  <span className="mt-1 text-[10px]">写真を追加</span>
+                  <span className="mt-1 text-[10px]">{copy.addPhoto}</span>
                 </div>
               )}
             </button>

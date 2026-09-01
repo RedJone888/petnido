@@ -1,0 +1,1 @@
+ALTER TYPE "NeedRequirementKindV2" ADD VALUE IF NOT EXISTS 'NOTE';

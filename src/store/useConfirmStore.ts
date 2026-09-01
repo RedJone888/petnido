@@ -5,6 +5,7 @@ interface ConfirmOptions {
   title: string;
   content: ReactNode;
   confirmText?: string;
+  cancelText?: string;
   variant?: "danger" | "primary";
 }
 interface ConfirmStore {
@@ -26,7 +27,6 @@ export const useConfirmStore = create<ConfirmStore>((set, get) => ({
   resolver: null,
   setIsDeleting: (loading) => set({ isDeleting: loading }),
   openConfirm: (options) => {
-    console.log("收到打开指令", options);
     set({ isDeleting: false });
     return new Promise((resolve) => {
       set({

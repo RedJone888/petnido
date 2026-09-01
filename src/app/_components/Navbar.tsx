@@ -1,269 +1,227 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Globe2, HandHelping, Menu, MessageCircleQuestion, NotebookText, X } from "lucide-react";
+import { useState } from "react";
+
 import { useLanguage } from "@/components/providers/language-provider";
+import { localizedPublicPathname } from "@/domain/content/localized-public-route";
+import { useAuthModal } from "@/modules/auth/client/auth-modal-provider";
+import cn from "@/lib/cn";
+import InboxMenu from "./navbar/InboxMenu";
+import UserMenu from "./navbar/UserMenu";
 
 const languageItems = [
-  { lang: "en", label: "English" },
-  { lang: "zh", label: "中文" },
-  { lang: "ja", label: "日本語" },
+  { lang: "en", compactLabel: "EN", label: "English" },
+  { lang: "zh", compactLabel: "中文", label: "简体中文" },
+  { lang: "ja", compactLabel: "日本語", label: "日本語" },
 ] as const;
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React, { useState, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
-
-import NotificationBell from "./navbar/NotificationBell";
-import { Mail, Menu, X } from "lucide-react";
-import UserMenu from "./navbar/UserMenu";
-import cn from "@/lib/cn";
-import Image from "next/image";
-import { CreateNeedButton, LoginButton } from "@/components/shared/buttons";
-import { LogoutButton } from "@/components/shared/buttons";
-import { Button } from "@/components/ui/button";
-const mockNotifications = [
-  {
-    id: "1",
-    title: "新しいメッセージ",
-    body: "大阪市此花区でのペットシッター募集に返信がありました。",
-    createdAt: "5分前",
-    read: false,
-  },
-  {
-    id: "2",
-    title: "ご予約の確認",
-    body: "12月24日のうさぎのお世話予約が承認されました。",
-    createdAt: "昨日",
-    read: true,
-  },
-];
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const avatarRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  //Dropdown: 点击外部 & Esc 关闭
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(target) &&
-        avatarRef.current &&
-        !avatarRef.current.contains(target)
-      ) {
-        setMenuOpen(false);
-      }
-    }
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEsc);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEsc);
-    };
-  }, []);
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+  const { openAuthModal } = useAuthModal();
   const { lang, setLang, t } = useLanguage();
-
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const mobilePanelOpen = mobileOpen || inboxOpen || userMenuOpen;
+  const publicPrefix = `/${lang}`;
   const links = [
-    { href: "/public/needs", label: t.nav.needs },
-    { href: "/public/sitters", label: t.nav.sitters },
-    { href: "#", label: t.nav.community },
-    { href: "#", label: t.nav.help },
+    { href: `${publicPrefix}/needs`, label: t.nav.needs, icon: MessageCircleQuestion },
+    { href: `${publicPrefix}/services`, label: t.nav.services, icon: HandHelping },
+    { href: `${publicPrefix}/knowledge`, label: t.nav.knowledge, icon: NotebookText },
   ];
+  const handleUserMenuOpen: React.Dispatch<React.SetStateAction<boolean>> = (next) => {
+    const open = typeof next === "function" ? next(userMenuOpen) : next;
+    setUserMenuOpen(open);
+    if (open) {
+      setInboxOpen(false);
+      setMobileOpen(false);
+    }
+  };
+  const switchLanguage = (nextLanguage: (typeof languageItems)[number]["lang"]) => {
+    if (nextLanguage === lang) return;
+    setLang(nextLanguage);
+    const nextPathname = localizedPublicPathname(pathname, nextLanguage);
+    if (!nextPathname || nextPathname === pathname) return;
+    window.history.replaceState(
+      null,
+      "",
+      `${nextPathname}${window.location.search}${window.location.hash}`,
+    );
+  };
+
+  const isLinkActive = (currentPath: string, linkHref: string) => {
+    if (currentPath === linkHref) return true;
+    if (
+      currentPath.startsWith(`${linkHref}/create`) ||
+      currentPath.startsWith(`${linkHref}/edit`) ||
+      currentPath.startsWith(`${linkHref}/new`)
+    ) {
+      return false;
+    }
+    return currentPath.startsWith(`${linkHref}/`);
+  };
+
   return (
-    <header className="bg-surface-container-lowest sticky top-0 z-999 shadow-sm border-b border-outline-variant/20">
-      <nav className="flex items-center justify-between w-full h-20 px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto">
-        {/* 1. Logo: 移动端缩小文字 */}
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/favicon.svg"
-            alt="PetNido Logo"
-            width={30}
-            height={30}
-            className="w-10 h-10"
-          />
-          <span className="text-headline-md font-bold text-primary">
-            PetNido
-          </span>
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-[999] border-b border-[#e7e0e8] bg-[#fffdf9]/95 backdrop-blur-lg transition-shadow",
+        mobilePanelOpen && "shadow-[0_4px_16px_-12px_rgba(39,25,50,0.45)] lg:shadow-none",
+      )}
+    >
+      <nav className="flex h-16 w-full items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={t.nav.homeLabel}>
+          <Image src="/favicon.svg" alt="" width={38} height={38} className="h-9 w-9" />
+          <span className="hidden text-2xl font-bold tracking-tight text-[var(--primary)] min-[350px]:inline md:text-[1.7rem]">PetNido</span>
         </Link>
-        {/* 桌面端链接 (仅 md 以上显示) */}
-        <div className="hidden md:flex items-center space-x-8">
+
+        <div className="hidden items-center gap-7 lg:flex">
           {links.map((link) => {
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href + "/") ||
-                  pathname === link.href;
+            const active = isLinkActive(pathname, link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                // prefetch={false}
-                className={`text-label-md ${cn(
-                  "hover:text-primary transition-colors duration-200 ",
-                  isActive
-                    ? "text-primary font-bold border-b-2 border-primary pb-1"
-                    : "text-on-surface-variant font-medium",
-                )}`}
+                className={cn(
+                  "relative py-2 text-sm font-semibold text-[#625a67] transition hover:text-[var(--primary)]",
+                  active && "text-[var(--primary)] after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:rounded-full after:bg-[var(--primary)]",
+                )}
               >
                 {link.label}
               </Link>
             );
           })}
         </div>
-        {/* Desktop Links */}
-        {/* 2. 右侧操作区 */}
-        <div className="flex items-center gap-2 md:gap-8">
-          <div className="flex items-center rounded-full border border-outline-variant/40 p-1">
+
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="hidden items-center rounded-full border border-[#ddd4df] bg-white p-1 md:flex">
             {languageItems.map((item) => (
               <button
                 key={item.lang}
                 type="button"
-                onClick={() => setLang(item.lang)}
+                aria-pressed={lang === item.lang}
+                onClick={() => switchLanguage(item.lang)}
                 className={cn(
-                  "h-7 min-w-7 rounded-full px-2 text-xs font-bold transition",
-                  lang === item.lang
-                    ? "bg-primary text-on-primary"
-                    : "text-on-surface-variant hover:text-primary",
+                  "h-7 rounded-full px-2.5 text-[11px] font-bold transition",
+                  lang === item.lang ? "bg-[#eee7f3] text-[var(--primary)]" : "text-[#817a85] hover:text-[var(--primary)]",
                 )}
               >
-                {item.label}
+                  {item.compactLabel}
               </button>
             ))}
           </div>
-          {/* 已登录状态下的：通知和消息 (移动端也显示，提高优先级) */}
-          {session && (
-            <div className="flex items-center gap-1 md:gap-8">
-              <NotificationBell notifications={mockNotifications} />
 
-              {/* 桌面端头像入口 */}
-              <div className="hidden md:block">
-                <UserMenu
-                  session={session}
-                  avatarRef={avatarRef}
-                  menuRef={menuRef}
-                  menuOpen={menuOpen}
-                  setMenuOpen={setMenuOpen}
-                />
-              </div>
+          {session ? (
+            <>
+              <InboxMenu
+                open={inboxOpen}
+                onOpenChange={(open) => {
+                  setInboxOpen(open);
+                  if (open) {
+                    setUserMenuOpen(false);
+                    setMobileOpen(false);
+                  }
+                }}
+              />
+              <UserMenu
+                session={session}
+                menuOpen={userMenuOpen}
+                setMenuOpen={handleUserMenuOpen}
+              />
+            </>
+          ) : sessionStatus === "unauthenticated" ? (
+            <div>
+              <button type="button" onClick={() => openAuthModal()} className="h-11 rounded-xl px-3 text-sm font-bold text-[var(--primary)] transition hover:bg-[#f2edf4] sm:px-4">
+                {t.nav.signIn}
+              </button>
             </div>
-          )}
+          ) : null}
 
-          {/* 未登录显示登录按钮 */}
-          {
-            !session && (
-              <div className="flex items-center gap-4">
-                {/* <LoginButton /> */}
-                <Button
-                  variant="primary"
-                  size="md"
-                  shape="pill"
-                  className="font-label-md"
-                >
-                  {t.nav.signIn}
-                </Button>
-              </div>
-            )
-            // (
-            //   <Button
-            //     className="ml-4 rounded-full px-6 py-2"
-            //     variant="primary"
-            //     onClick={() => openAuthModal()}
-            //   >
-            //     ログイン
-            //   </Button>
-            // )
-          }
-          {/* 3. 手机端汉堡按钮 */}
           <button
-            className="md:hidden p-2 text-gray-700"
-            onClick={() => setMobileOpen(!mobileOpen)}
+            type="button"
+            aria-label={mobileOpen ? t.nav.closeMenu : t.nav.openMenu}
+            aria-expanded={mobileOpen}
+            onClick={() => {
+              setMobileOpen((open) => !open);
+              setInboxOpen(false);
+              setUserMenuOpen(false);
+            }}
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-xl border text-slate-600 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 lg:hidden",
+              mobileOpen
+                ? "border-[#d7c7e0] bg-[#eee7f3] text-[var(--primary)]"
+                : "border-transparent hover:bg-[#f2edf4] hover:text-[var(--primary)]",
+            )}
           >
-            {mobileOpen ? <X size={28} /> : <Menu size={28} />}
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        {/* 4. 手机端全屏/侧边抽屉 */}
         {mobileOpen && (
           <>
-            {/* 背景遮罩 */}
-            {/* <div
-              className="fixed inset-0 bg-black/30 z-40"
+            <button
+              type="button"
+              aria-label={t.nav.closeMenu}
               onClick={() => setMobileOpen(false)}
-            /> */}
-            {/* 侧边菜单 */}
-            <div className="md:hidden absolute top-full right-0 w-[70%] bg-white z-50 shadow-2xl animate-fadeIn">
-              <div className="flex flex-col h-full">
-                {/* 页面导航 */}
-                <div className="p-6 flex flex-col gap-6">
-                  {links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileOpen(false)}
-                      className="block text-lg font-medium text-gray-800"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-                {/* 两个核心 CTA 按钮 */}
-                <div className="flex flex-col gap-3 pb-6 border-b border-gray-100">
-                  {/* <CreateNeedButton />
-                  <CreateNeedButton /> */}
-                  {/* <CreateService className="w-full" variant="outline" /> */}
-                </div>
-                {/* 底部用户信息区 */}
-                <div className="p-6 border-t border-gray-100 bg-gray-50">
-                  {session ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 mb-4">
-                        {/* 这里显示头像和欢迎词 */}
-                        <Image
-                          src={session.user?.image || "/default-avatar.png"}
-                          width={40}
-                          height={40}
-                          className="rounded-full"
-                          alt="user"
-                        />
-                        <span className="font-semibold text-gray-700">
-                          {session.user?.name} 様
-                        </span>
-                      </div>
-                      <Link href="/dashboard" className="block text-primary">
-                        マイページ
+              className="fixed inset-x-0 bottom-0 top-16 z-[1000] bg-slate-950/20 backdrop-blur-[1px] lg:hidden"
+            />
+            <div className="fixed left-3 right-3 top-[4.5rem] z-[1001] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_48px_-20px_rgba(30,20,48,0.38)] lg:hidden">
+              <div className="w-full p-3 sm:p-4">
+                <div className="grid gap-1">
+                  {links.map((link) => {
+                    const Icon = link.icon;
+                    const active = isLinkActive(pathname, link.href);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "flex min-h-11 items-center gap-3 rounded-xl px-4 text-sm font-semibold text-slate-600 transition hover:bg-[#f2edf4] hover:text-[var(--primary)]",
+                          active && "bg-[#f3edf7] text-[var(--primary)]",
+                        )}
+                      >
+                        <Icon size={18} aria-hidden="true" className="shrink-0 text-[var(--primary)]" />
+                        <span>{link.label}</span>
                       </Link>
-                      <LogoutButton />
-                    </div>
-                  ) : (
-                    <LoginButton />
-                  )}
+                    );
+                  })}
+                </div>
+                <div className="mt-2 border-t border-slate-100 px-4 pt-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <Globe2 size={16} aria-hidden="true" className="text-[var(--primary)]" />
+                    <span>{t.settings.preferences.languageTitle}</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-slate-100/80 p-1" role="group" aria-label={t.settings.preferences.languageTitle}>
+                    {languageItems.map((item) => (
+                      <button
+                        type="button"
+                        key={item.lang}
+                        aria-pressed={lang === item.lang}
+                        onClick={() => switchLanguage(item.lang)}
+                        className={cn(
+                          "min-h-9 rounded-lg px-2 text-xs font-semibold transition",
+                          lang === item.lang
+                            ? "bg-white text-[var(--primary)] shadow-sm ring-1 ring-slate-200"
+                            : "text-slate-500 hover:bg-white/70 hover:text-slate-700",
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </>
         )}
-
-        <style jsx>{`
-          .animate-fadeIn {
-            animation: fadeIn 0.15s ease-out;
-          }
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-6px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}</style>
       </nav>
     </header>
   );

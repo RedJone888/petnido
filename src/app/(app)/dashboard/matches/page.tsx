@@ -1,126 +1,70 @@
-// src/app/dashboard/matches/page.tsx
-
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+
+import { RecommendationPanel } from "@/components/matching/recommendation-panel";
+import { useLanguage } from "@/components/providers/language-provider";
+import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
+import { needDisplayDateRange } from "@/domain/marketplace/need-date-range";
+import { formatPublishedAt } from "@/domain/date/presentation";
+import { trpc } from "@/utils/trpc";
 
 export default function DashboardMatches() {
-  // ---- MOCK MATCH / BOOKING DATA ----
-  const matches = [
-    {
-      id: "m1",
-      needTitle: "帮我照顾兔子两天",
-      sitterName: "兔兔姐姐",
-      role: "OWNER", // OWNER 视角 / SITTER 视角
-      startDate: "2025-02-01",
-      endDate: "2025-02-03",
-      price: 3000,
-      status: "PENDING", // PENDING | CONFIRMED | COMPLETED | CANCELLED
-    },
-    {
-      id: "m2",
-      needTitle: "猫咪日托（Kyoto）",
-      sitterName: "宠物博士",
-      role: "OWNER",
-      startDate: "2025-01-15",
-      endDate: "2025-01-15",
-      price: 2000,
-      status: "CONFIRMED",
-    },
-    {
-      id: "m3",
-      needTitle: "狗狗散步 1 小时",
-      sitterName: "Nara 宅家达人",
-      role: "SITTER",
-      startDate: "2025-01-05",
-      endDate: "2025-01-05",
-      price: 1000,
-      status: "COMPLETED",
-    },
-    {
-      id: "m4",
-      needTitle: "鸟类短期寄养",
-      sitterName: "鸟友专员",
-      role: "SITTER",
-      startDate: "2025-01-10",
-      endDate: "2025-01-12",
-      price: 2500,
-      status: "CANCELLED",
-    },
-  ];
+  const { lang, t } = useLanguage();
+  const copy = t.core.matching;
+  const searchParams = useSearchParams();
+  const needId = searchParams.get("needId");
+  const serviceId = searchParams.get("serviceId");
+  const needs = trpc.needV2.listMine.useQuery(undefined, { enabled: !needId && !serviceId });
+  const services = trpc.serviceV2.listMine.useQuery(undefined, { enabled: !needId && !serviceId });
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6">匹配 / 订单中心</h1>
+    <main className="w-full h-full flex flex-col overflow-hidden">
+      <div className="mx-auto max-w-5xl w-full h-full flex flex-col overflow-hidden">
+        {/* Fixed Top Header */}
+        <header className="shrink-0 pb-3">
+          <p className="text-xs font-black uppercase tracking-widest text-primary">{copy.eyebrow}</p>
+          <h1 className="mt-1 text-2xl font-black text-slate-950">{copy.title}</h1>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{copy.intro}</p>
+        </header>
 
-      <div className="space-y-6">
-        {matches.map((match) => (
-          // <MatchCard key={match.id} data={match} />
-          <>test</>
-        ))}
+        {/* Scrollable Content Body */}
+        <div className="flex-1 overflow-y-auto pr-1 pb-8">
+          {needId ? <div className="mt-4"><RecommendationPanel kind="NEED" id={needId} /></div> : null}
+          {serviceId ? <div className="mt-4"><RecommendationPanel kind="SERVICE" id={serviceId} /></div> : null}
+
+          {!needId && !serviceId ? (
+            <div className="mt-4 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="text-lg font-black">{copy.requestsSection}</h2>
+            <div className="mt-4 space-y-3">
+              {needs.data?.filter((need) => need.state === "OPEN" && !need.expired).map((need) => {
+                const displayEndDate = needDisplayDateRange({ ...need, source: "V2" }).endDate;
+                return (
+                  <Link key={need.id} href={`/dashboard/matches?needId=${encodeURIComponent(need.id)}`} className="block rounded-xl border border-slate-200 p-4 hover:border-primary">
+                    <p className="font-black text-slate-900">{buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, tasks: (need as any).tasks, lang })}</p><p className="mt-1 text-xs text-slate-500">{t.core.modes[need.mode as keyof typeof t.core.modes] ?? need.mode} · {copy.requestDeadline} {formatPublishedAt(displayEndDate, lang)}</p>
+                  </Link>
+                );
+              })}
+              {!needs.isLoading && !needs.data?.some((need) => need.state === "OPEN" && !need.expired) ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">{copy.noRequests}<Link href="/needs/create" className="ml-1 font-black text-primary underline">{copy.postRequest}</Link></p> : null}
+            </div>
+          </section>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="text-lg font-black">{copy.servicesSection}</h2>
+            <div className="mt-4 space-y-3">
+              {services.data?.filter((service) => service.state === "ACTIVE").map((service) => (
+                <Link key={service.id} href={`/dashboard/matches?serviceId=${encodeURIComponent(service.id)}`} className="block rounded-xl border border-slate-200 p-4 hover:border-primary">
+                  <p className="font-black text-slate-900">{service.title}</p><p className="mt-1 text-xs text-slate-500">{t.core.modes[service.mode as keyof typeof t.core.modes] ?? service.mode} · {service.currency}</p>
+                </Link>
+              ))}
+              {!services.isLoading && !services.data?.some((service) => service.state === "ACTIVE") ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">{copy.noServices}<Link href="/dashboard/serviceprofile/services/new" className="ml-1 font-black text-primary underline">{copy.postService}</Link></p> : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
+        </div>
       </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------
-   Match Card Component
------------------------------------------- */
-
-type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
-type roleStatus = "OWNER" | "SITTER";
-interface MatchData {
-  id: string;
-  needTitle: string;
-  sitterName: string;
-  role: roleStatus;
-  startDate: string;
-  endDate: string;
-  price: number;
-  status: BookingStatus;
-}
-
-function MatchCard({ data }: { data: MatchData }) {
-  const statusColor: Record<BookingStatus, string> = {
-    PENDING: "bg-yellow-100 text-yellow-700",
-    CONFIRMED: "bg-blue-100 text-blue-700",
-    COMPLETED: "bg-green-100 text-green-700",
-    CANCELLED: "bg-red-100 text-red-700",
-  };
-
-  const statusText: Record<BookingStatus, string> = {
-    PENDING: "待确认",
-    CONFIRMED: "已确认",
-    COMPLETED: "已完成",
-    CANCELLED: "已取消",
-  };
-
-  return (
-    <div className="border rounded-lg p-5 shadow-sm hover:shadow transition">
-      <div className="flex justify-between">
-        <h3 className="text-xl font-semibold">{data.needTitle}</h3>
-
-        <span
-          className={`px-3 py-1 rounded-full text-sm ${
-            statusColor[data.status]
-          }`}
-        >
-          {statusText[data.status]}
-        </span>
-      </div>
-
-      <p className="text-gray-600 text-sm mt-1">💬 对方：{data.sitterName}</p>
-      <p className="text-gray-500 text-sm">
-        👤 {data.role === "OWNER" ? "我是主人" : "我是照顾者"}
-      </p>
-
-      <p className="mt-2 text-gray-700">
-        📅 {data.startDate} → {data.endDate}
-      </p>
-
-      <p className="mt-2 text-purple-600 font-semibold">
-        💴 价格：¥{data.price}
-      </p>
-    </div>
+    </main>
   );
 }

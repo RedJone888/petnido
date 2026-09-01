@@ -34,7 +34,7 @@ export const TagButton = ({
         active && `border-transparent shadow-sm ${tag.color}`,
         disabled && "opacity-50 cursor-not-allowed grayscale",
         // 必填项的特殊标识（如果是寄养模式下的健康标签）
-        required && !active && "border-red-100 bg-red-50/30",
+        required && !active && "border-danger-border bg-danger-bg/30",
       )}
     >
       <div className="flex items-center gap-1.5">
@@ -55,7 +55,7 @@ export const TagButton = ({
         )} */}
         {tag.label}
         {disabled && active && " (包含済)"}
-        {required && !active && <span className="text-red-400">*</span>}
+        {required && !active && <span className="text-danger-text">*</span>}
       </div>
     </button>
   );

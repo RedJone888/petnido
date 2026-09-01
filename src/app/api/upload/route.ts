@@ -16,9 +16,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import { auth } from "@/lib/auth";
+import { auth } from "@/modules/auth";
 import prisma from "@/lib/prisma";
-import { ServicePhotoKind } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +47,6 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const type = (formData.get("type") as string) || "others";
     const signature = formData.get("signature") as string;
-    const serviceKind = formData.get("serviceKind") as ServicePhotoKind;
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
@@ -69,7 +67,6 @@ export async function POST(request: NextRequest) {
         url,
         fileKey,
         signature,
-        serviceKind,
         status: 0,
         order: 0,
       },

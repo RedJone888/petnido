@@ -9,21 +9,24 @@ export const locationRouter = router({
       z.object({
         q: z.string().min(1),
         limit: z.number().default(5),
-        countrycodes: z.string(),
+        countrycodes: z.string().optional(),
+        language: z.enum(["ja", "en", "zh"]).optional(),
       }),
     )
     .query(async ({ input }) => {
-      const key = `jp:${input.q}:${input.limit}`;
+      const language = input.language ?? "ja";
+      const key = `${input.countrycodes ?? "global"}:${language}:${input.q}:${input.limit}`;
       const cached = getCached(key);
-      console.log("cached", cached);
       if (cached) {
         return cached;
       }
+      const countryParam = input.countrycodes ? `&countrycodes=${encodeURIComponent(input.countrycodes)}` : "";
       const url =
         `https://nominatim.openstreetmap.org/search?` +
         `q=${encodeURIComponent(input.q)}` +
-        `&countrycodes=${input.countrycodes}` +
+        countryParam +
         `&format=json` +
+        `&accept-language=${language}` +
         `&addressdetails=1` +
         // `&featuretype=city` +
         // `&extratags=1` +
@@ -35,7 +38,7 @@ export const locationRouter = router({
       });
 
       const data = await res.json();
-      const result = nominatimToUx(data, input.q);
+      const result = nominatimToUx(data, input.q, language);
       setCached(key, result, 60_000);
       return result;
     }),
@@ -44,15 +47,18 @@ export const locationRouter = router({
       z.object({
         lat: z.number(),
         lon: z.number(),
+        language: z.enum(["ja", "en", "zh"]).optional(),
       }),
     )
     .query(async ({ input }) => {
       try {
+        const language = input.language ?? "ja";
         const url =
           `https://nominatim.openstreetmap.org/reverse?` +
           `lat=${input.lat}` +
           `&lon=${input.lon}` +
           `&format=json` +
+          `&accept-language=${language}` +
           `&addressdetails=1`;
         const res = await fetch(url, {
           headers: {
@@ -65,7 +71,7 @@ export const locationRouter = router({
         }
         data = await res.json();
         if (!data) return [];
-        return nominatimToUx([data], "");
+        return nominatimToUx([data], "", language);
       } catch (e) {
         throw new Error("reverse failed");
       }

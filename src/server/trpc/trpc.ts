@@ -2,12 +2,16 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { ZodError } from "zod";
 import type { TRPCContext } from "@/server/trpc/context";
+import { formatAppError } from "@/server/trpc/app-error";
 const t = initTRPC.context<TRPCContext>().create({
-  errorFormatter({ shape, error }) {
+  errorFormatter({ shape, error, ctx }) {
+    const appError = formatAppError(error, ctx?.requestId ?? "unknown");
     return {
       ...shape,
+      message: appError.code,
       data: {
         ...shape.data,
+        appError,
         zodError:
           error.cause instanceof ZodError ? error.cause.flatten() : null,
       },

@@ -1,5 +1,32 @@
 node_modules
 .next
+.next-e2e
+private/
+.codex-*/
+.codex-qa/
+.codex-audit/
 .env*
+!.env.example
 *storybook.log
 storybook-static
+coverage/
+playwright-report/
+test-results/
+.generated/
+prisma/validation/*.db*
+
+# Local OS and compiler artifacts
+.DS_Store
+*.tsbuildinfo
+
+# Local QA, audit, document-rendering, and font caches
+.audit/
+.codex-audit/
+.codex-qa/
+.docx-assets/
+
+# Generated prototype build output
+home-visits-prototype/dist/
+
+# Microsoft Office temporary lock files
+~$*.docx

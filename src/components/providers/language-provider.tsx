@@ -1,8 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import type { Lang } from "@/domain/lang/types";
 import { messages } from "@/i18n/messages";
+import { trpc } from "@/utils/trpc";
 
 const LanguageContext = createContext<{
   lang: Lang;
@@ -12,18 +14,41 @@ const LanguageContext = createContext<{
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
+  const { status } = useSession();
+  const { mutate: savePreferredLocale } =
+    trpc.profile.setPreferredLocale.useMutation();
 
   useEffect(() => {
-    const saved = localStorage.getItem("lang") as Lang | null;
+    let saved: Lang | null = null;
+    try {
+      saved = localStorage.getItem("lang") as Lang | null;
+    } catch {
+      // Some embedded browsers restrict storage; the cookie below is the fallback.
+    }
+    if (saved !== "en" && saved !== "zh" && saved !== "ja") {
+      saved = (document.cookie.match(/(?:^|; )petnido_lang=(en|zh|ja)(?:;|$)/)?.[1] as Lang | undefined) ?? null;
+    }
     if (saved === "en" || saved === "zh" || saved === "ja") {
       setLangState(saved);
     }
   }, []);
 
-  const setLang = (next: Lang) => {
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  const setLang = useCallback((next: Lang) => {
     setLangState(next);
-    localStorage.setItem("lang", next);
-  };
+    try {
+      localStorage.setItem("lang", next);
+    } catch {
+      // Keep the in-memory choice and persist it with the cookie fallback.
+    }
+    document.cookie = `petnido_lang=${next}; path=/; max-age=31536000; samesite=lax`;
+    if (status === "authenticated") {
+      savePreferredLocale({ preferredLocale: next });
+    }
+  }, [savePreferredLocale, status]);
 
   const value = useMemo(
     () => ({
@@ -31,7 +56,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       setLang,
       t: messages[lang],
     }),
-    [lang],
+    [lang, setLang],
   );
 
   return (
@@ -45,4 +70,20 @@ export function useLanguage() {
   const ctx = useContext(LanguageContext);
   if (!ctx) throw new Error("useLanguage must be used inside LanguageProvider");
   return ctx;
+}
+
+export function usePageLanguage(initialLanguage?: Lang) {
+  const context = useLanguage();
+  const initialApplied = useRef<Lang | undefined>(undefined);
+
+  useEffect(() => {
+    if (initialLanguage && initialApplied.current !== initialLanguage) {
+      initialApplied.current = initialLanguage;
+      if (context.lang !== initialLanguage) {
+        context.setLang(initialLanguage);
+      }
+    }
+  }, [context, initialLanguage]);
+
+  return context.lang;
 }

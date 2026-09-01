@@ -4,9 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc } from "@/utils/trpc";
 import { httpBatchLink } from "@trpc/client";
 import { useState } from "react";
-import { AuthModalProvider } from "@/components/providers/AuthModalProvider";
+import { AuthModalProvider } from "@/modules/auth/client/auth-modal-provider";
 import { LanguageProvider } from "./language-provider";
-export function Providers({ children }: { children: React.ReactNode }) {
+import type { Session } from "next-auth";
+
+export function Providers({ children, initialSession }: { children: React.ReactNode; initialSession: Session | null }) {
   const [queryClient] = useState(() => new QueryClient());
   const [trpcClient] = useState(() =>
     trpc.createClient({
@@ -18,12 +20,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }),
   );
   return (
-    <SessionProvider>
+    <SessionProvider session={initialSession}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <AuthModalProvider>
-            <LanguageProvider>{children}</LanguageProvider>
-          </AuthModalProvider>
+          <LanguageProvider>
+            <AuthModalProvider>{children}</AuthModalProvider>
+          </LanguageProvider>
         </QueryClientProvider>
       </trpc.Provider>
     </SessionProvider>

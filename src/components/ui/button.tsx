@@ -3,18 +3,16 @@ import { forwardRef } from "react";
 import cn from "@/lib/cn";
 
 const variantStyles = {
-  primary: cn(
-    "text-on-primary bg-primary",
-    "shadow-lg hover:shadow-xl",
-    "hover:scale-105 active:scale-95",
-  ),
+  primary: "button-primary-raised",
   secondary: cn(
     "bg-on-primary text-primary hover:bg-primary/5",
-    "border-2 border-primary/10 shadow-lg ",
-    "shadow-sm",
+    "border-2 border-primary/10 shadow-lg",
   ),
-  solid: cn("bg-primary hover:bg-brand-700 text-on-primary", "shadow-xl"),
-  danger: cn("bg-danger-text hover:bg-red-600 text-on-primary", "shadow-xl"),
+  solid: "button-primary-raised",
+  danger: cn(
+    "bg-danger-action text-on-primary hover:bg-danger-hover",
+    "shadow-xl",
+  ),
   outline: cn(
     "border border-primary ",
     "bg-on-primary hover:bg-primary",
@@ -26,9 +24,9 @@ const variantStyles = {
     "text-slate-400 hover:text-primary",
   ),
   outlineDanger: cn(
-    "border border-slate-200 hover:border-red-500",
+    "border border-slate-200 hover:border-danger-border",
     "bg-on-primary",
-    "text-slate-400 hover:text-red-500",
+    "text-slate-400 hover:text-danger-text",
   ),
   ghost: cn(
     "border border-transparent bg-transparent",
@@ -42,7 +40,7 @@ const variantStyles = {
   outline1:
     "border border-slate-200 hover:border-primary bg-white text-slate-400 hover:text-primary",
   outline2:
-    "border border-slate-200 hover:border-red-500 bg-white text-slate-400 hover:text-red-500",
+    "border border-slate-200 hover:border-danger-border bg-white text-slate-400 hover:text-danger-text",
   ghost1:
     "border border-transparent bg-transparent text-primary shadow-none gap-2 hover:gap-3",
   // Backward-compatible aliases. Prefer primary/secondary/outline/ghost/danger.

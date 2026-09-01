@@ -1,18 +1,61 @@
 import NavLinks from "./_components/nav-links";
-export default function DashboardLayout({
+import { redirect } from "next/navigation";
+import { auth } from "@/modules/auth";
+import prisma from "@/lib/prisma";
+import { cookies } from "next/headers";
+import {
+  hasValidProfileValidationToken,
+  validationProfileCookie,
+  validationProfileUserId,
+} from "@/server/validation/profile-session";
+import { getValidationPrisma } from "@/lib/validation-prisma";
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const validationRequest = new Request("http://localhost", {
+    headers: {
+      cookie: `${validationProfileCookie}=${cookies().get(validationProfileCookie)?.value ?? ""}`,
+    },
+  });
+  const validationSession = hasValidProfileValidationToken(validationRequest);
+  const session = validationSession
+    ? {
+        user: {
+          id: validationProfileUserId,
+          email: "profile-e2e@petnido.invalid",
+          name: "Profile E2E",
+        },
+      }
+    : await auth();
+  if (!session?.user?.id) {
+    redirect("/auth/sign-in?returnTo=%2Fdashboard");
+  }
+  const database = validationSession
+    ? (getValidationPrisma() as unknown as typeof prisma)
+    : prisma;
+  const profile = await database.profile.findUnique({
+    where: { userId: session.user.id },
+    select: { onboardingStep: true },
+  });
+  if (!profile || profile.onboardingStep !== "COMPLETE") {
+    redirect("/auth/continue?returnTo=%2Fdashboard");
+  }
   return (
-    <div className="bg-[#f6f7fb] h-full">
-      <div className="max-w-7xl mx-auto h-full overflow-hidden py-2 flex">
-        <NavLinks />
-        <main className="flex-1 px-4">
-          <div className="overflow-hidden h-full bg-white rounded-xl shadow-[0px_0px_20px_rgba(15,23,42,0.08)]">
-            {children}
-          </div>
-        </main>
+    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-[#f6f7fb]">
+      <div
+        data-dashboard-shell
+        className="site-shell relative flex h-full flex-col gap-0 overflow-hidden py-3 [--dashboard-title-height:6rem] md:flex-row md:gap-5 md:py-4 lg:gap-6"
+      >
+        <NavLinks user={session.user} />
+        <div
+          data-dashboard-panel
+          className="min-w-0 flex-1 h-full flex flex-col overflow-hidden"
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

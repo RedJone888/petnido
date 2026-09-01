@@ -3,14 +3,17 @@ import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuthModal } from "@/components/providers/AuthModalProvider";
+import { useAuthModal } from "@/modules/auth/client/auth-modal-provider";
 import { useRouter } from "next/navigation";
 import { Session } from "next-auth";
+import { useLanguage } from "@/components/providers/language-provider";
+import { useAuthMessages } from "@/modules/auth/i18n/use-auth-messages";
 interface CreateButtonProps {
   initialSession: Session | null;
 }
 
 export function LoginButton() {
+  const copy = useAuthMessages().modal;
   const { openAuthModal } = useAuthModal();
   return (
     <Button
@@ -18,11 +21,12 @@ export function LoginButton() {
       variant="primary"
       onClick={() => openAuthModal()}
     >
-      ログイン
+      {copy.login}
     </Button>
   );
 }
 export function LogoutButton() {
+  const copy = useAuthMessages().modal;
   const pathname = usePathname();
 
   const handleLogout = async () => {
@@ -38,37 +42,30 @@ export function LogoutButton() {
   return (
     <Button
       variant="ghost"
-      className="rounded-xl px-4 py-2 text-md gap-4"
+      className="min-h-9 self-center rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 gap-2 hover:bg-slate-100 hover:text-slate-700"
       onClick={handleLogout}
     >
-      <LogOut size={18} className="text-primary" />
-      ログアウト
+      <LogOut size={15} aria-hidden="true" />
+      {copy.signOut}
     </Button>
   );
 }
 export function CreateNeedButton({ initialSession }: CreateButtonProps) {
-  const { openAuthModal } = useAuthModal();
+  const { t } = useLanguage();
   const router = useRouter();
-  const handleCreateNeed = () => {
-    if (!initialSession) {
-      // 没登录，明确指定登录后去发布页
-      openAuthModal("/dashboard/needs/new");
-      return;
-    }
-    // 已登录，直接跳转
-    router.push("/dashboard/needs/new");
-  };
+  const handleCreateNeed = () => router.push("/needs/create");
   return (
     <Button
       variant="primary"
       className="px-8 py-3 rounded-full w-[85%] md:w-auto text-lg"
       onClick={handleCreateNeed}
     >
-      お世話を依頼する
+      {t.home.postNeed}
     </Button>
   );
 }
 export function CreateServiceButton({ initialSession }: CreateButtonProps) {
+  const { t } = useLanguage();
   const { openAuthModal } = useAuthModal();
   const router = useRouter();
   const handleCreateService = () => {
@@ -86,7 +83,7 @@ export function CreateServiceButton({ initialSession }: CreateButtonProps) {
       className="px-8 py-3 rounded-full w-[85%] md:w-auto text-lg"
       onClick={handleCreateService}
     >
-      シッターに登録する
+      {t.home.becomeSitter}
     </Button>
   );
 }

@@ -1,7 +1,7 @@
 import React from "react";
 
 interface Props {
-  className?: string; // 允许传入额外的 margin 或颜色 (text-red-500)
+  className?: string; // 允许传入额外的 margin 或颜色 (text-danger-text)
   size?: string; // 大小，例如 "w-6 h-6"
   stroke?: string; // 粗细，例如 "stroke-2" 或 "stroke-[3px]"
 }

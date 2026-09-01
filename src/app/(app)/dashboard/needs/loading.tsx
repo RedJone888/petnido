@@ -1,5 +1,5 @@
-import LoadingPage from "@/components/shared/loading-page";
+import { DashboardNeedsSkeleton } from "./_components/dashboard-need-card";
 
 export default function Loading() {
-  return <LoadingPage title="読み込み中..." />;
+  return <DashboardNeedsSkeleton />;
 }
