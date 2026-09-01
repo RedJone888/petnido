@@ -20,7 +20,7 @@
     "test:db:seed": "node prisma/seed-test.mjs",
     "prisma:validate": "node scripts/prisma-validate.mjs",
     "prisma:validation:generate": "node scripts/prisma-validation-generate.mjs",
-    "quality": "npm run prisma:validation:generate && npm run lint && npm run typecheck && npm run test && npm run test:integration && npm run test:i18n && npm run test:location-privacy && npm run prisma:validate",
+    "quality": "npm run prisma:generate && npm run prisma:validation:generate && npm run lint && npm run typecheck && npm run test && npm run test:integration && npm run test:i18n && npm run test:location-privacy && npm run prisma:validate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "node scripts/prisma-migrate-deploy.mjs",
