@@ -34,38 +34,7 @@ export type PublicServiceV2Source = Prisma.ServiceV2GetPayload<{
   include: typeof publicServiceV2Include;
 }>;
 
-export const publicLegacyServiceSelect = {
-  id: true,
-  serviceType: true,
-  customType: true,
-  description: true,
-  isActive: true,
-  archivedAt: true,
-  areaLat: true,
-  areaLon: true,
-  currency: true,
-  availabilityRangeType: true,
-  availabilityWeekPattern: true,
-  includeHolidays: true,
-  availableFrom: true,
-  availableTo: true,
-  priceUnit: true,
-  petTypes: true,
-  createdAt: true,
-  serviceProfile: { select: providerSelect },
-  priceRules: { orderBy: { id: "asc" as const } },
-  photos: {
-    where: { status: 1 },
-    orderBy: { order: "asc" as const },
-    select: { id: true, url: true, serviceKind: true },
-  },
-} as const;
-
-export type PublicLegacyServiceSource = Prisma.ServiceGetPayload<{
-  select: typeof publicLegacyServiceSelect;
-}>;
-
-function providerDto(profile: PublicServiceV2Source["serviceProfile"] | PublicLegacyServiceSource["serviceProfile"]) {
+function providerDto(profile: PublicServiceV2Source["serviceProfile"]) {
   return {
     publicId: profile.user.id,
     nickname: profile.user.name,
@@ -76,10 +45,6 @@ function providerDto(profile: PublicServiceV2Source["serviceProfile"] | PublicLe
     rating: profile.rating,
     reviewCount: profile.reviewCount,
   };
-}
-
-function legacyAmountMinor(amount: number, currency: string) {
-  return Math.round(amount * (currency === "JPY" || currency === "KRW" ? 1 : 100));
 }
 
 function dateOnly(value: Date | null) {
@@ -101,6 +66,7 @@ export function toPublicServiceV2MarketplaceDto(
     serviceRadiusMeters: service.serviceRadiusMeters,
     maxPetCapacity: service.mode === "BOARDING" ? service.maxPetCapacity : null,
     location: {
+      label: service.locationSnapshot.label,
       regionLabel: service.locationSnapshot.regionLabel,
       displayPrecision: service.locationSnapshot.displayPrecision,
       distanceMeters,
@@ -158,63 +124,7 @@ export function toPublicServiceV2MarketplaceDto(
   };
 }
 
-export function toPublicLegacyServiceDto(
-  service: PublicLegacyServiceSource,
-  distanceMeters: number | null,
-) {
-  const mode = service.serviceType === "VISIT" ? "HOME_VISIT" : service.serviceType === "FOSTER" ? "BOARDING" : "CUSTOM";
-  const weekdays = service.availabilityWeekPattern === "WEEKDAYS_ONLY"
-    ? [1, 2, 3, 4, 5]
-    : service.availabilityWeekPattern === "WEEKENDS_ONLY"
-      ? [6, 7]
-      : [1, 2, 3, 4, 5, 6, 7];
-  return {
-    publicId: `legacy:${service.id}`,
-    source: "LEGACY" as const,
-    mode,
-    title: mode === "CUSTOM" && service.customType ? service.customType : mode === "HOME_VISIT" ? "Home visit care" : "Boarding care",
-    description: service.description,
-    timeZone: null,
-    currency: service.currency,
-    serviceRadiusMeters: null,
-    maxPetCapacity: null,
-    location: { regionLabel: null, displayPrecision: "MAP_POINT", distanceMeters },
-    availabilityRules: [{
-      kind: service.availabilityRangeType === "DATE_RANGE" ? "DATE_RANGE" as const : "WEEKLY" as const,
-      weekdays: service.availabilityRangeType === "DATE_RANGE" ? [] : weekdays,
-      startsOn: dateOnly(service.availableFrom),
-      endsOn: dateOnly(service.availableTo),
-      includesHolidays: service.includeHolidays,
-    }],
-    availabilityExceptions: [],
-    petPolicies: service.petTypes.map((petType) => ({
-      petType,
-      size: "ANY",
-      ageBand: "ANY",
-      accepted: true,
-      notes: null,
-    })),
-    offerings: service.description ? [{ category: "LEGACY", label: service.customType || "Care service", description: service.description }] : [],
-    priceRules: service.priceRules.map((rule) => ({
-      label: rule.groupLabel,
-      unit: service.priceUnit,
-      amountMinor: legacyAmountMinor(rule.price, service.currency),
-    })),
-    discounts: [],
-    boardingEnvironment: null,
-    attachments: service.photos.map((photo, order) => ({
-      id: photo.id,
-      url: photo.url,
-      purpose: photo.serviceKind === "HOME" ? "ENVIRONMENT" : "EXPERIENCE",
-      order,
-    })),
-    provider: providerDto(service.serviceProfile),
-    confirmedBookings: { status: "AVAILABLE_BY_DATE" as const, count: null, date: null },
-    createdAt: service.createdAt,
-  };
-}
-
-export type PublicServiceDto = ReturnType<typeof toPublicServiceV2MarketplaceDto> | ReturnType<typeof toPublicLegacyServiceDto>;
+export type PublicServiceDto = ReturnType<typeof toPublicServiceV2MarketplaceDto>;
 
 export function serviceAvailableOn(
   service: Pick<PublicServiceDto, "availabilityRules" | "availabilityExceptions">,

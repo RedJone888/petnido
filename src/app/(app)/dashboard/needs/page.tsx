@@ -1,7 +1,6 @@
 import { auth } from "@/modules/auth";
 import { NeedV2List } from "./_components/NeedV2List";
 import { NeedDashboardSignIn, NeedDraftPanel } from "./_components/NeedDraftList";
-import { publishingV2WriteEnabled } from "@/server/feature-flags/publishing-v2";
 
 export default async function NeedsPage({
   searchParams,
@@ -22,7 +21,7 @@ export default async function NeedsPage({
       ) : (
         <NeedV2List
           user={session.user}
-          mutable={publishingV2WriteEnabled()}
+          mutable
         />
       )}
     </main>

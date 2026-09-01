@@ -61,7 +61,11 @@ export function formatJapaneseAddress(r: any, lang: Lang = "ja") {
       normalized.city;
 
   const sub = subHierarchy.filter((part) => !main.includes(part!)).join(" ");
-  const publicRegionParts = [normalized.city, normalized.district]
+  const publicRegionParts = [
+    normalized.admin1,
+    normalized.city,
+    normalized.district,
+  ]
     .filter((part, index, values): part is string => Boolean(part) && values.indexOf(part) === index);
   const publicRegion = publicRegionParts
     .join(lang === "en" ? ", " : "")

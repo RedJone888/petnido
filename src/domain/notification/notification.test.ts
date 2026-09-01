@@ -10,7 +10,7 @@ describe("notification presentation and safe links", () => {
   });
 
   it("only creates fixed dashboard destinations and escapes identifiers", () => {
-    expect(notificationResourceHref("CONVERSATION", "conversation&admin=1")).toBe("/dashboard/notifications?view=conversations&conversation=conversation%26admin%3D1");
+    expect(notificationResourceHref("CONVERSATION", "conversation&admin=1")).toBe("/dashboard/messages?conversation=conversation%26admin%3D1");
     expect(notificationResourceHref("APPLICATION", "application-1")).toBe("/dashboard/applications?application=application-1");
     expect(notificationResourceHref("BOOKING", "booking-1")).toBe("/dashboard/bookings?booking=booking-1");
   });

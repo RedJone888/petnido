@@ -16,7 +16,7 @@ type NeedRecommendationItem = {
   match: RecommendationMatch;
   need: {
     publicId: string;
-    source: "V2" | "LEGACY";
+    source: "V2";
     mode: string;
     title: string;
     pets?: Array<{ name?: string | null; petType: string; customPetType?: string | null }>;
@@ -79,7 +79,7 @@ export function RecommendationPanel(props: RecommendationPanelProps) {
             : ((serviceResult.data?.items ?? []) as NeedRecommendationItem[]).map(({ match, need }) => (
                 <article key={need.publicId} className="rounded-xl border border-white bg-white p-3 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <div><p className="text-xs font-black uppercase text-primary">{t.core.modes[need.mode as keyof typeof t.core.modes] ?? need.mode}</p><h3 className="mt-1 text-sm font-black text-slate-900">{need.source === "V2" ? buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, lang }) : need.title}</h3></div>
+                    <div><p className="text-xs font-black uppercase text-primary">{t.core.modes[need.mode as keyof typeof t.core.modes] ?? need.mode}</p><h3 className="mt-1 text-sm font-black text-slate-900">{need.source === "V2" ? buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, tasks: (need as any).tasks, lang }) : need.title}</h3></div>
                     <span className="shrink-0 text-xs font-bold text-slate-500"><Distance meters={match.distanceMeters} /></span>
                   </div>
                   <p className="mt-2 text-xs leading-5 text-slate-600">{match.reasons.slice(0, 3).join(" · ")}</p>

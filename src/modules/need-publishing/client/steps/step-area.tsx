@@ -223,19 +223,18 @@ export function StepArea({
           LocationDraft["displayPrecision"]
         >)
       : "MAP_POINT";
+    const displayLabel =
+      savedLocation.label ||
+      savedLocation.regionLabel ||
+      copy.savedLocation;
     const next = {
       sourceLocationId: savedLocation.id,
       displayPrecision,
+      label: displayLabel,
       regionLabel: savedLocation.regionLabel,
       lat,
       lng,
     };
-    const displayLabel =
-      savedLocation.label ||
-      savedLocation.regionLabel ||
-      (Number.isFinite(lat) && Number.isFinite(lng)
-        ? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-        : copy.savedLocation);
     onChange(displayLabel);
     onAreaConfirmedChange(true);
     onLocationChange(next);
@@ -249,6 +248,7 @@ export function StepArea({
         location={location}
         savedLocations={savedLocations}
         showValidation={showValidation}
+        distance={careType === "boarding" ? distance : undefined}
         onChange={onChange}
         onAreaConfirmedChange={onAreaConfirmedChange}
         onLocationChange={onLocationChange}
@@ -282,6 +282,7 @@ function AreaLocationEditor({
   location,
   savedLocations,
   showValidation,
+  distance,
   onChange,
   onAreaConfirmedChange,
   onLocationChange,
@@ -292,6 +293,7 @@ function AreaLocationEditor({
   location: LocationDraft;
   savedLocations: SavedLocationOption[];
   showValidation: boolean;
+  distance?: string;
   onChange: (value: string) => void;
   onAreaConfirmedChange: (value: boolean) => void;
   onLocationChange: (value: LocationDraft) => void;
@@ -303,8 +305,10 @@ function AreaLocationEditor({
   const mapAvailable = Boolean(process.env.NEXT_PUBLIC_MAPTILER_KEY);
   const initialRef = useRef({ area, location });
   const controller = useLocationController({
+    refreshFromCoordinates: true,
     location: {
-      label: initialRef.current.area,
+      label:
+        initialRef.current.location.label || initialRef.current.area,
       regionLabel: initialRef.current.location.regionLabel,
       lat: initialRef.current.location.lat,
       lon: initialRef.current.location.lng,
@@ -325,6 +329,7 @@ function AreaLocationEditor({
       ...location,
       lat: controller.location.lat,
       lng: controller.location.lon,
+      label: controller.location.label || undefined,
       regionLabel:
         controller.location.regionLabel ||
         controller.location.label ||
@@ -336,6 +341,8 @@ function AreaLocationEditor({
     if (
       nextLocation.lat !== location.lat ||
       nextLocation.lng !== location.lng ||
+      nextLocation.label !== location.label ||
+      nextLocation.regionLabel !== location.regionLabel ||
       nextLocation.sourceLocationId !== location.sourceLocationId ||
       nextLocation.displayPrecision !== location.displayPrecision
     ) {
@@ -360,17 +367,23 @@ function AreaLocationEditor({
     onLocationChange,
   ]);
 
+  const searchRadiusKm =
+    distance && distance !== "No preference"
+      ? (() => {
+          const match = distance.match(/(\d+(?:\.\d+)?)/);
+          return match ? parseFloat(match[1]) : null;
+        })()
+      : null;
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col items-start gap-3 sm:flex-row md:max-w-[calc(100%_-_215px)] lg:max-w-[calc(100%_-_225px)]">
-        <div className="order-2 w-full min-w-0 flex-1 sm:order-1">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="min-w-0 flex-1">
           <Field label={copy.fieldLabel}>
             <div className="relative">
-              <PiMagnifyingGlass
-                aria-hidden="true"
-                className="pointer-events-none absolute left-4 top-6 z-10 -translate-y-1/2 text-[#8a5d34]"
-                size={19}
-              />
+              <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-slate-400">
+                <PiMagnifyingGlass size={18} />
+              </span>
               <AddressInput
                 inputId="need-area-location-search"
                 controller={controller}
@@ -404,6 +417,7 @@ function AreaLocationEditor({
           <MapLibreMap
             lat={controller.location.lat}
             lon={controller.location.lon}
+            searchRadiusKm={searchRadiusKm}
             editable
             onLocationChange={controller.setByMap}
           />

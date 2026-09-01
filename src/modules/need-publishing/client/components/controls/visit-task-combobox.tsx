@@ -26,6 +26,7 @@ export function VisitSelect({
   ariaLabel,
   className,
   listClassName,
+  side = "bottom",
   onChange,
 }: {
   value: string;
@@ -34,6 +35,7 @@ export function VisitSelect({
   ariaLabel: string;
   className?: string;
   listClassName?: string;
+  side?: "top" | "bottom";
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -54,8 +56,15 @@ export function VisitSelect({
     return () => observer.disconnect();
   }, []);
 
+  const handleOpen = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen && triggerRef.current) {
+      triggerRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -80,6 +89,8 @@ export function VisitSelect({
       </PopoverTrigger>
       <PopoverContent
         align="start"
+        side={side}
+        avoidCollisions={true}
         style={triggerWidth ? { width: `${triggerWidth}px` } : undefined}
         className={cn(
           "z-[1200] max-w-[calc(100vw-32px)] p-1.5",
@@ -260,9 +271,13 @@ export function VisitTaskNameCombobox({
         placeholder={placeholder}
         onFocus={(event) => {
           event.currentTarget.select();
+          event.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" });
           setOpen(suggestionsEnabled);
         }}
-        onClick={() => setOpen(suggestionsEnabled)}
+        onClick={(event) => {
+          event.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          setOpen(suggestionsEnabled);
+        }}
         onChange={(event) => {
           const next = event.target.value;
           const matching = options.find(

@@ -133,7 +133,7 @@ export function GuidedNeedFlowLayout({
   useEffect(() => setMobileStepsOpen(false), [currentId]);
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col overflow-hidden lg:block lg:h-auto lg:overflow-visible">
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden pt-16">
       <div className="shrink-0 border-b border-[#e7e0e8] bg-[#fcfbf8] lg:hidden">
         <div className="site-shell py-3.5">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
@@ -202,8 +202,8 @@ export function GuidedNeedFlowLayout({
         </div>
       </div>
 
-      <div className="site-shell flex min-h-0 flex-1 flex-col overflow-hidden lg:grid lg:overflow-visible lg:pb-9 lg:pt-7 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-9 xl:gap-11">
-        <aside className="hidden min-w-0 lg:sticky lg:top-[84px] lg:flex lg:h-[calc(100dvh-84px)] lg:flex-col lg:self-start lg:pb-5">
+      <div className="site-shell flex min-h-0 flex-1 flex-col overflow-hidden lg:grid lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-9 lg:pb-5 lg:pt-7 xl:gap-11">
+        <aside className="hidden min-h-0 min-w-0 lg:flex lg:h-full lg:flex-col">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">
             {copy.postNeed}
           </p>
@@ -218,42 +218,53 @@ export function GuidedNeedFlowLayout({
             onSaveExit={onSaveExit}
             saveState={saveState}
             onResolveConflict={onResolveConflict}
-            className="mt-3 shrink-0 border-t border-[#e7e0e8] pt-3"
+            className="mt-3 shrink-0"
             stacked
           />
         </aside>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:block">
-          <div className="relative isolate mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 flex-col lg:block">
-            <div
-              data-need-flow-scroll-region
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-5 lg:overflow-visible lg:pt-0"
-            >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[185px] w-[185px] bg-[url('/images/need-flow-step-sprite-v1.png')] bg-[length:400%_300%] bg-no-repeat mix-blend-multiply md:block lg:h-[195px] lg:w-[195px]"
-              style={{
-                backgroundPosition: illustration.position,
-                WebkitMaskImage:
-                  "radial-gradient(ellipse 82% 82% at center, #000 58%, transparent 100%)",
-                maskImage:
-                  "radial-gradient(ellipse 82% 82% at center, #000 58%, transparent 100%)",
-              }}
-            />
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="relative isolate mx-auto flex min-h-0 w-full max-w-[1120px] flex-1 flex-col">
+            {currentId === "preview" ? (
+              <div
+                data-need-flow-scroll-region
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 pr-1 md:py-4 lg:pr-2"
+              >
+                <section className="w-full">{children}</section>
+              </div>
+            ) : (
+              <div
+                data-need-flow-scroll-region
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-5 lg:contents"
+              >
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[185px] w-[185px] bg-[url('/images/need-flow-step-sprite-v1.png')] bg-[length:400%_300%] bg-no-repeat mix-blend-multiply md:block lg:h-[195px] lg:w-[195px]"
+                  style={{
+                    backgroundPosition: illustration.position,
+                    WebkitMaskImage:
+                      "radial-gradient(ellipse 82% 82% at center, #000 58%, transparent 100%)",
+                    maskImage:
+                      "radial-gradient(ellipse 82% 82% at center, #000 58%, transparent 100%)",
+                  }}
+                />
 
-            <section className="border-b border-[#e3dde5] pb-5 md:max-w-[calc(100%_-_215px)] lg:max-w-[calc(100%_-_225px)]">
-              <h1 className="text-3xl font-bold leading-[1.12] tracking-[-0.035em] md:text-[34px] lg:text-[36px] xl:text-[38px]">
-                {current.title}
-              </h1>
-              <p className="mt-4 text-base leading-7 text-[#706a78]">
-                {current.description}
-              </p>
-            </section>
+                <section className="border-b border-[#e3dde5] pb-5 md:max-w-[calc(100%_-_215px)] lg:w-full lg:max-w-[calc(100%_-_225px)] lg:shrink-0">
+                  <h1 className="text-3xl font-bold leading-[1.12] tracking-[-0.035em] md:text-[34px] lg:text-[36px] xl:text-[38px]">
+                    {current.title}
+                  </h1>
+                  <p className="mt-4 text-base leading-7 text-[#706a78]">
+                    {current.description}
+                  </p>
+                </section>
 
-            <section className="w-full py-5 md:py-7">{children}</section>
-            </div>
+                <section className="w-full px-1 py-5 md:py-7 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pl-1.5 lg:pr-3">
+                  {children}
+                </section>
+              </div>
+            )}
 
-            <footer className="flex w-full shrink-0 items-center justify-start gap-4 border-t border-[#e3dde5] bg-[#fcfbf8] py-3 md:py-4 lg:py-6">
+            <footer className="flex w-full shrink-0 items-center justify-start gap-4 border-t border-[#e3dde5] bg-[#fcfbf8] py-3 md:py-4 lg:pb-0 lg:pt-6">
               {currentIndex > 0 && (
                 <button
                   type="button"

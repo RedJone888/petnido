@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import { buildNotificationEmail, retryDelayMilliseconds } from "@/domain/notification/email-template";
 import { notificationTypes, type NotificationLocale, type NotificationType } from "@/domain/notification/notification";
-import { emailOutboxEnabled } from "@/server/feature-flags/publishing-v2";
+import { emailOutboxEnabled } from "@/server/feature-flags/email-outbox";
 
 function locale(value: string): NotificationLocale {
   return value === "zh" || value === "en" ? value : "ja";

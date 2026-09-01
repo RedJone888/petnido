@@ -15,11 +15,6 @@ import {
   startConsultation,
 } from "@/server/domains/messaging/conversation-v2";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
-import { conversationsV2Enabled } from "@/server/feature-flags/publishing-v2";
-
-function requireConversationsV2() {
-  if (!conversationsV2Enabled()) throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-}
 
 function commandError(error: unknown): never {
   if (error instanceof ConversationCommandError) {
@@ -40,7 +35,6 @@ export const conversationRouter = router({
       clientMessageId: clientMessageIdSchema,
     }).strict())
     .mutation(async ({ ctx, input }) => {
-      requireConversationsV2();
       try {
         return await startConsultation(ctx.prisma, {
           actorId: ctx.session.user.id,
@@ -156,7 +150,6 @@ export const conversationRouter = router({
       clientMessageId: clientMessageIdSchema,
     }).strict())
     .mutation(async ({ ctx, input }) => {
-      requireConversationsV2();
       try {
         return await sendConversationMessage(ctx.prisma, { ...input, actorId: ctx.session.user.id });
       } catch (error) {

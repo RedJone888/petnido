@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { GuidedNeedFlow } from "@/modules/need-publishing/client";
 import { NeedEditBlocked } from "../need-edit-blocked";
-import { guidedNeedPublishingEnabled } from "@/server/feature-flags/publishing-v2";
 import {
   validationProfileCookie,
   validationProfileEnabled,
@@ -14,9 +13,6 @@ export default async function EditNeedPage({
 }: {
   params: { id: string };
 }) {
-  if (!guidedNeedPublishingEnabled()) {
-    redirect(`/dashboard/needs/${params.id}/edit`);
-  }
   const { userId, prisma } = await getServerUserContext();
   if (!userId) {
     redirect(`/auth/sign-in?returnTo=${encodeURIComponent(`/needs/edit/${params.id}`)}`);

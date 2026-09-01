@@ -1,9 +1,13 @@
 "use client";
 
 import {
+  ChevronDown,
   ClipboardList,
+  MoreHorizontal,
   Plus,
+  RotateCcw,
   Trash2,
+  User,
 } from "lucide-react";
 import { useMemo, useState, type ElementType } from "react";
 import Link from "next/link";
@@ -23,7 +27,6 @@ import { useConfirmStore } from "@/store/useConfirmStore";
 import { trpc } from "@/utils/trpc";
 import { mapNeedDraftPayloadToLegacyNeedDraftV3 } from "@/domain/publishing/legacy-need-draft-v3";
 import { NEED_DRAFT_STORAGE_KEY } from "@/modules/need-publishing/client";
-import { LegacyCompatibilityPanel } from "@/components/publishing/legacy-compatibility-panel";
 import { useLanguage } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { AppImage } from "@/components/ui/app-image";
@@ -31,10 +34,11 @@ import EmptyState from "../../_components/EmptyState";
 import {
   NEED_DISPLAY_CONFIG,
   type NeedDisplayStatus,
-} from "@/domain/need/constant";
+} from "@/domain/need/display-status";
 import {
   compactDate,
   formatPetsSummary,
+  formatPetsSummaryInfo,
   NeedLocationLabel,
 } from "@/app/(flow)/needs/_components/need-card";
 import {
@@ -47,19 +51,14 @@ import {
 } from "@/domain/marketplace/need-pricing";
 import { messages } from "@/i18n/messages";
 import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
-import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
-
-function petAvatarPosition(petType: string) {
-  const normalized = petType.trim().toUpperCase();
-  if (normalized === "DOG") return "0% 0%";
-  if (normalized === "CAT") return "33.333% 0%";
-  if (normalized === "RABBIT") return "66.667% 0%";
-  if (normalized === "BIRD") return "100% 0%";
-  if (normalized === "HAMSTER") return "0% 50%";
-  if (normalized === "GUINEA_PIG") return "33.333% 50%";
-  if (normalized === "CHINCHILLA") return "0% 100%";
-  return "33.333% 100%";
-}
+import {
+  buildNeedDisplayTitle,
+  buildNeedTitleParts,
+} from "@/modules/need-publishing/domain/display-title";
+import { petAvatarPosition } from "@/domain/pet/avatar";
+import { resolveNeedCardPetMedia } from "@/domain/marketplace/need-card-media";
+import { needDisplayDateRange } from "@/domain/marketplace/need-date-range";
+import { DashboardNeedCardFrame, DashboardNeedCardSkeleton } from "./dashboard-need-card";
 
 function formatNeedPetTitle(
   pets: Array<{ name?: string | null; petType: string; quantity?: number }>,
@@ -124,43 +123,13 @@ const VISIBLE_STATUS_KEYS: VisibleNeedFilter[] = [
   "CLOSED",
 ];
 
-const requestModeIcons: Record<string, ElementType> = {
-  HOME_VISIT: PiHouseLine,
-  BOARDING: PiWarehouse,
-  CUSTOM: PiHandHeart,
-};
-
-const modeBadgeThemes: Record<string, string> = {
-  HOME_VISIT: "bg-emerald-600 text-white shadow-emerald-950/20",
-  BOARDING: "bg-amber-600 text-white shadow-amber-950/20",
-  CUSTOM: "bg-violet-600 text-white shadow-violet-950/20",
-};
-
-const statusBadgeThemes: Record<
-  string,
-  { container: string; dot: string }
-> = {
-  OPEN: {
-    container:
-      "bg-white/95 text-emerald-800 border border-emerald-300/90 shadow-sm backdrop-blur-md",
-    dot: "bg-emerald-500 ring-2 ring-emerald-200",
-  },
-  EXPIRED: {
-    container:
-      "bg-white/95 text-amber-900 border border-amber-300/90 shadow-sm backdrop-blur-md",
-    dot: "bg-amber-500 ring-2 ring-amber-200",
-  },
-  MATCHED: {
-    container:
-      "bg-white/95 text-purple-900 border border-purple-300/90 shadow-sm backdrop-blur-md",
-    dot: "bg-purple-500 ring-2 ring-purple-200",
-  },
-  CLOSED: {
-    container:
-      "bg-slate-900/80 text-slate-100 border border-slate-700 shadow-sm backdrop-blur-md",
-    dot: "bg-slate-400",
-  },
-};
+import {
+  modeBadgeThemes,
+  requestModeIcons,
+} from "@/domain/care/care-themes";
+import {
+  needStatusThemes as statusBadgeThemes,
+} from "@/domain/marketplace/need-status-theme";
 
 function getNeedDisplayStatus(need: {
   state: string;
@@ -230,6 +199,7 @@ export function NeedV2List({
   });
   const [actionError, setActionError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<VisibleNeedFilter>("ALL");
+  const [expandedActionId, setExpandedActionId] = useState<string | null>(null);
   const actions = t.core.management.actions;
   const copy = needMessages.dashboardNeeds;
 
@@ -318,7 +288,7 @@ export function NeedV2List({
     need: NonNullable<typeof needs.data>[number],
   ) => {
     setActionError(null);
-    if (need.expired) {
+    if (need.expired || new Date(need.endsAt) <= new Date()) {
       setActionError(actions.reopenExpired);
       return;
     }
@@ -412,10 +382,10 @@ export function NeedV2List({
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden space-y-4">
-      {/* 1. TOP HEADER: Exactly matching Overview typography and padding */}
-      <div className="shrink-0 px-2 pt-2.5 pb-4 border-b border-slate-200/70 space-y-3">
+      {/* 1. TOP HEADER */}
+      <div className="h-auto shrink-0 space-y-3 border-b border-slate-200/70 px-2 py-3 md:flex md:h-[var(--dashboard-title-height)] md:flex-col md:justify-center md:py-0">
         {/* 第一行：Title 单独一行 */}
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+        <h1 className="pr-32 text-2xl font-bold text-slate-900 md:pr-0">
           {copy.userRequests}
         </h1>
 
@@ -428,24 +398,24 @@ export function NeedV2List({
                 key={stat.id}
                 type="button"
                 className={cn(
-                  "group flex items-baseline gap-1 rounded-full px-3 py-1 transition text-xs",
+                  "group flex items-baseline gap-1 rounded-full px-3 py-1 text-xs font-medium transition",
                   filterStatus === stat.id
-                    ? "bg-slate-200/90 font-bold"
+                    ? "bg-slate-200/90 text-slate-700"
                     : "hover:bg-slate-100/80 text-slate-500",
                 )}
                 onClick={() => setFilterStatus(stat.id)}
               >
                 <span
                   className={cn(
-                    "text-[11px] font-bold leading-none text-slate-400",
-                    filterStatus === stat.id && "text-slate-700",
+                    "text-[11px] font-medium leading-none text-slate-400",
+                    filterStatus === stat.id && "font-semibold text-slate-700",
                   )}
                 >
                   {stat.label}
                 </span>
                 <span
                   className={cn(
-                    "text-base font-black tabular-nums tracking-tight",
+                    "text-sm font-semibold tabular-nums",
                     stat.textColor,
                   )}
                 >
@@ -454,7 +424,7 @@ export function NeedV2List({
                 {copy.unit ? (
                   <span
                     className={cn(
-                      "text-[10px] font-bold text-slate-400",
+                      "text-[10px] font-medium text-slate-400",
                       filterStatus === stat.id && "text-slate-700",
                     )}
                   >
@@ -469,7 +439,7 @@ export function NeedV2List({
           <div className="shrink-0">
             <Button
               href="/needs/create"
-              className="rounded-full px-4 py-2 text-xs font-bold shadow-xs"
+              className="rounded-full px-4 py-2 text-xs font-semibold shadow-xs"
             >
               <Plus className="h-4 w-4 mr-1" strokeWidth={3} />
               {copy.create}
@@ -477,24 +447,25 @@ export function NeedV2List({
           </div>
         </div>
 
-        <LegacyCompatibilityPanel kind="NEED" />
+      </div>
+
+      {/* 2. LOWER CONTENT AREA (Scrollable): 需求卡片网格 */}
+      <div className="min-h-0 flex-1 overflow-y-auto pb-8 pr-1 pt-2">
 
         {actionError ? (
           <p
             role="alert"
-            className="rounded-xl border border-danger-border bg-danger-bg px-3.5 py-2.5 text-xs font-bold text-danger-text"
+            className="mb-3 rounded-xl border border-danger-border bg-danger-bg px-3.5 py-2.5 text-xs font-bold text-danger-text"
           >
             {actionError}
           </p>
         ) : null}
-      </div>
-
-      {/* 2. LOWER CONTENT AREA (Scrollable): 需求卡片网格 */}
-      <div className="flex-1 overflow-y-auto pr-1 pb-8 pt-2">
         {needs.isLoading ? (
-          <section className="rounded-2xl border border-[#ded9e0] bg-white p-8 text-center text-sm text-slate-500">
-            {t.core.management.loadingRequests}
-          </section>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <DashboardNeedCardSkeleton key={i} />
+            ))}
+          </div>
         ) : needs.error ? (
           <section
             role="alert"
@@ -508,8 +479,6 @@ export function NeedV2List({
               icon={<ClipboardList className="h-10 w-10" />}
               title={copy.emptyTitle}
               description={copy.emptyDescription}
-              href="/needs/create"
-              btnLabel={copy.create}
             />
           </div>
         ) : filteredNeeds.length === 0 ? (
@@ -519,79 +488,90 @@ export function NeedV2List({
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredNeeds.map((need) => {
+              const hasEnded = new Date(need.endsAt) <= new Date();
               const isExpired =
-              need.state === "OPEN" &&
-              (need.expired ??
-                new Date(need.endsAt) <= new Date());
-            const visibleState = isExpired
-              ? t.core.states.EXPIRED
-              : t.core.states[need.state];
+                need.state === "OPEN" && (need.expired ?? hasEnded);
+              const canReopen = need.state === "CLOSED" && !hasEnded;
+              const visibleState = isExpired
+                ? t.core.states.EXPIRED
+                : t.core.states[need.state];
 
             const ModeIcon = requestModeIcons[need.mode] ?? PiHandHeart;
 
-            const featuredPet = need.pets[0];
-            const coverImage =
-              featuredPet?.image ??
-              need.attachments[0]?.attachment?.url ??
-              null;
+            const { firstPet, featuredPet, coverImage } =
+              resolveNeedCardPetMedia(need.pets);
             const featuredPetLabel = featuredPet
               ? (featuredPet.name?.trim() ||
                   (t.core.pets[featuredPet.petType as keyof typeof t.core.pets] ??
                     featuredPet.petType))
               : "";
-            const petsSummary = formatPetsSummary(
+            const petsSummaryInfo = formatPetsSummaryInfo(
               need.pets as any,
               lang,
               messages[lang],
               needMessages,
             );
 
-            const cardTitle = buildNeedDisplayTitle({
+            const titleInfo = buildNeedTitleParts({
               mode: need.mode,
               pets: need.pets,
+              tasks: (need as any).tasks,
               lang,
             });
 
             // Date / Time schedule text
-            const startDateStr = compactDate(need.startsAt, lang);
-            const endDateStr = compactDate(need.endsAt, lang);
-            const isSameDay =
-              new Date(need.startsAt).toDateString() ===
-              new Date(need.endsAt).toDateString();
+            const displayDates = needDisplayDateRange({
+              ...need,
+              source: "V2",
+            });
+            const startDateStr = compactDate(displayDates.startDate, lang);
+            const endDateStr = compactDate(displayDates.endDate, lang);
+            const isSameDay = displayDates.startDate === displayDates.endDate;
 
-            let timeDisplay = "";
+            let dateRangeText = "";
+            const scheduleBadges: string[] = [];
+
             if (need.mode === "BOARDING") {
+              dateRangeText = `${startDateStr} – ${endDateStr}`;
               const nights = calculateBoardingNights(need.startsAt, need.endsAt);
-              timeDisplay = `${startDateStr} – ${endDateStr} · ${t.core.marketplace.nightsTotal.replace("{n}", String(nights))}`;
+              scheduleBadges.push(
+                t.core.marketplace.nightsTotal.replace("{n}", String(nights)),
+              );
             } else if (need.mode === "CUSTOM") {
-              timeDisplay = isSameDay
+              dateRangeText = isSameDay
                 ? startDateStr
                 : `${startDateStr} – ${endDateStr}`;
             } else {
-              const days = inclusiveDayCount(need.startsAt, need.endsAt);
-              timeDisplay = isSameDay
-                ? `${startDateStr} · ${t.core.marketplace.daysTotal.replace("{n}", "1")}`
-                : `${startDateStr} – ${endDateStr} · ${t.core.marketplace.daysTotal.replace("{n}", String(days))}`;
+              dateRangeText = isSameDay
+                ? startDateStr
+                : `${startDateStr} – ${endDateStr}`;
+              const days = inclusiveDayCount(
+                displayDates.startDate,
+                displayDates.endDate,
+              );
+              scheduleBadges.push(
+                t.core.marketplace.daysTotal.replace("{n}", String(days)),
+              );
+              if (need.homeVisitDetail) {
+                const visits = calculateTotalHomeVisits(
+                  need.startsAt,
+                  need.endsAt,
+                  {
+                    intervalDays: need.homeVisitDetail.intervalDays,
+                    firstServiceDate: need.homeVisitDetail.firstServiceDate,
+                    visitsPerServiceDay: need.homeVisitDetail.visitsPerServiceDay,
+                  },
+                ).totalVisits;
+                scheduleBadges.push(
+                  t.core.marketplace.visitsTotal.replace(
+                    "{n}",
+                    String(visits),
+                  ),
+                );
+              }
             }
 
-            // For HOME_VISIT: fold visits count into the time display row
-            let timeDisplayFull = timeDisplay;
-            if (need.mode === "HOME_VISIT" && need.homeVisitDetail) {
-              const visits = calculateTotalHomeVisits(
-                need.startsAt,
-                need.endsAt,
-                {
-                  intervalDays: need.homeVisitDetail.intervalDays,
-                  firstServiceDate: need.homeVisitDetail.firstServiceDate,
-                  visitsPerServiceDay: need.homeVisitDetail.visitsPerServiceDay,
-                },
-              ).totalVisits;
-              const visitsLabel = t.core.marketplace.visitsTotal.replace(
-                "{n}",
-                String(visits),
-              );
-              timeDisplayFull = `${timeDisplay} · ${visitsLabel}`;
-            }
+            const timeDisplayFull = [dateRangeText, ...scheduleBadges].join(" · ");
 
             // Pricing
             const pricingInput: NeedPricingInput = {
@@ -636,12 +616,9 @@ export function NeedV2List({
             );
 
             return (
-              <article
-                key={need.id}
-                className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-xs"
-              >
+              <DashboardNeedCardFrame key={need.id}>
                 <Link
-                  href={`/dashboard/needs/v2/${need.id}`}
+                  href={`/needs/v2%3A${need.id}?from=dashboard`}
                   className="block min-w-0"
                 >
                   {/* 1. TOP: Pet Photo Cover / Default Avatar with Overlays */}
@@ -650,7 +627,7 @@ export function NeedV2List({
                       {coverImage ? (
                         <AppImage
                           src={coverImage}
-                          alt={cardTitle}
+                          alt={titleInfo.title}
                           width={480}
                           height={320}
                           className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
@@ -664,7 +641,7 @@ export function NeedV2List({
                             backgroundImage:
                               "url('/images/pet-default-avatars-v2.png')",
                             backgroundPosition: petAvatarPosition(
-                              featuredPet?.petType || "OTHER",
+                              firstPet?.petType || "OTHER",
                             ),
                             backgroundSize: "400% auto",
                           }}
@@ -716,10 +693,17 @@ export function NeedV2List({
                     <div>
                       <div className="flex items-start justify-between gap-2 min-w-0">
                         <h3
-                          className="min-w-0 flex-1 truncate text-[14px] font-black text-slate-900 transition group-hover:text-primary"
-                          title={cardTitle}
+                          className="min-w-0 flex-1 flex items-center gap-1.5 text-[14px] font-black text-slate-900 transition group-hover:text-primary"
+                          title={titleInfo.title}
                         >
-                          {cardTitle}
+                          {titleInfo.petSummary ? (
+                            <span className="shrink-0 inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[11px] font-bold text-primary ring-1 ring-inset ring-purple-500/15">
+                              {titleInfo.petSummary}
+                            </span>
+                          ) : null}
+                          <span className="min-w-0 truncate text-slate-900">
+                            {titleInfo.taskSummary}
+                          </span>
                         </h3>
                         {need.budgetKind === "OPEN" || need.minAmountMinor === null ? (
                           <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-500">
@@ -731,14 +715,28 @@ export function NeedV2List({
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-[10.5px] text-slate-400">
-                        {copy.publishedAt}
-                        {new Date(need.createdAt).toLocaleDateString(lang, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full border border-purple-100 bg-purple-50 text-primary">
+                            {user?.image ? (
+                              <AppImage src={user.image} alt={user.name || "PetNido user"} width={28} height={28} className="h-full w-full object-cover" />
+                            ) : (
+                              <User size={13} />
+                            )}
+                          </div>
+                          <span className="min-w-0 truncate text-[11px] font-semibold text-slate-700">
+                            {user?.name || user?.email || (lang === "zh" ? "PetNido 用户" : lang === "ja" ? "PetNidoユーザー" : "PetNido user")}
+                          </span>
+                        </div>
+                        <time dateTime={new Date(need.createdAt).toISOString()} className="shrink-0 text-[10.5px] text-slate-400">
+                          {copy.publishedAt}
+                          {new Date(need.createdAt).toLocaleDateString(lang, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </time>
+                      </div>
                     </div>
 
                     {/* Key Info rows — enhanced contrast and breathing room */}
@@ -773,29 +771,46 @@ export function NeedV2List({
                           className="shrink-0 text-slate-400"
                           aria-hidden="true"
                         />
-                        <p className="min-w-0 truncate" title={timeDisplayFull}>
-                          {timeDisplayFull}
-                        </p>
+                        <div className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px]" title={timeDisplayFull}>
+                          <span className="shrink-0 font-semibold text-slate-700">
+                            {dateRangeText}
+                          </span>
+                          {scheduleBadges.map((badge, idx) => (
+                            <span
+                              key={idx}
+                              className="shrink-0 inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200/70"
+                            >
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Pets summary */}
-                      {petsSummary ? (
+                      {petsSummaryInfo.details ? (
                         <div className="flex items-center gap-1.5 min-w-0">
                           <PiPawPrint
                             size={13}
                             className="shrink-0 text-slate-400"
                             aria-hidden="true"
                           />
-                          <p className="min-w-0 truncate" title={petsSummary}>
-                            {petsSummary}
-                          </p>
+                          <div className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px]" title={petsSummaryInfo.fullText}>
+                            <span className="shrink-0 font-medium text-slate-700">
+                              {petsSummaryInfo.details}
+                            </span>
+                            {petsSummaryInfo.totalBadge ? (
+                              <span className="shrink-0 inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200/70">
+                                {petsSummaryInfo.totalBadge}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       ) : null}
                     </div>
                   </div>
                 </Link>
 
-                {/* 3. MANAGEMENT FOOTER: Clear, active action buttons */}
+                {/* 3. MANAGEMENT FOOTER: frequent actions stay visible; low-frequency actions live in the menu. */}
                 {mutable && (
                   <div className="px-3.5 pb-3.5">
                     <div className="flex items-center gap-1.5 border-t border-slate-100 pt-2.5">
@@ -807,13 +822,10 @@ export function NeedV2List({
                       >
                         {actions.edit}
                       </button>
-                      {need.state === "CLOSED" ? (
+                      {canReopen ? (
                         <button
                           type="button"
-                          disabled={
-                            command.isLoading ||
-                            new Date(need.endsAt) <= new Date()
-                          }
+                          disabled={command.isLoading}
                           onClick={() => void handleReopen(need)}
                           className="flex-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 shadow-2xs transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
                         >
@@ -828,38 +840,65 @@ export function NeedV2List({
                         >
                           {actions.cancelMatch}
                         </button>
-                      ) : (
+                      ) : need.state === "OPEN" && !isExpired ? (
                         <button
                           type="button"
-                          disabled={command.isLoading || isExpired}
+                          disabled={command.isLoading}
                           onClick={() => void handleClose(need)}
                           className="flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           {actions.close}
                         </button>
-                      )}
+                      ) : null}
+
                       <button
                         type="button"
-                        aria-label={actions.delete}
-                        title={actions.delete}
-                        disabled={command.isLoading}
-                        onClick={() => void handleDelete(need)}
-                        className="flex items-center justify-center rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 shadow-2xs transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                        aria-label={t.core.management.moreActions}
+                        title={t.core.management.moreActions}
+                        aria-expanded={expandedActionId === need.id}
+                        disabled={command.isLoading || reuseNeed.isLoading}
+                        onClick={() =>
+                          setExpandedActionId((current) =>
+                            current === need.id ? null : need.id,
+                          )
+                        }
+                        className="flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-slate-200 bg-white px-2 text-slate-500 shadow-2xs transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 disabled:opacity-50"
                       >
-                        <Trash2 size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={reuseNeed.isLoading || command.isLoading}
-                        onClick={() => void reuse(need.id)}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-500 shadow-2xs transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary disabled:opacity-50"
-                      >
-                        {actions.reuse}
+                        <MoreHorizontal size={15} />
+                        <ChevronDown
+                          size={12}
+                          className={cn(
+                            "transition-transform",
+                            expandedActionId === need.id && "rotate-180",
+                          )}
+                        />
                       </button>
                     </div>
+                    {expandedActionId === need.id ? (
+                      <div className="absolute bottom-12 right-3 z-10 grid w-40 gap-1.5 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                        <button
+                          type="button"
+                          disabled={reuseNeed.isLoading || command.isLoading}
+                          onClick={() => void reuse(need.id)}
+                          className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-primary/5 hover:text-primary disabled:opacity-50"
+                        >
+                          <RotateCcw size={14} />
+                          {actions.reuse}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={command.isLoading}
+                          onClick={() => void handleDelete(need)}
+                          className="flex items-center gap-2 rounded-lg border-t border-slate-100 px-2.5 py-2 text-left text-xs font-semibold text-danger-text transition hover:bg-danger-bg disabled:opacity-50"
+                        >
+                          <Trash2 size={14} />
+                          {actions.delete}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 )}
-              </article>
+              </DashboardNeedCardFrame>
             );
           })}
         </div>

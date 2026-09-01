@@ -21,13 +21,17 @@ export default function StepLogin({
   handleSuccessRedirect,
 }: Props) {
   const copy = useAuthMessages().modal;
+  const passwordCopy = useAuthMessages().passwordField;
   const { cancelTo, closeAuthModal, returnTo } = useAuthModal();
   const [password, setPassword] = useState("");
   const [passwordFormatError, setPasswordFormatError] = useState("");
   const [apiError, setApiError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const handleChangePassword = (password: string) => {
-    if (passwordFormatError) setPasswordFormatError("");
+    const passwordResult = stepLoginSchema.shape.password.safeParse(password);
+    setPasswordFormatError(
+      password.length > 0 && !passwordResult.success ? passwordCopy.invalid : "",
+    );
     if (apiError) setApiError("");
     setPassword(password);
   };
@@ -42,8 +46,7 @@ export default function StepLogin({
     // 1. Zod 校验
     const validate = stepLoginSchema.safeParse({ email, password });
     if (!validate.success) {
-      const msg =
-        validate.error.formErrors.fieldErrors.password?.[0] || copy.invalidPassword;
+      const msg = password.length > 0 ? passwordCopy.invalid : copy.invalidPassword;
       setPasswordFormatError(msg);
       return;
     }

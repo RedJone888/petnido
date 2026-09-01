@@ -58,10 +58,17 @@ export function buildNotificationEmail(input: {
   baseUrl: string;
 }) {
   const copy = text[input.locale];
-  const [subject, body] = copy[category[input.type]];
+  const notificationCategory = category[input.type];
+  const [subject, body] = copy[notificationCategory];
   const baseUrl = safeBaseUrl(input.baseUrl);
-  const dashboardUrl = `${baseUrl}/dashboard/notifications`;
-  const settingsUrl = `${baseUrl}/dashboard/settings#preferences`;
+  const destination = {
+    message: "/dashboard/messages",
+    application: "/dashboard/applications",
+    booking: "/dashboard/bookings",
+    need: "/dashboard/needs",
+  }[notificationCategory];
+  const dashboardUrl = `${baseUrl}${destination}`;
+  const settingsUrl = `${baseUrl}/dashboard/messages`;
   return {
     subject,
     html: `<main style="font-family:Arial,sans-serif;line-height:1.6;color:#2f2733"><h1 style="font-size:20px">${subject}</h1><p>${body}</p><p><a href="${dashboardUrl}">${copy.view}</a></p><hr><p style="font-size:12px;color:#6b6470"><a href="${settingsUrl}">${copy.settings}</a></p></main>`,

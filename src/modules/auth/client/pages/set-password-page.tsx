@@ -69,7 +69,7 @@ export function SetPasswordPageClient({
       setError("");
       void utils.auth.getAccountOverview.invalidate();
       toast.success(copy.completed);
-      router.replace("/dashboard/settings");
+      router.replace("/dashboard/settings/security");
     },
     onError: (value) => setError(errorMessage(value.message)),
   });
@@ -109,7 +109,7 @@ export function SetPasswordPageClient({
 
           {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Button href="/dashboard/settings" variant="outline" className="min-h-11 w-full">
+            <Button href="/dashboard/settings/security" variant="outline" className="min-h-11 w-full">
               {copy.cancel}
             </Button>
             {stage === "request" ? (

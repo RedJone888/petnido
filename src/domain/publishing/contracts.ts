@@ -57,6 +57,7 @@ export const mapLocationInputSchema = z
     sourceLocationId: z.string().min(1).optional(),
     lat: z.number().finite().min(-90).max(90),
     lon: z.number().finite().min(-180).max(180),
+    label: z.string().trim().min(1).max(240).nullable().optional(),
     regionLabel: z.string().trim().min(1).max(120).nullable().optional(),
     displayPrecision: z.enum([
       "MAP_POINT",
@@ -134,6 +135,8 @@ const petSnapshotObjectSchema = z
   .object({
     clientPetKey: z.string().min(1).max(80),
     sourcePetId: z.string().min(1).nullable(),
+    attachmentId: z.string().min(1).nullable().default(null),
+    attachmentUrl: z.string().max(2048).nullable().default(null),
     profileAction: z.enum(["CREATE", "UPDATE", "NONE"]).optional(),
     quantity: z.number().int().positive().max(100).default(1),
     name: z.string().trim().min(1).max(80),
@@ -254,7 +257,7 @@ const supplyInputSchema = z
 
 const requirementInputSchema = z
   .object({
-    kind: z.enum(["ENVIRONMENT_REQUIRED", "UNACCEPTABLE", "OTHER_NEED", "WARNING"]),
+    kind: z.enum(["ENVIRONMENT_REQUIRED", "UNACCEPTABLE", "OTHER_NEED", "WARNING", "NOTE"]),
     label: z.string().trim().min(1).max(500),
     petKey: z.string().min(1).nullable(),
   })
@@ -708,7 +711,7 @@ export const publishDraftEnvelopeSchema = z.discriminatedUnion("kind", [
 ]);
 
 const publishDraftCommandShape = {
-  id: z.string().uuid(),
+  id: z.string().min(1),
   mode: publishingModeSchema.nullable(),
   currentStep: z.string().min(1).max(80),
 };

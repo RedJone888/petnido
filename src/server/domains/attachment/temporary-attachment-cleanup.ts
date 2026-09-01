@@ -53,10 +53,7 @@ export async function cleanupTemporaryAttachments(
       where: {
         status: 0,
         createdAt: { lt: cutoff },
-        serviceId: null,
-        needId: null,
         petId: null,
-        needPetId: null,
         avatarFor: { is: null },
         needV2Links: { none: {} },
         serviceV2Links: { none: {} },

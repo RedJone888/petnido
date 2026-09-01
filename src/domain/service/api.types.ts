@@ -7,6 +7,3 @@ export type ProfileApi = NonNullable<GetMineOutput>["profile"];
 export type ServiceProfileApi = NonNullable<
   NonNullable<GetMineOutput>["serviceProfile"]
 >;
-export type ServiceApi = NonNullable<ServiceProfileApi>["services"][number];
-export type PhotoApi = NonNullable<ServiceApi>["photos"][number];
-export type PriceRuleApi = NonNullable<ServiceApi>["priceRules"][number];

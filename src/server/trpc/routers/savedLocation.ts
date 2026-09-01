@@ -33,6 +33,7 @@ export const savedLocationRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
+        const coordinateLabel = /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/;
         const activeCount = await tx.userLocation.count({
           where: { userId, archivedAt: null },
         });
@@ -43,14 +44,21 @@ export const savedLocationRouter = router({
             data: { isDefault: false },
           });
         }
+        const rawLabel = input.label?.trim();
+        const rawRegionLabel = input.regionLabel?.trim();
         const resolvedRegionLabel =
-          input.regionLabel?.trim() ||
-          input.label?.trim() ||
-          `${Number(input.lat).toFixed(4)}, ${Number(input.lon).toFixed(4)}`;
+          (rawRegionLabel && !coordinateLabel.test(rawRegionLabel)
+            ? rawRegionLabel
+            : null) ||
+          (rawLabel && !coordinateLabel.test(rawLabel) ? rawLabel : null) ||
+          "Selected map location";
+        const resolvedLabel =
+          (rawLabel && !coordinateLabel.test(rawLabel) ? rawLabel : null) ||
+          resolvedRegionLabel;
         return tx.userLocation.create({
           data: {
             userId,
-            label: input.label?.trim() || null,
+            label: resolvedLabel,
             lat: input.lat,
             lon: input.lon,
             regionLabel: resolvedRegionLabel,
@@ -66,9 +74,26 @@ export const savedLocationRouter = router({
     .input(savedLocationUpdateSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+      const coordinateLabel = /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/;
+      const rawLabel = data.label?.trim();
+      const rawRegionLabel = data.regionLabel?.trim();
+      const safeRegionLabel =
+        rawRegionLabel && !coordinateLabel.test(rawRegionLabel)
+          ? rawRegionLabel
+          : undefined;
+      const safeLabel =
+        (rawLabel && !coordinateLabel.test(rawLabel) ? rawLabel : undefined) ||
+        safeRegionLabel ||
+        "Selected map location";
       const updated = await ctx.prisma.userLocation.updateMany({
         where: { id, userId: ctx.session.user.id, archivedAt: null },
-        data,
+        data: {
+          ...data,
+          ...(data.label !== undefined ? { label: safeLabel } : {}),
+          ...(data.regionLabel !== undefined
+            ? { regionLabel: safeRegionLabel || safeLabel }
+            : {}),
+        },
       });
       if (updated.count !== 1) {
         throw new TRPCError({

@@ -1,14 +1,5 @@
-import { redirect } from "next/navigation";
+import NotificationCenter from "../notifications/_components/notification-center-page";
 
-export default function LegacyMessagesPage({
-  searchParams,
-}: {
-  searchParams: { conversation?: string };
-}) {
-  const conversation = searchParams.conversation;
-  redirect(
-    conversation
-      ? `/dashboard/notifications?view=conversations&conversation=${encodeURIComponent(conversation)}`
-      : "/dashboard/notifications?view=conversations",
-  );
+export default function MessagesPage() {
+  return <NotificationCenter />;
 }

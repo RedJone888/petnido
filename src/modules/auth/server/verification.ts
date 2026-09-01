@@ -534,7 +534,6 @@ export async function confirmLineLink(input: {
       await tx.account.update({ where: { id: lineAccount.id }, data: { userId: target.id } });
       await tx.profile.deleteMany({ where: { userId: input.sourceUserId } });
       await tx.notificationPreference.deleteMany({ where: { userId: input.sourceUserId } });
-      await tx.session.deleteMany({ where: { userId: input.sourceUserId } });
       await tx.user.delete({ where: { id: input.sourceUserId } });
       return createLoginTicket(tx, target.id);
     },

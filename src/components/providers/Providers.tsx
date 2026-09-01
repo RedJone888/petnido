@@ -8,7 +8,7 @@ import { AuthModalProvider } from "@/modules/auth/client/auth-modal-provider";
 import { LanguageProvider } from "./language-provider";
 import type { Session } from "next-auth";
 
-export function Providers({ children, validationProfileSession = false }: { children: React.ReactNode; validationProfileSession?: boolean }) {
+export function Providers({ children, initialSession }: { children: React.ReactNode; initialSession: Session | null }) {
   const [queryClient] = useState(() => new QueryClient());
   const [trpcClient] = useState(() =>
     trpc.createClient({
@@ -19,14 +19,8 @@ export function Providers({ children, validationProfileSession = false }: { chil
       ],
     }),
   );
-  const validationSession: Session | undefined = validationProfileSession
-    ? {
-        user: { id: "validation-profile-user", email: "profile-e2e@petnido.invalid", name: "Profile E2E" },
-        expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      }
-    : undefined;
   return (
-    <SessionProvider session={validationSession}>
+    <SessionProvider session={initialSession}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <LanguageProvider>

@@ -21,12 +21,9 @@ describe("public detail metadata lookup", () => {
       select: {
         mode: true,
         pets: { select: { name: true, petType: true, customPetType: true } },
+        tasks: { select: { category: true, label: true } },
       },
     });
-  });
-
-  it("does not query a missing legacy model", async () => {
-    await expect(findPublicDetailSubject(database({ needV2: {} }), { kind: "need", publicId: "legacy:need-1" })).resolves.toBeNull();
   });
 
   it("requires an active service and accepting provider", async () => {
@@ -38,12 +35,12 @@ describe("public detail metadata lookup", () => {
     }));
   });
 
-  it("looks up a provider through active V2 services when legacy delegates are absent", async () => {
+  it("looks up a provider through active services", async () => {
     const findFirst = vi.fn().mockResolvedValue({ user: { name: "Mika" } });
     const result = await findPublicDetailSubject(database({ serviceProfile: { findFirst } }), { kind: "provider", publicId: "user-1" });
     expect(result).toBe("Mika");
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ OR: [{ servicesV2: { some: { state: "ACTIVE", archivedAt: null } } }] }),
+      where: expect.objectContaining({ servicesV2: { some: { state: "ACTIVE", archivedAt: null } } }),
     }));
   });
 });

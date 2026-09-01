@@ -1,4 +1,5 @@
 import FooterHome from "./_components/FooterHome";
+import { LocalizedPublicLayoutFrame } from "@/app/[lang]/_components/localized-public-layout-frame";
 
 export default function HomeLayout({
   children,
@@ -6,9 +7,8 @@ export default function HomeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <LocalizedPublicLayoutFrame footer={<FooterHome />}>
       {children}
-      <FooterHome />
-    </>
+    </LocalizedPublicLayoutFrame>
   );
 }

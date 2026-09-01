@@ -14,56 +14,36 @@ export class ConversationCommandError extends Error {
 }
 
 export async function resolveConsultationTarget(
-  prisma: Pick<Prisma.TransactionClient, "needV2" | "need" | "serviceV2" | "service">,
+  prisma: Pick<Prisma.TransactionClient, "needV2" | "serviceV2">,
   target: ConversationContextTarget,
   actorId: string,
   now = new Date(),
 ) {
-  if (target.kind === "NEED" && target.source === "V2") {
+  if (target.kind === "NEED") {
     const need = await prisma.needV2.findFirst({
       where: { id: target.contextId, state: "OPEN", archivedAt: null, endsAt: { gt: now } },
       select: {
         ownerId: true,
         mode: true,
         pets: { select: { name: true, petType: true, customPetType: true } },
+        tasks: { select: { category: true, label: true } },
       },
     });
     if (!need) throw new ConversationCommandError("RESOURCE_NOT_FOUND");
     if (need.ownerId === actorId) throw new ConversationCommandError("FORBIDDEN_RESOURCE_ACTION");
     return {
       counterpartId: need.ownerId,
-      contextTitle: buildNeedDisplayTitle({ mode: need.mode, pets: need.pets }),
+      contextTitle: buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, tasks: need.tasks }),
       contextMode: need.mode,
     };
   }
-  if (target.kind === "NEED") {
-    const need = await prisma.need.findFirst({
-      where: { id: target.contextId, status: "OPEN", archivedAt: null, endDate: { gt: now } },
-      select: { ownerId: true, title: true, category: true },
-    });
-    if (!need) throw new ConversationCommandError("RESOURCE_NOT_FOUND");
-    if (need.ownerId === actorId) throw new ConversationCommandError("FORBIDDEN_RESOURCE_ACTION");
-    const contextMode = need.category === "VISIT" ? "HOME_VISIT" : need.category === "FOSTER" ? "BOARDING" : "CUSTOM";
-    return { counterpartId: need.ownerId, contextTitle: need.title, contextMode };
-  }
-  if (target.source === "V2") {
-    const service = await prisma.serviceV2.findFirst({
+  const service = await prisma.serviceV2.findFirst({
       where: { id: target.contextId, state: "ACTIVE", archivedAt: null, serviceProfile: { isAccepting: true } },
       select: { title: true, mode: true, serviceProfile: { select: { userId: true } } },
     });
     if (!service) throw new ConversationCommandError("RESOURCE_NOT_FOUND");
     if (service.serviceProfile.userId === actorId) throw new ConversationCommandError("FORBIDDEN_RESOURCE_ACTION");
-    return { counterpartId: service.serviceProfile.userId, contextTitle: service.title, contextMode: service.mode };
-  }
-  const service = await prisma.service.findFirst({
-    where: { id: target.contextId, isActive: true, archivedAt: null, serviceProfile: { isAccepting: true } },
-    select: { serviceType: true, customType: true, serviceProfile: { select: { userId: true } } },
-  });
-  if (!service) throw new ConversationCommandError("RESOURCE_NOT_FOUND");
-  if (service.serviceProfile.userId === actorId) throw new ConversationCommandError("FORBIDDEN_RESOURCE_ACTION");
-  const contextMode = service.serviceType === "VISIT" ? "HOME_VISIT" : service.serviceType === "FOSTER" ? "BOARDING" : "CUSTOM";
-  const contextTitle = contextMode === "CUSTOM" && service.customType ? service.customType : contextMode === "HOME_VISIT" ? "Home visit care" : "Boarding care";
-  return { counterpartId: service.serviceProfile.userId, contextTitle, contextMode };
+  return { counterpartId: service.serviceProfile.userId, contextTitle: service.title, contextMode: service.mode };
 }
 
 async function advanceConversationLastMessage(

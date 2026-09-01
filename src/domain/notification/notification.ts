@@ -78,7 +78,7 @@ export function notificationPresentation(notification: NotificationView, locale:
 
 export function notificationResourceHref(resourceKind: NotificationResourceKind, resourceId: string) {
   const encoded = encodeURIComponent(resourceId);
-  if (resourceKind === "CONVERSATION") return `/dashboard/notifications?view=conversations&conversation=${encoded}`;
+  if (resourceKind === "CONVERSATION") return `/dashboard/messages?conversation=${encoded}`;
   if (resourceKind === "APPLICATION") return `/dashboard/applications?application=${encoded}`;
   return `/dashboard/bookings?booking=${encoded}`;
 }

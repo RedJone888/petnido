@@ -8,13 +8,13 @@ import ServiceProfile from "./_components/ServiceProfile";
 import { ServiceV2List } from "./_components/ServiceV2List";
 import { ServiceBulkManagement } from "./_components/service-bulk-management";
 import { ServiceProfileSettings } from "./_components/service-profile-settings";
+import { ServiceDraftPanel } from "./_components/service-draft-panel";
+import { DevelopmentBadge } from "../_components/development-badge";
 
 export function ServiceProfileDashboardClient({
-  publishingV2Enabled,
-  publishingV2Mutable,
+  showDrafts,
 }: {
-  publishingV2Enabled: boolean;
-  publishingV2Mutable: boolean;
+  showDrafts: boolean;
 }) {
   const { t } = useLanguage();
   const copy = t.core.serviceDashboard;
@@ -25,21 +25,23 @@ export function ServiceProfileDashboardClient({
     retry: false,
   });
   const userProfile = getServiceProfile.data;
+  if (showDrafts) return <ServiceDraftPanel />;
   return (
     <main className="w-full h-full flex flex-col overflow-hidden">
-      <div className="mx-auto max-w-7xl w-full h-full flex flex-col overflow-hidden">
-        {/* Fixed Top Section: ServiceProfileSettings */}
-        <div className="shrink-0 pb-3">
-          <ServiceProfileSettings />
-        </div>
+      <div className="flex h-full w-full flex-col overflow-hidden">
+        <header className="flex h-auto shrink-0 items-center border-b border-slate-200/70 px-2 py-3 md:h-[var(--dashboard-title-height)] md:py-0">
+          <h1 className="pr-32 text-2xl font-black tracking-tight text-slate-900 md:pr-0">{t.core.dashboard.groupServices}</h1>
+        </header>
 
         {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto pr-1 pb-8 space-y-6">
-          {hasServiceProfile && publishingV2Enabled && publishingV2Mutable ? (
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pb-8 pr-1 pt-4">
+          <DevelopmentBadge />
+          <ServiceProfileSettings />
+          {hasServiceProfile ? (
             <ServiceBulkManagement />
           ) : null}
-        {hasServiceProfile && publishingV2Enabled ? (
-          <ServiceV2List mutable={publishingV2Mutable} />
+        {hasServiceProfile ? (
+          <ServiceV2List mutable />
         ) : null}
         {hasServiceProfile && getServiceProfile.isLoading ? (
           <LoadingPage title={t.core.common.loading} />

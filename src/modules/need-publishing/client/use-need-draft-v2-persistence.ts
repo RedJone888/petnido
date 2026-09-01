@@ -10,11 +10,10 @@ import { trpc } from "@/utils/trpc";
 import { createSerialTaskQueue } from "./serial-task-queue";
 import { usePublishDraft } from "@/components/publishing/use-publish-draft";
 
-const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function validDraftId(value: string | undefined) {
-  return value && uuidPattern.test(value) ? value : null;
+  return value && typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
 }
 
 function draftContentSignature(snapshot: NeedDraftSnapshotV3 | null) {
@@ -248,6 +247,19 @@ export function useNeedDraftV2Persistence({
     Boolean(serverDraftIdRef.current) &&
     lastSavedSignature === snapshotSignature;
 
+  const finalizePublished = useCallback(() => {
+    // Publishing marks the server draft PUBLISHED in the same transaction as
+    // the need. Keep autosave permanently quiet while this page navigates
+    // away so the completed draft is not presented as another sync operation.
+    publishingRef.current = true;
+    latestSnapshotRef.current = null;
+    autoSaveSignatureRef.current = null;
+    if (autoSaveTimerRef.current !== null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+  }, []);
+
   return {
     draftId: serverDraftIdRef.current,
     isSynced,
@@ -294,5 +306,6 @@ export function useNeedDraftV2Persistence({
     },
     keepCurrentChanges,
     abandonDraft,
+    finalizePublished,
   };
 }

@@ -16,8 +16,8 @@ export default function QuickNav() {
     { label: t.core.dashboard.applications, icon: "📋", count: data ? data.counts.receivedApplications + data.counts.submittedApplications : undefined, href: "/dashboard/applications" },
     { label: t.core.dashboard.bookings, icon: "🗓️", count: data ? data.counts.receivedBookings + data.counts.requestedBookings : undefined, href: "/dashboard/bookings" },
     { label: t.core.dashboard.matches, icon: "✨", count: undefined, href: "/dashboard/matches" },
-    { label: t.core.dashboard.notifications, icon: "🔔", count: data?.counts.unreadNotifications, href: "/dashboard/notifications" },
-    { label: t.core.dashboard.settings, icon: "⚙️", count: undefined, href: "/dashboard/settings" },
+    { label: t.core.dashboard.messages, icon: "💬", count: data?.counts.unreadMessages, href: "/dashboard/messages" },
+    { label: t.core.dashboard.settings, icon: "⚙️", count: undefined, href: "/dashboard/settings/security" },
   ];
   return (
     <section className="mb-6 rounded-2xl border border-primary/10 bg-primary/5 px-6 py-4">

@@ -384,6 +384,29 @@ describe("legacy need draft v3 migration", () => {
     });
   });
 
+  it("maps task source pet ids to the current draft client pet key", () => {
+    const result = mapLegacyNeedDraftV3(
+      draft({
+        careType: "visit",
+        pets: [{ ...pet, sourcePetId: "saved-pet-1" }],
+        visitPlans: [
+          {
+            id: "feeding-task",
+            templateId: "feeding",
+            label: "Feeding",
+            priority: "must",
+            petIds: ["saved-pet-1"],
+            visitNumbers: [1],
+            custom: false,
+          },
+        ],
+      }),
+      "Asia/Tokyo",
+    );
+
+    expect(result.payload.homeVisit?.tasks?.[0]?.petKeys).toEqual(["pet-1"]);
+  });
+
   it("preserves the pet profile save and sync choices", () => {
     const result = mapLegacyNeedDraftV3(
       draft({
@@ -498,6 +521,7 @@ describe("legacy need draft v3 migration", () => {
       location: {
         lat: 35.681236,
         lng: 139.767125,
+        label: "Tokyo",
       },
     });
 
@@ -508,12 +532,17 @@ describe("legacy need draft v3 migration", () => {
     expect(taskKey).toBe("custom-task-123e4567-e89b-12d3-a456-426614174000:pet-1");
   });
 
-  it("never copies the legacy area label into the V2 location snapshot", () => {
+  it("carries the confirmed search-box text as the saved location label", () => {
     const result = mapLegacyNeedDraftV3(
       draft({
         careType: "custom",
         areaConfirmed: true,
         area: "legacy user-entered location text",
+        location: {
+          lat: 35.681236,
+          lng: 139.767125,
+          label: "legacy user-entered location text",
+        },
       }),
       "Asia/Tokyo",
     );
@@ -521,13 +550,14 @@ describe("legacy need draft v3 migration", () => {
     expect(result.payload.location).toEqual({
       lat: 35.681236,
       lon: 139.767125,
+      label: "legacy user-entered location text",
       regionLabel: null,
       displayPrecision: "MAP_POINT",
     });
-    expect(JSON.stringify(result.payload)).not.toContain("legacy user-entered");
+    expect(JSON.stringify(result.payload)).toContain("legacy user-entered");
   });
 
-  it("preserves a selected saved map location without adding address text", () => {
+  it("preserves a selected saved map location and its display label", () => {
     const result = mapLegacyNeedDraftV3(
       draft({
         careType: "custom",
@@ -537,6 +567,7 @@ describe("legacy need draft v3 migration", () => {
           sourceLocationId: "saved-location-1",
           lat: 35.681236,
           lng: 139.767125,
+          label: "profile display label",
         },
       }),
       "Asia/Tokyo",
@@ -546,10 +577,11 @@ describe("legacy need draft v3 migration", () => {
       sourceLocationId: "saved-location-1",
       lat: 35.681236,
       lon: 139.767125,
+      label: "profile display label",
       regionLabel: null,
       displayPrecision: "MAP_POINT",
     });
-    expect(JSON.stringify(result.payload)).not.toContain("profile display label");
+    expect(JSON.stringify(result.payload)).toContain("profile display label");
   });
 
   it("maps completed supporting uploads to attachment IDs", () => {
@@ -573,7 +605,14 @@ describe("legacy need draft v3 migration", () => {
   it("round-trips a persisted home-visit payload through an edit draft", () => {
     const original = draft({
       careType: "visit",
-      pets: [{ ...pet, sourcePetId: "saved-pet-1" }],
+      pets: [
+        {
+          ...pet,
+          sourcePetId: "saved-pet-1",
+          photoAttachmentId: "pet-photo-1",
+          photo: "/uploads/mochi.jpg",
+        },
+      ],
       dates: { startDate: "2026-08-10", endDate: "2026-08-12", notes: "" },
       visitFrequency: "every-2-days",
       firstVisitDate: "2026-08-10",
@@ -623,6 +662,11 @@ describe("legacy need draft v3 migration", () => {
     });
     const republished = mapLegacyNeedDraftV3(restored, "Asia/Tokyo");
 
+    expect(restored.pets[0]).toMatchObject({
+      photoAttachmentId: "pet-photo-1",
+      photo: "/uploads/mochi.jpg",
+      profileAction: "update",
+    });
     expect(republished).toEqual(published);
   });
 
@@ -696,6 +740,8 @@ describe("legacy need draft v3 migration", () => {
     });
     const republished = mapLegacyNeedDraftV3(restored, "Asia/Tokyo");
 
+    expect(published.payload.endsAt).toBe("2026-08-11T15:00:00.000Z");
+    expect(restored.dates.endDate).toBe("2026-08-12");
     expect(republished).toEqual(published);
     expect(restored.customBoardingRequirements).toEqual(["No stairs"]);
     expect(restored.customHomeSituations).toEqual(["Open-plan kitchen"]);
@@ -946,7 +992,7 @@ describe("legacy need draft v3 migration", () => {
         petKey: null,
       },
       {
-        kind: "OTHER_NEED",
+        kind: "NOTE",
         label: "No direct contact with other pets",
         petKey: null,
       },
@@ -957,6 +1003,7 @@ describe("legacy need draft v3 migration", () => {
         careType: "custom",
         customNeeds: ["Quiet handling"],
         customWarnings: ["Do not use a retractable leash"],
+        customRequirementsNotes: "Meet at the side entrance",
       }),
       "Asia/Tokyo",
     );
@@ -965,6 +1012,11 @@ describe("legacy need draft v3 migration", () => {
       {
         kind: "WARNING",
         label: "Do not use a retractable leash",
+        petKey: null,
+      },
+      {
+        kind: "NOTE",
+        label: "Meet at the side entrance",
         petKey: null,
       },
     ]);
@@ -999,7 +1051,7 @@ describe("legacy need draft v3 migration", () => {
     expect(
       parseLegacyNeedDraftV3({
         ...draft(),
-        serverDraftId: "not-a-uuid",
+        serverDraftId: 123 as any,
       }),
     ).toBeNull();
     expect(parseLegacyNeedDraftV3(draft())).not.toBeNull();

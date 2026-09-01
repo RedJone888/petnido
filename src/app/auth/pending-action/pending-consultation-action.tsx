@@ -24,7 +24,7 @@ export function PendingConsultationAction({
   const [body, setBody] = useState("");
   const consultation = trpc.conversation.startConsultation.useMutation({
     onSuccess: (result) => {
-      router.replace(`/dashboard/notifications?view=conversations&conversation=${encodeURIComponent(result.conversationId)}`);
+      router.replace(`/dashboard/messages?conversation=${encodeURIComponent(result.conversationId)}`);
     },
   });
   const submit = () => {

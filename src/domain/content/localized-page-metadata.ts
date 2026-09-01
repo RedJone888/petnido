@@ -1,7 +1,7 @@
 import type { Lang } from "@/domain/lang/types";
 
 export const supportedLanguages = ["en", "zh", "ja"] as const;
-export type LocalizedPage = "knowledge" | "needs" | "services" | "providers" | "care-types" | "care-home-visits" | "care-boarding" | "care-custom" | "how-it-works" | "how-needs" | "how-services";
+export type LocalizedPage = "knowledge" | "needs" | "services" | "providers" | "care-types" | "care-home-visits" | "care-boarding" | "care-custom";
 
 const copy: Record<LocalizedPage, Record<Lang, { title: string; description: string }>> = {
   needs: {
@@ -43,21 +43,6 @@ const copy: Record<LocalizedPage, Record<Lang, { title: string; description: str
     en: { title: "Custom pet services | PetNido", description: "Learn how to define a safe, lawful and clearly scoped custom pet task." },
     zh: { title: "自定义宠物服务 | PetNido", description: "了解如何描述安全、合法且任务边界清晰的自定义服务。" },
     ja: { title: "カスタムペットサービス | PetNido", description: "安全で合法、範囲が明確なカスタム作業の伝え方を紹介します。" },
-  },
-  "how-it-works": {
-    en: { title: "How PetNido works", description: "Choose whether to post a need, publish a service or compare care types." },
-    zh: { title: "PetNido 如何使用", description: "选择发布需求、发布服务，或先比较三种照护类型。" },
-    ja: { title: "PetNidoの使い方", description: "依頼の投稿、サービス公開、ケア形式の比較から選べます。" },
-  },
-  "how-needs": {
-    en: { title: "How to post a pet-care need | PetNido", description: "Follow the structured steps for publishing a clear pet-care need." },
-    zh: { title: "如何发布宠物照护需求 | PetNido", description: "按照结构化步骤发布清晰的宠物照护需求。" },
-    ja: { title: "ペットケア依頼の投稿方法 | PetNido", description: "わかりやすい依頼を投稿する手順を紹介します。" },
-  },
-  "how-services": {
-    en: { title: "How to publish a pet-care service | PetNido", description: "Follow the steps for turning real experience and availability into a clear service." },
-    zh: { title: "如何发布宠物照护服务 | PetNido", description: "把真实经验和可用时间整理成清晰服务的发布步骤。" },
-    ja: { title: "ペットケアサービスの公開方法 | PetNido", description: "経験と空き時間をサービスとして公開する手順を紹介します。" },
   },
 };
 

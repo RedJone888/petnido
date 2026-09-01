@@ -35,7 +35,7 @@ export const stepVerifySchema = z
   })
   .strict();
 export const stepLoginSchema = z
-  .object({ email: authEmailSchema, password: authCurrentPasswordSchema })
+  .object({ email: authEmailSchema, password: authPasswordSchema })
   .strict();
 
 export const emailChangeRequestSchema = z.object({ email: authEmailSchema }).strict();

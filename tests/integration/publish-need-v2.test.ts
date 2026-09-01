@@ -50,6 +50,7 @@ function common(draftId: string) {
     location: {
       lat: 35.681236,
       lon: 139.767125,
+      label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan",
       regionLabel: "Chiyoda, Tokyo",
       displayPrecision: "DISTRICT" as const,
     },
@@ -168,6 +169,7 @@ describe("V2 need publication transaction", () => {
       await prisma.needV2.findUnique({
         where: { id: first.needId },
         include: {
+          locationSnapshot: true,
           pets: true,
           tasks: { include: { petLinks: true, visitOrders: true } },
           homeVisitDetail: true,
@@ -179,6 +181,10 @@ describe("V2 need publication transaction", () => {
     ).toMatchObject({
       state: "OPEN",
       scheduleNotes: "Access after 18:00 on the first day.",
+      locationSnapshot: {
+        label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan",
+        regionLabel: "Chiyoda, Tokyo",
+      },
       pets: [{ quantity: 2, petType: "CAT" }],
       homeVisitDetail: { intervalDays: 1, visitsPerServiceDay: 2 },
     });
@@ -355,8 +361,16 @@ describe("V2 need publication transaction", () => {
 
     const editDraftId = randomUUID();
     await createDraft(owner.id, editDraftId, "BOARDING", created.needId);
+    const editedLocation = {
+      ...common(editDraftId).location,
+      label: "Meguro Station, Kamimeguro, Meguro, Tokyo, Japan",
+      regionLabel: "Tokyo, Meguro",
+      lat: 35.633,
+      lon: 139.716,
+    };
     const editInput = needPublishSchema.parse({
       ...common(editDraftId),
+      location: editedLocation,
       pets: [
         {
           ...common(editDraftId).pets[0],
@@ -400,6 +414,7 @@ describe("V2 need publication transaction", () => {
           boardingDetail: true,
           requirements: true,
           pets: true,
+          locationSnapshot: true,
         },
       }),
     ).toMatchObject({
@@ -407,8 +422,83 @@ describe("V2 need publication transaction", () => {
       boardingDetail: { maxProviderDistanceMeters: 5000 },
       requirements: [{ label: "Quiet room" }],
       pets: [{ sourcePetId: savedPet.id, quantity: 1 }],
+      locationSnapshot: {
+        label: editedLocation.label,
+        regionLabel: editedLocation.regionLabel,
+      },
     });
     expect(await prisma.pet.count({ where: { ownerId: owner.id } })).toBe(1);
+  });
+
+  it("freezes pet attachment URLs on snapshots in pet order", async () => {
+    const owner = await prisma.user.create({
+      data: { email: "need-pet-snapshot-photo@example.com" },
+    });
+    const firstPet = await prisma.pet.create({
+      data: { ownerId: owner.id, name: "No photo", type: "DOG" },
+    });
+    const secondPet = await prisma.pet.create({
+      data: { ownerId: owner.id, name: "Has photo", type: "CAT" },
+    });
+    const attachment = await prisma.attachment.create({
+      data: {
+        userId: owner.id,
+        petId: secondPet.id,
+        url: "/uploads/second-pet.jpg",
+        fileKey: "second-pet.jpg",
+        signature: "second-pet-signature",
+        status: 1,
+      },
+    });
+    const draftId = randomUUID();
+    await createDraft(owner.id, draftId, "CUSTOM");
+    const basePet = common(draftId).pets[0];
+    const input = needPublishSchema.parse({
+      ...common(draftId),
+      pets: [
+        {
+          ...basePet,
+          clientPetKey: "pet-1",
+          sourcePetId: firstPet.id,
+          profileAction: "UPDATE",
+          name: "No photo",
+          petType: "DOG",
+        },
+        {
+          ...basePet,
+          clientPetKey: "pet-2",
+          sourcePetId: secondPet.id,
+          attachmentId: attachment.id,
+          profileAction: "UPDATE",
+          name: "Has photo",
+          petType: "CAT",
+        },
+      ],
+      mode: "CUSTOM",
+      custom: {
+        tasks: [{ ...task(), petKeys: ["pet-1", "pet-2"] }],
+        requirements: [],
+        timePreference: null,
+        exactTime: null,
+      },
+    });
+
+    const published = await publish(owner.id, input);
+    const snapshots = await prisma.needPetSnapshotV2.findMany({
+      where: { needId: published.needId },
+      orderBy: { order: "asc" },
+      include: {
+        attachments: {
+          orderBy: { order: "asc" },
+          include: { attachment: { select: { url: true } } },
+        },
+      },
+    });
+
+    expect(snapshots.map((pet) => pet.attachments[0]?.attachment.url ?? null)).toEqual([
+      null,
+      "/uploads/second-pet.jpg",
+    ]);
   });
 
   it("rolls back every write when a referenced pet belongs to another user", async () => {

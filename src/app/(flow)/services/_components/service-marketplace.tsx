@@ -11,6 +11,8 @@ import type { Lang } from "@/domain/lang/types";
 import { messages } from "@/i18n/messages";
 import { petTypeCodes } from "@/modules/need-publishing/domain/pet-types";
 
+import type { RouterOutputs } from "@/server/trpc";
+
 type Mode = "HOME_VISIT" | "BOARDING" | "CUSTOM";
 const petTypes = petTypeCodes;
 const inputClass = "min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm";
@@ -26,7 +28,13 @@ function money(amount: number, currency: string) {
   return `${currency} ${(amount / divisor).toLocaleString(undefined, { maximumFractionDigits: divisor === 1 ? 0 : 2 })}`;
 }
 
-export function ServiceMarketplace({ initialLanguage }: { initialLanguage?: Lang } = {}) {
+export function ServiceMarketplace({
+  initialLanguage,
+  initialData,
+}: {
+  initialLanguage?: Lang;
+  initialData?: any;
+} = {}) {
   const lang = usePageLanguage(initialLanguage);
   const t = messages[lang];
   const copy = t.core.marketplace;
@@ -50,7 +58,10 @@ export function ServiceMarketplace({ initialLanguage }: { initialLanguage?: Lang
     availableOn: availableOn || undefined,
     origin: origin ? { ...origin, radiusMeters: radiusKm * 1000 } : undefined,
   }), [availableOn, currency, maximum, minimum, mode, origin, petType, radiusKm]);
-  const services = trpc.marketplaceService.list.useQuery({ filter, limit: 20, cursor });
+  const services = trpc.marketplaceService.list.useQuery(
+    { filter, limit: 20, cursor },
+    { initialData: !cursor && initialData ? initialData : undefined },
+  );
 
   function update(action: () => void) { setCursor(undefined); action(); }
   function useLocation() {
@@ -87,7 +98,7 @@ export function ServiceMarketplace({ initialLanguage }: { initialLanguage?: Lang
               <div className="p-5"><p className="text-[11px] font-black uppercase tracking-wide text-primary">{t.core.modes[service.mode as keyof typeof t.core.modes] ?? service.mode}</p><h2 className="mt-1 line-clamp-2 font-black text-slate-950">{service.title}</h2><div className="mt-3 flex items-center gap-2"><div className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-slate-100">{service.provider.image ? <AppImage src={service.provider.image} alt="" width={36} height={36} className="h-full w-full object-cover" /> : "🐾"}</div><div><p className="text-sm font-black">{service.provider.nickname || t.core.common.providerFallback}</p><p className="flex items-center gap-1 text-xs text-slate-500"><Star size={12} />{service.provider.rating.toFixed(1)} · {service.provider.reviewCount} {t.core.common.reviewCount}</p></div></div>
                 <dl className="mt-4 space-y-2 text-xs text-slate-600"><div className="flex gap-2"><PawPrint size={15} className="text-primary" /><dd>{[...new Set(service.petPolicies.filter((policy) => policy.accepted).map((policy) => t.core.pets[policy.petType as keyof typeof t.core.pets]))].join(", ") || copy.askProvider}</dd></div><div className="flex gap-2"><MapPin size={15} className="text-primary" /><dd>{service.location.regionLabel || t.core.common.approximateArea}{service.location.distanceMeters !== null ? ` · ${(service.location.distanceMeters / 1000).toFixed(1)} km` : ""}</dd></div><div className="flex gap-2"><CalendarCheck size={15} className="text-primary" /><dd>{service.availabilityRules.length} {copy.availabilityRules}</dd></div></dl>
                 <p className="mt-4 text-sm font-black">{service.priceRules[0] ? `${copy.from} ${money(Math.min(...service.priceRules.map((rule) => rule.amountMinor)), service.currency)}` : t.core.common.discussPrice}</p>
-                <Link href={`${prefix}/services/${encodeURIComponent(service.publicId)}`} className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-black text-white">{copy.viewService}</Link>
+                <Link href={`${prefix}/services/${encodeURIComponent(service.publicId)}`} prefetch={true} className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-black text-white">{copy.viewService}</Link>
               </div>
             </article>
           ))}

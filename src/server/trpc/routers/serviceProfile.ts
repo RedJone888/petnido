@@ -58,19 +58,6 @@ export const serviceProfileRouter = router({
               lon: true,
             },
           },
-          services: {
-            where: { archivedAt: null },
-            include: {
-              priceRules: true,
-              photos: {
-                where: { status: 1 },
-                orderBy: {
-                  order: "asc",
-                },
-              },
-            },
-            orderBy: { createdAt: "asc" },
-          },
         },
       }),
     ]);
@@ -226,29 +213,22 @@ export const serviceProfileRouter = router({
         });
         if (claimed.count !== 1) throw new TRPCError({ code: "CONFLICT", message: "CONFLICTING_UPDATE" });
         let v2Count = 0;
-        let legacyCount = 0;
         if (input.command === "PAUSE_ALL" || input.command === "RESUME_ALL") {
           const nextV2 = input.command === "PAUSE_ALL" ? "PAUSED" : "ACTIVE";
           const currentV2 = input.command === "PAUSE_ALL" ? "ACTIVE" : "PAUSED";
           v2Count = (await tx.serviceV2.updateMany({ where: { serviceProfileId: profile.id, archivedAt: null, state: currentV2 }, data: { state: nextV2 } })).count;
-          legacyCount = (await tx.service.updateMany({ where: { serviceProfileId: profile.id, archivedAt: null, isActive: input.command === "PAUSE_ALL" }, data: { isActive: input.command === "RESUME_ALL" } })).count;
           if (input.command === "RESUME_ALL") await tx.profile.updateMany({ where: { userId }, data: { isSitter: true } });
         } else if (input.command === "SET_CURRENCY") {
           v2Count = (await tx.serviceV2.updateMany({ where: { serviceProfileId: profile.id, archivedAt: null }, data: { currency: input.currency } })).count;
-          legacyCount = (await tx.service.updateMany({ where: { serviceProfileId: profile.id, archivedAt: null }, data: { currency: input.currency } })).count;
         } else {
           const services = await tx.serviceV2.findMany({ where: { serviceProfileId: profile.id, archivedAt: null }, select: { locationSnapshotId: true } });
           v2Count = (await tx.locationSnapshotV2.updateMany({
             where: { id: { in: services.map((item) => item.locationSnapshotId) } },
             data: { sourceLocationId: location!.id, lat: location!.lat, lon: location!.lon, regionLabel: location!.regionLabel, displayPrecision: location!.displayPrecision },
           })).count;
-          legacyCount = (await tx.service.updateMany({
-            where: { serviceProfileId: profile.id, archivedAt: null },
-            data: { areaLat: Number(location!.lat), areaLon: Number(location!.lon), areaRaw: location!.regionLabel ?? "Map point" },
-          })).count;
         }
         const updatedProfile = await tx.serviceProfile.findUniqueOrThrow({ where: { id: profile.id }, select: { isAccepting: true, baseCurrency: true, defaultLocationId: true, updatedAt: true } });
-        return { command: input.command, affected: { v2: v2Count, legacy: legacyCount }, profile: updatedProfile, existingBookingsChanged: false };
+        return { command: input.command, affected: v2Count, profile: updatedProfile, existingBookingsChanged: false };
       });
     }),
   getLocationAndCurrency: protectedProcedure.query(async ({ ctx }) => {

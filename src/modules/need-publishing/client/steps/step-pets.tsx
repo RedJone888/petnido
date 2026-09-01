@@ -80,6 +80,7 @@ export function draftPetFromProfile(pet: SavedPetOption): PetDraft {
   return {
     id: crypto.randomUUID(),
     sourcePetId: pet.id,
+    photoAttachmentId: pet.photos[0]?.id,
     profileAction: "update",
     type: supportedType ? normalizedType : "other",
     typeCode: normalizedSelection.petType,
@@ -130,7 +131,7 @@ export function draftPetToProfileEditorValue(
     photos: pet.photo
       ? [
           {
-            id: `need-pet-${pet.id}`,
+            id: pet.photoAttachmentId ?? `need-pet-${pet.id}`,
             url: pet.photo,
             signature: `need-pet-${pet.id}`,
             isUploading: false,
@@ -160,6 +161,9 @@ export function profileEditorValueToDraftPatch(
     sex: value.sex.toLowerCase(),
     neutered: value.neutered.toLowerCase(),
     photo: value.photos[0]?.url ?? "",
+    photoAttachmentId: value.photos[0]?.id.startsWith("need-pet-")
+      ? undefined
+      : value.photos[0]?.id,
     notes: value.notes,
   };
 }
@@ -172,6 +176,12 @@ export function profileEditorValueToPetInput(
     value.type,
     value.customType,
   );
+  const hasSyntheticPhoto = value.photos.some((photo) =>
+    photo.id.startsWith("need-pet-"),
+  );
+  const photoIds = value.photos
+    .map((photo) => photo.id)
+    .filter((id) => !id.startsWith("need-pet-"));
   return {
     name: value.name.trim(),
     type: normalizedPetType.petType,
@@ -191,6 +201,7 @@ export function profileEditorValueToPetInput(
     sex: value.sex || null,
     neutered: value.neutered || null,
     notes: value.notes.trim() || null,
+    ...(!hasSyntheticPhoto ? { photoIds } : {}),
   };
 }
 
@@ -338,6 +349,12 @@ export function StepPets({
     pets.flatMap((pet) => (pet.sourcePetId ? [pet.sourcePetId] : [])),
   );
   const profileChoiceCopy = needMessages.needPublishingClient.petProfile;
+  const deletePetKeepTasksMessage =
+    lang === "ja"
+      ? "「{pet}」を削除しますか？設定済みの作業は保持されますが、このペットに割り当てた作業は再設定が必要です。"
+      : lang === "zh"
+        ? "确定要删除「{pet}」吗？已设置的任务会保留，但需要重新分配原本关联这只宠物的任务。"
+        : "Delete {pet}? Existing care tasks will be kept, but tasks assigned to this pet must be reassigned.";
   const activePet = editorPet?.id === expanded ? editorPet : null;
   const activeEditorValue = activePet
     ? draftPetToProfileEditorValue(activePet, lang)
@@ -347,7 +364,7 @@ export function StepPets({
       title: `${taskForm.delete} ${petLabel}`,
       content: (
         <p>
-          {taskForm.deletePetMessage.replace("{pet}", petLabel)}
+          {deletePetKeepTasksMessage.replace("{pet}", petLabel)}
         </p>
       ),
       confirmText: taskForm.delete,
@@ -360,8 +377,53 @@ export function StepPets({
     closeConfirm();
   };
 
+  const visiblePets = displayPets.filter(
+    (pet) => !newPetIdsRef.current.has(pet.id),
+  );
+  const profilePets = visiblePets.filter((pet) => Boolean(pet.sourcePetId));
+  const customPets = visiblePets.filter((pet) => !pet.sourcePetId);
+
+  const renderPetCard = (pet: PetDraft, index: number) => {
+    const petError = validatedPetIds.has(pet.id)
+      ? (petProfileMissingFields(pet)[0] ?? "")
+      : "";
+    const petLabel =
+      pet.name || petDisplayType(pet) || `Pet ${index + 1}`;
+    return (
+      <PetProfileCard
+        key={pet.id}
+        pet={{
+          id: pet.id,
+          name: petLabel,
+          type: pet.type.toUpperCase(),
+          customType: pet.otherType,
+          breed: pet.breed,
+          birthDate: pet.birthDate || null,
+          weightGrams: pet.weight.trim()
+            ? Math.round(
+                Number(pet.weight) *
+                  (pet.weightUnit === "kg" ? 1000 : 1),
+              )
+            : null,
+          sex: pet.sex,
+          neutered: pet.neutered,
+          notes: pet.notes,
+          photoUrl: pet.photo,
+        }}
+        invalidMessage={petError ? form.completeDetails : undefined}
+        editLabel={t.settings.pets.editAria.replace("{name}", petLabel)}
+        deleteLabel={t.settings.pets.deleteAria.replace(
+          "{name}",
+          petLabel,
+        )}
+        onEdit={() => openPetEditor(pet)}
+        onDelete={() => void confirmRemovePet(pet, petLabel)}
+      />
+    );
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <section className="relative z-30 flex flex-wrap items-center gap-3">
         {savedPetsLoading ? (
           <span className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-400">
@@ -486,49 +548,33 @@ export function StepPets({
         ) : null}
       </section>
 
-      <div className="flex flex-wrap items-start gap-3">
-        {displayPets
-          .filter((pet) => !newPetIdsRef.current.has(pet.id))
-          .map((pet, index) => {
-            const petError = validatedPetIds.has(pet.id)
-              ? (petProfileMissingFields(pet)[0] ?? "")
-              : "";
-            const petLabel =
-              pet.name || petDisplayType(pet) || `Pet ${index + 1}`;
-            return (
-              <PetProfileCard
-                key={pet.id}
-                pet={{
-                  id: pet.id,
-                  name: petLabel,
-                  type: pet.type.toUpperCase(),
-                  customType: pet.otherType,
-                  breed: pet.breed,
-                  birthDate: pet.birthDate || null,
-                  weightGrams: pet.weight.trim()
-                    ? Math.round(
-                        Number(pet.weight) *
-                          (pet.weightUnit === "kg" ? 1000 : 1),
-                      )
-                    : null,
-                  sex: pet.sex,
-                  neutered: pet.neutered,
-                  notes: pet.notes,
-                  photoUrl: pet.photo,
-                }}
-                invalidMessage={petError ? form.completeDetails : undefined}
-                sourceLabel={pet.sourcePetId ? form.fromProfile : undefined}
-                editLabel={t.settings.pets.editAria.replace("{name}", petLabel)}
-                deleteLabel={t.settings.pets.deleteAria.replace(
-                  "{name}",
-                  petLabel,
-                )}
-                onEdit={() => openPetEditor(pet)}
-                onDelete={() => void confirmRemovePet(pet, petLabel)}
-              />
-            );
-          })}
-      </div>
+      {profilePets.length > 0 ? (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
+            <span>{form.profilePetsGroup}</span>
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[11px] font-bold text-slate-600">
+              {profilePets.length}
+            </span>
+          </div>
+          <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {profilePets.map(renderPetCard)}
+          </div>
+        </section>
+      ) : null}
+
+      {customPets.length > 0 ? (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
+            <span>{form.customPetsGroup}</span>
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[11px] font-bold text-slate-600">
+              {customPets.length}
+            </span>
+          </div>
+          <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {customPets.map(renderPetCard)}
+          </div>
+        </section>
+      ) : null}
 
       {activePet && activeEditorValue ? (
         <PetProfileEditorDialog

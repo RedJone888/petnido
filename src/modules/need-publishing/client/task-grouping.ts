@@ -22,13 +22,14 @@ export function groupTaskRowsByPetGroup<T extends { petIds: string[] }>(
   taskRows: T[],
 ): PetTaskGroupItem<T>[] {
   return taskRows.reduce<PetTaskGroupItem<T>[]>((groups, item) => {
-    const key = [...item.petIds].sort().join("|");
+    const petIds = Array.from(new Set(item.petIds)).sort();
+    const key = petIds.join("|");
     const previous = groups.at(-1);
     // rowSpan is a presentation-only optimization. Only adjacent rows may be
     // merged; looking up an older group would silently reorder intervening
     // rows and change the task sequence the user saved.
     if (previous?.key === key) previous.items.push(item);
-    else groups.push({ key, petIds: item.petIds, items: [item] });
+    else groups.push({ key, petIds, items: [item] });
     return groups;
   }, []);
 }

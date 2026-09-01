@@ -17,21 +17,19 @@ describe("marketplace pagination and filters", () => {
     expect(decodeMarketplaceCursor("not-a-cursor")).toBeNull();
   });
 
-  it("orders equal timestamps deterministically across sources and IDs", () => {
+  it("orders equal timestamps deterministically by ID", () => {
     const createdAt = new Date("2026-08-04T00:00:00.000Z");
     const items = [
-      { createdAt, source: "LEGACY" as const, id: "z" },
       { createdAt, source: "V2" as const, id: "a" },
       { createdAt, source: "V2" as const, id: "z" },
     ].sort(compareMarketplaceItems);
     expect(items.map((item) => `${item.source}:${item.id}`)).toEqual([
       "V2:z",
       "V2:a",
-      "LEGACY:z",
     ]);
     const cursor = { createdAt: createdAt.toISOString(), source: "V2" as const, id: "a" };
     expect(isAfterCursor(items[0], cursor)).toBe(false);
-    expect(isAfterCursor(items[2], cursor)).toBe(true);
+    expect(isAfterCursor(items[1], cursor)).toBe(false);
   });
 
   it("calculates distance without returning coordinates and applies radius boundaries", () => {

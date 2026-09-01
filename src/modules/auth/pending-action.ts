@@ -16,9 +16,7 @@ export const pendingActionStartSchema = z
   .object({
     action: pendingActionKindSchema,
     targetId: z.string().min(1).max(128).refine(
-      (value) =>
-        (value.startsWith("v2:") && value.length > 3) ||
-        (value.startsWith("legacy:") && value.length > 7),
+      (value) => value.startsWith("v2:") && value.length > 3,
       "INVALID_PUBLIC_TARGET",
     ),
     returnTo: z.string().max(2048).optional().default("/"),

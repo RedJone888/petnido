@@ -47,7 +47,7 @@ export default async function DashboardLayout({
     <div className="h-[calc(100vh-4rem)] overflow-hidden bg-[#f6f7fb]">
       <div
         data-dashboard-shell
-        className="site-shell flex flex-col md:flex-row h-full gap-5 lg:gap-6 py-3 md:py-4 overflow-hidden"
+        className="site-shell relative flex h-full flex-col gap-0 overflow-hidden py-3 [--dashboard-title-height:6rem] md:flex-row md:gap-5 md:py-4 lg:gap-6"
       >
         <NavLinks user={session.user} />
         <div

@@ -5,11 +5,6 @@ import { bookingWindowSchema, buildServiceBookingCalendar } from "@/domain/booki
 import { clientMessageIdSchema, conversationContextTargetSchema, messageBodySchema } from "@/domain/messaging/conversation";
 import { BookingCommandError, cancelServiceBooking, confirmServiceBooking, createServiceBooking, declineServiceBooking } from "@/server/domains/booking/service-booking-v2";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
-import { boardingCapacityEnabled, conversationsV2Enabled } from "@/server/feature-flags/publishing-v2";
-
-function requireConversationsV2() {
-  if (!conversationsV2Enabled()) throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-}
 
 function commandError(error: unknown): never {
   if (error instanceof BookingCommandError) {
@@ -26,23 +21,19 @@ export const serviceBookingRouter = router({
     startsAt: z.coerce.date(), endsAt: z.coerce.date(), pets: z.array(z.object({ petId: z.string().min(1).max(128), quantity: z.number().int().min(1).max(100) }).strict()).min(1).max(20),
     body: messageBodySchema, idempotencyKey: clientMessageIdSchema,
   }).strict()).mutation(async ({ ctx, input }) => {
-    requireConversationsV2();
     const window = bookingWindowSchema.parse({ startsAt: input.startsAt, endsAt: input.endsAt, pets: input.pets });
     try { return await createServiceBooking(ctx.prisma, { actorId: ctx.session.user.id, target: conversationContextTargetSchema.parse(input.target), ...window, body: input.body, idempotencyKey: input.idempotencyKey }); }
     catch (error) { commandError(error); }
   }),
   confirm: protectedProcedure.input(idInput).mutation(async ({ ctx, input }) => {
-    requireConversationsV2();
-    try { return await confirmServiceBooking(ctx.prisma, { providerId: ctx.session.user.id, bookingId: input.bookingId }, { enforceBoardingCapacity: boardingCapacityEnabled() }); }
+    try { return await confirmServiceBooking(ctx.prisma, { providerId: ctx.session.user.id, bookingId: input.bookingId }); }
     catch (error) { commandError(error); }
   }),
   decline: protectedProcedure.input(idInput).mutation(async ({ ctx, input }) => {
-    requireConversationsV2();
     try { return await declineServiceBooking(ctx.prisma, { providerId: ctx.session.user.id, bookingId: input.bookingId }); }
     catch (error) { commandError(error); }
   }),
   cancel: protectedProcedure.input(idInput).mutation(async ({ ctx, input }) => {
-    requireConversationsV2();
     try { return await cancelServiceBooking(ctx.prisma, { actorId: ctx.session.user.id, bookingId: input.bookingId }); }
     catch (error) { commandError(error); }
   }),

@@ -250,7 +250,7 @@ function PreviewBar({ onBack }: { onBack: () => void }) {
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex shrink-0 items-center gap-2.5 border-r border-[#e6e0e7] pr-3 sm:pr-4">
             <Image src="/favicon.svg" alt="PetNido" width={30} height={30} />
-            <span className="hidden text-lg font-bold tracking-[0.015em] text-[var(--primary)] [font-family:'PT_Sans_Narrow','Avenir_Next_Condensed','Arial_Narrow',sans-serif] [font-stretch:condensed] sm:inline">
+            <span className="hidden text-lg font-bold tracking-tight text-[var(--primary)] sm:inline">
               PetNido
             </span>
           </span>

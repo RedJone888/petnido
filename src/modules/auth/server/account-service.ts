@@ -49,15 +49,9 @@ export async function assertLineProvisionalUserIsEmpty(
       id: userId,
       OR: [
         { pets: { some: {} } },
-        { needs: { some: {} } },
         { serviceProfile: { isNot: null } },
         { locations: { some: {} } },
         { attachment: { some: {} } },
-        { applications: { some: {} } },
-        { sittings: { some: {} } },
-        { ownerBookings: { some: {} } },
-        { messagesSent: { some: {} } },
-        { messagesReceived: { some: {} } },
         { publishDraftsV2: { some: {} } },
         { needsV2: { some: {} } },
         { favoritesV2: { some: {} } },
@@ -104,7 +98,7 @@ export async function getAccountOverview(db: PrismaClient, userId: string) {
       email: true,
       emailVerified: true,
       passwordHash: true,
-      accounts: { select: { provider: true, providerEmail: true } },
+      accounts: { select: { provider: true, providerEmail: true, providerDisplayName: true } },
     },
   });
   return {
@@ -117,6 +111,9 @@ export async function getAccountOverview(db: PrismaClient, userId: string) {
         account.provider,
         account.providerEmail ?? (account.provider === "google" ? user.email : null),
       ]),
+    ) as Record<string, string | null>,
+    providerDisplayNames: Object.fromEntries(
+      user.accounts.map((account) => [account.provider, account.providerDisplayName]),
     ) as Record<string, string | null>,
   };
 }
@@ -214,16 +211,7 @@ export async function deleteAccount(
     throw new AuthPolicyError("REAUTH_REQUIRED");
   }
 
-  const [legacyApplications, legacyBookings, applicationsV2, bookingsV2] = await Promise.all([
-    db.application.count({
-      where: { sitterId: input.userId, status: { in: ["PENDING", "ACCEPTED"] } },
-    }),
-    db.booking.count({
-      where: {
-        OR: [{ ownerId: input.userId }, { sitterId: input.userId }],
-        status: { in: ["PENDING", "CONFIRMED"] },
-      },
-    }),
+  const [applicationsV2, bookingsV2] = await Promise.all([
     db.needApplicationV2.count({
       where: {
         OR: [{ ownerId: input.userId }, { applicantId: input.userId }],
@@ -237,14 +225,13 @@ export async function deleteAccount(
       },
     }),
   ]);
-  if ([legacyApplications, legacyBookings, applicationsV2, bookingsV2].some(Boolean)) {
+  if ([applicationsV2, bookingsV2].some(Boolean)) {
     throw new AuthPolicyError("ACCOUNT_HAS_ACTIVE_OBLIGATIONS");
   }
 
   const deletedAt = new Date();
   await db.$transaction(async (tx) => {
     await tx.account.deleteMany({ where: { userId: input.userId } });
-    await tx.session.deleteMany({ where: { userId: input.userId } });
     await tx.pendingOAuthLink.deleteMany({ where: { targetUserId: input.userId } });
     await tx.authLoginTicket.deleteMany({ where: { userId: input.userId } });
     await tx.notificationPreference.upsert({

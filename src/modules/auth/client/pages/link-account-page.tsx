@@ -66,7 +66,7 @@ export default function LinkAccountPageClient({
   });
   const confirmConnect = trpc.auth.confirmGoogleConnect.useMutation({
     async onSuccess() {
-      router.replace("/dashboard/settings?googleConnect=success");
+      router.replace("/dashboard/settings/security?googleConnect=success");
       router.refresh();
     },
     onError: (value) => setError(value.message),
@@ -113,7 +113,7 @@ export default function LinkAccountPageClient({
           <p className="text-sm leading-6">{connectErrorMessage(connectError)}</p>
         </div>
         <div className="flex justify-end">
-          <Button href="/dashboard/settings" className="min-h-11 min-w-32">
+          <Button href="/dashboard/settings/security" className="min-h-11 min-w-32">
             {connectCopy.close}
           </Button>
         </div>
@@ -155,7 +155,7 @@ export default function LinkAccountPageClient({
         {displayedError ? <p role="alert" className="text-sm text-red-600">{displayedError}</p> : null}
         <div className="grid grid-cols-2 gap-3">
           <Button
-            href="/dashboard/settings"
+            href="/dashboard/settings/security"
             variant="outline"
             className="min-h-11 w-full"
           >

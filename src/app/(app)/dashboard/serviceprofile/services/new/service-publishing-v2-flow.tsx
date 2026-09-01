@@ -86,6 +86,7 @@ export function ServicePublishingV2Flow() {
   const stepLabels: Record<StepId, string> = copy.steps;
   const searchParams = useSearchParams();
   const editDraftId = searchParams.get("editDraft");
+  const resumeDraftId = searchParams.get("resumeDraft");
   const [currentStep, setCurrentStep] = useState<StepId>("mode");
   const [mode, setMode] = useState<Mode | null>(null);
   const [payload, setPayload] = useState<Payload>(blankPayload);
@@ -153,11 +154,14 @@ export function ServicePublishingV2Flow() {
   useEffect(() => {
     if (editDraftId || checkedExistingDraft || drafts.isLoading) return;
     const existing = drafts.data?.find(
-      (draft) => draft.kind === "SERVICE" && draft.status === "ACTIVE",
+      (draft) =>
+        draft.kind === "SERVICE" &&
+        draft.status === "ACTIVE" &&
+        (!resumeDraftId || draft.id === resumeDraftId),
     );
     if (existing) setPendingDraft(existing as PublishDraftEnvelope);
     setCheckedExistingDraft(true);
-  }, [checkedExistingDraft, drafts.data, drafts.isLoading, editDraftId]);
+  }, [checkedExistingDraft, drafts.data, drafts.isLoading, editDraftId, resumeDraftId]);
 
   useEffect(() => {
     if (!editDraft.data || draftId) return;
@@ -612,7 +616,7 @@ export function ServicePublishingV2Flow() {
       ) : null}
 
       {publishOutcome ? (
-        <div className="fixed bottom-24 left-1/2 z-50 max-h-[75vh] w-[min(520px,calc(100vw-32px))] -translate-x-1/2 overflow-y-auto rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl" role="status"><p className="text-sm font-black text-emerald-900">{publishOutcome.edited ? copy.updated : copy.publishedSuccess}</p><p className="mt-1 text-xs leading-5 text-slate-600">{copy.serverConfirmed}</p><div className="mt-3"><RecommendationPanel kind="SERVICE" id={publishOutcome.serviceId} compact /></div>{publishOutcome.shouldPromptForEmail ? <Link href="/dashboard/settings#preferences" className="mt-3 inline-flex text-xs font-bold text-primary underline">{copy.emailNotifications}</Link> : null}<p className="mt-2 break-all text-[11px] text-slate-400">{copy.serviceId} {publishOutcome.serviceId}</p><Link href={`/dashboard/matches?serviceId=${encodeURIComponent(publishOutcome.serviceId)}`} className="mt-3 inline-flex text-xs font-bold text-primary underline">{copy.openMatching}</Link></div>
+        <div className="fixed bottom-24 left-1/2 z-50 max-h-[75vh] w-[min(520px,calc(100vw-32px))] -translate-x-1/2 overflow-y-auto rounded-2xl border border-emerald-200 bg-white p-4 shadow-2xl" role="status"><p className="text-sm font-black text-emerald-900">{publishOutcome.edited ? copy.updated : copy.publishedSuccess}</p><p className="mt-1 text-xs leading-5 text-slate-600">{copy.serverConfirmed}</p><div className="mt-3"><RecommendationPanel kind="SERVICE" id={publishOutcome.serviceId} compact /></div>{publishOutcome.shouldPromptForEmail ? <Link href="/dashboard/messages" className="mt-3 inline-flex text-xs font-bold text-primary underline">{copy.emailNotifications}</Link> : null}<p className="mt-2 break-all text-[11px] text-slate-400">{copy.serviceId} {publishOutcome.serviceId}</p><Link href={`/dashboard/matches?serviceId=${encodeURIComponent(publishOutcome.serviceId)}`} className="mt-3 inline-flex text-xs font-bold text-primary underline">{copy.openMatching}</Link></div>
       ) : null}
     </>
   );

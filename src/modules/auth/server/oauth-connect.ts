@@ -168,6 +168,7 @@ export async function connectLineFromIntent(input: {
   db: PrismaClient;
   rawToken: string;
   account: Account;
+  displayName?: string | null;
   now?: Date;
 }) {
   const now = input.now ?? new Date();
@@ -229,6 +230,7 @@ export async function connectLineFromIntent(input: {
             type: input.account.type,
             provider: "line",
             providerAccountId: input.account.providerAccountId,
+            providerDisplayName: input.displayName?.trim() || null,
             refresh_token: input.account.refresh_token,
             access_token: input.account.access_token,
             expires_at: input.account.expires_at,

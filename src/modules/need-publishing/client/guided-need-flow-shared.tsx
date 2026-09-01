@@ -28,6 +28,11 @@ import {
   normalizePetTypeSelection,
   petTypeLabel,
 } from "@/modules/need-publishing/domain/pet-types";
+import {
+  formatPetAge as formatDomainPetAge,
+  formatPetGenderAndNeuter,
+} from "@/domain/pet/presentation";
+import { petAvatarPosition } from "@/domain/pet/avatar";
 
 export { boardingNights } from "@/domain/publishing/boarding-date-math";
 
@@ -43,7 +48,7 @@ export type SavedPetOption = {
   sex: string | null;
   neutered: string | null;
   notes: string | null;
-  photos: Array<{ url: string }>;
+  photos: Array<{ id: string; url: string }>;
 };
 
 export const petTypes = PET_TYPE_KEYS.map((id) => ({
@@ -713,45 +718,21 @@ export function petGroupKey(pet: PetDraft) {
 
 export function savedPetAvatarPosition(pet: SavedPetOption) {
   const type = pet.type.trim().toUpperCase();
-  if (type === "DOG") return "0% 5.556%";
-  if (type === "CAT") return "33.333% 5.556%";
-  if (type === "RABBIT") return "66.667% 5.556%";
-  if (type === "BIRD") return "100% 5.556%";
-
   const legacyOtherTypeKeys: Record<string, string> = {
     HAMSTER: "hamster",
     GUINEA_PIG: "guinea-pig",
     CHINCHILLA: "chinchilla",
   };
-  const canonicalOtherType =
+  const key =
     legacyOtherTypeKeys[type] ??
-    (type === "OTHER" ? resolveOtherPetTypeKey(pet.customType ?? "") : null);
-  if (canonicalOtherType === "hamster") return "0% 50%";
-  if (canonicalOtherType === "guinea-pig") return "33.333% 50%";
-  if (canonicalOtherType === "ferret") return "66.667% 50%";
-  if (canonicalOtherType === "turtle") return "100% 50%";
-  if (canonicalOtherType === "chinchilla") return "0% 94.444%";
-  return "33.333% 94.444%";
+    (type === "OTHER" ? (pet.customType ?? "OTHER") : type);
+  return petAvatarPosition(key);
 }
-
-
 
 export function draftPetAvatarPosition(pet: PetDraft) {
   const type = pet.type.trim().toUpperCase();
-  if (type === "DOG") return "0% 5.556%";
-  if (type === "CAT") return "33.333% 5.556%";
-  if (type === "RABBIT") return "66.667% 5.556%";
-  if (type === "BIRD") return "100% 5.556%";
-  const canonicalOtherType =
-    type === "OTHER"
-      ? resolveOtherPetTypeKey(pet.otherType)
-      : type.toLowerCase();
-  if (canonicalOtherType === "hamster") return "0% 50%";
-  if (canonicalOtherType === "guinea-pig") return "33.333% 50%";
-  if (canonicalOtherType === "ferret") return "66.667% 50%";
-  if (canonicalOtherType === "turtle") return "100% 50%";
-  if (canonicalOtherType === "chinchilla") return "0% 94.444%";
-  return "33.333% 94.444%";
+  const key = type === "OTHER" ? (pet.otherType || "OTHER") : type;
+  return petAvatarPosition(key);
 }
 
 
@@ -817,19 +798,7 @@ export function isValidPetBirthDate(value: string) {
 
 
 export function formatPetAge(value: string) {
-  const birthDate = parseDateValue(value);
-  if (!birthDate) return "";
-  const today = new Date();
-  let months =
-    (today.getFullYear() - birthDate.getFullYear()) * 12 +
-    today.getMonth() -
-    birthDate.getMonth();
-  if (today.getDate() < birthDate.getDate()) months -= 1;
-  months = Math.max(0, months);
-  if (months < 1) return "Under 1 month";
-  if (months < 12) return `${months} ${months === 1 ? "month" : "months"}`;
-  const years = Math.floor(months / 12);
-  return `${years} ${years === 1 ? "year" : "years"}`;
+  return formatDomainPetAge(value, "en") || "";
 }
 
 
@@ -849,36 +818,24 @@ export function petCardDetails(pet: PetDraft) {
 
 
 
-export function formatPetSex(value: string) {
-  if (value === "male") return "Male";
-  if (value === "female") return "Female";
-  if (value === "unknown") return "Sex unknown";
-  return "";
+export function formatPetSex(value: string, lang: Lang = "en") {
+  const info = formatPetGenderAndNeuter(value, null, lang);
+  return info?.sexLabel || "";
 }
 
-
-
-export function formatNeuteredStatus(pet: PetDraft) {
-  if (pet.neutered === "unknown") return "Not sure";
-  if (!pet.neutered) return "";
-  if (pet.sex === "female")
-    return pet.neutered === "yes" ? "Spayed" : "Not spayed";
-  if (pet.sex === "male")
-    return pet.neutered === "yes" ? "Neutered" : "Not neutered";
-  return pet.neutered === "yes"
-    ? "Spayed or neutered"
-    : "Not spayed or neutered";
+export function formatNeuteredStatus(pet: PetDraft, lang: Lang = "en") {
+  const info = formatPetGenderAndNeuter(pet.sex, pet.neutered, lang);
+  return info?.neuteredLabel || "";
 }
 
-
-
-export function previewPetDetails(pet: PetDraft) {
+export function previewPetDetails(pet: PetDraft, lang: Lang = "en") {
+  const info = formatPetGenderAndNeuter(pet.sex, pet.neutered, lang);
   const neuteredLabel =
     pet.sex === "female"
-      ? "Spayed"
+      ? (info?.neuteredLabel || "Spayed")
       : pet.sex === "male"
-        ? "Neutered"
-        : "Spayed/neutered";
+        ? (info?.neuteredLabel || "Neutered")
+        : (info?.neuteredLabel || "Spayed/neutered");
 
   return [
     { label: "Breed", value: pet.breed.trim() },
@@ -887,30 +844,13 @@ export function previewPetDetails(pet: PetDraft) {
       label: "Weight",
       value: pet.weight.trim() ? `${pet.weight.trim()} ${pet.weightUnit}` : "",
     },
-    { label: "Sex", value: formatPetSex(pet.sex) },
-    { label: neuteredLabel, value: previewNeuteredStatus(pet) },
+    { label: "Sex", value: formatPetSex(pet.sex, lang) },
+    { label: "Neutered", value: formatNeuteredStatus(pet, lang) },
   ].filter((detail) => detail.value);
 }
 
-
-
-export function previewNeuteredStatus(pet: PetDraft) {
-  if (pet.neutered === "unknown") {
-    if (pet.sex === "female") return "Spay status unknown";
-    if (pet.sex === "male") return "Neuter status unknown";
-    return "Neuter / Spay unknown";
-  }
-  if (pet.neutered === "yes") {
-    if (pet.sex === "female") return "Spayed";
-    if (pet.sex === "male") return "Neutered";
-    return "Spayed / Neutered";
-  }
-  if (pet.neutered === "no") {
-    if (pet.sex === "female") return "Not Spayed";
-    if (pet.sex === "male") return "Not Neutered";
-    return "Not Spayed / Neutered";
-  }
-  return "";
+export function previewNeuteredStatus(pet: PetDraft, lang: Lang = "en") {
+  return formatNeuteredStatus(pet, lang);
 }
 
 

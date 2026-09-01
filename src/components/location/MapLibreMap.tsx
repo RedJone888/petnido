@@ -17,6 +17,7 @@ type Props = {
   searchRadiusKm?: number | null;
   showPrimaryMarker?: boolean;
   primaryMarkerLabel?: string;
+  primaryMarkerColor?: string;
   additionalMarkers?: Array<{
     id: string;
     lat: number;
@@ -43,6 +44,7 @@ export default function MapLibreMap({
   searchRadiusKm,
   showPrimaryMarker = true,
   primaryMarkerLabel,
+  primaryMarkerColor = "#2563eb",
   additionalMarkers = [],
   fitToMarkers = false,
   scrollZoom = true,
@@ -188,7 +190,7 @@ export default function MapLibreMap({
     // 处理marker的创建或者移动
     if (!markerRef.current) {
       markerRef.current = new maplibregl.Marker({
-        color: "#2563eb",
+        color: primaryMarkerColor,
         draggable: editable ?? Boolean(onLocationChangeRef.current),
       })
         .setLngLat([lon, lat])
@@ -210,6 +212,8 @@ export default function MapLibreMap({
       }
     } else {
       markerRef.current.setLngLat([lon, lat]);
+      const svgPath = markerRef.current.getElement().querySelector("svg path[fill]");
+      if (svgPath) svgPath.setAttribute("fill", primaryMarkerColor);
     }
     markerRef.current.setDraggable(editable ?? Boolean(onLocationChangeRef.current));
 
@@ -305,7 +309,7 @@ export default function MapLibreMap({
         isInternalChange.current = false;
       }, 100);
     }
-  }, [editable, fitToMarkers, lat, lon, primaryMarkerLabel, showPrimaryMarker, showPrivacyRadius, searchRadiusKm, zoom, mapLoaded, styleVersion, copy.mapSelection]);
+  }, [editable, fitToMarkers, lat, lon, primaryMarkerColor, primaryMarkerLabel, showPrimaryMarker, showPrivacyRadius, searchRadiusKm, zoom, mapLoaded, styleVersion, copy.mapSelection]);
 
   useEffect(() => {
     const map = mapInstance.current;
@@ -419,8 +423,8 @@ export default function MapLibreMap({
       bounds.extend([item.lon, item.lat]);
     });
 
-    if (fitToMarkers && !bounds.isEmpty()) {
-      map.fitBounds(bounds, { padding: 64, maxZoom: 12, duration: 500 });
+    if ((fitToMarkers || (searchRadiusKm && searchRadiusKm > 0)) && !bounds.isEmpty()) {
+      map.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 500 });
     }
   }, [additionalMarkers, fitToMarkers, lat, lon, mapLoaded, searchRadiusKm, showPrimaryMarker, styleVersion]);
 

@@ -35,6 +35,7 @@ export type ScreenId =
 export type PetDraft = {
   id: string;
   sourcePetId?: string;
+  photoAttachmentId?: string;
   profileAction?: "create" | "update" | "none";
   type: string;
   typeCode?: PetTypeCode;
@@ -321,6 +322,7 @@ export type BudgetDraft = {
 export type LocationDraft = {
   lat: number;
   lng: number;
+  label?: string | null;
   regionLabel?: string | null;
   sourceLocationId?: string;
   displayPrecision?: "CITY" | "DISTRICT" | "NEIGHBORHOOD" | "MAP_POINT";
@@ -417,6 +419,7 @@ const petDraftSchema = z
   .object({
     id: z.string(),
     sourcePetId: z.string().optional(),
+    photoAttachmentId: z.string().optional(),
     profileAction: z.enum(["create", "update", "none"]).optional(),
     type: z.string(),
     typeCode: z.enum(petTypeCodes).optional(),
@@ -455,8 +458,8 @@ export const legacyNeedDraftV3Schema = z
   .object({
     version: z.literal(3),
     savedAt: z.number().finite(),
-    serverDraftId: z.string().uuid().optional(),
-    publishIdempotencyKey: z.string().uuid().optional(),
+    serverDraftId: z.string().min(1).optional(),
+    publishIdempotencyKey: z.string().min(1).optional(),
     currentId: screenIdSchema,
     careType: careTypeSchema.nullable(),
     pets: z.array(petDraftSchema),
@@ -519,6 +522,7 @@ export const legacyNeedDraftV3Schema = z
       .object({
         lat: z.number().finite().min(-90).max(90),
         lng: z.number().finite().min(-180).max(180),
+        label: z.string().trim().min(1).max(240).nullable().optional(),
         regionLabel: z.string().trim().min(1).max(120).nullable().optional(),
         sourceLocationId: z.string().optional(),
         displayPrecision: z
@@ -620,12 +624,13 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
     return {
       id: pet.clientPetKey ?? `pet-${index + 1}`,
       ...(pet.sourcePetId ? { sourcePetId: pet.sourcePetId } : {}),
+      ...(pet.attachmentId ? { photoAttachmentId: pet.attachmentId } : {}),
       profileAction:
-        pet.profileAction === "UPDATE"
-          ? "update"
-          : pet.profileAction === "NONE"
-            ? "none"
-            : "create",
+        pet.profileAction === "CREATE"
+          ? "create"
+          : pet.sourcePetId
+            ? "update"
+            : "none",
       type: standardType ? normalizedType : "other",
       typeCode: pet.petType,
       otherType:
@@ -642,7 +647,7 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
       birthDate: pet.birthDate ?? "",
       sex: pet.sex?.toLowerCase() ?? "unknown",
       neutered: pet.neutered?.toLowerCase() ?? "unknown",
-      photo: "",
+      photo: pet.attachmentUrl ?? "",
       notes: pet.careNotes ?? "",
     };
   });
@@ -686,7 +691,9 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
     : "";
   const endDate = payload.endsAt
     ? localDateAtInstant(
-        new Date(new Date(payload.endsAt).getTime() - 1).toISOString(),
+        mode === "BOARDING"
+          ? payload.endsAt
+          : new Date(new Date(payload.endsAt).getTime() - 1).toISOString(),
         timeZone,
       )
     : "";
@@ -809,6 +816,17 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
         label: task.label,
         custom,
       });
+      const resolvedPetIds =
+        task.petKeys?.length
+          ? task.petKeys.map((key) => {
+              const matched = pets.find(
+                (p) => p.id === key || p.sourcePetId === key,
+              );
+              return matched ? matched.id : pets.length === 1 ? pets[0].id : key;
+            })
+          : pets.length === 1
+            ? [pets[0].id]
+            : [];
       return {
         templateId: identity.code ?? "custom",
         label: identity.label || "Boarding care task",
@@ -816,7 +834,12 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
         routines: [
           {
             id: task.clientTaskKey,
-            petIds: task.petKeys ?? [],
+            petIds:
+              resolvedPetIds.length > 0
+                ? resolvedPetIds
+                : pets.length === 1
+                  ? [pets[0].id]
+                  : [],
             priority: task.priority === "NICE" ? "nice" : "must",
             scheduleType:
               task.scheduleKind === "REPEATING"
@@ -880,26 +903,34 @@ export function mapNeedDraftPayloadToLegacyNeedDraftV3({
     boardingHomeNotes: persistedBoardingRequirements
       .filter(
         (item) =>
-          item.kind === "OTHER_NEED" && !item.label.startsWith("Acceptable: "),
+          item.kind === "NOTE" ||
+          (item.kind === "OTHER_NEED" && !item.label.startsWith("Acceptable: ")),
       )
       .map((item) => item.label)
       .join("; "),
     customNeeds: customRequirements
-      .filter((item) => item.kind !== "WARNING")
+      .filter((item) => item.kind !== "WARNING" && item.kind !== "NOTE")
       .map((item) => item.label),
     customWarnings: customRequirements
       .filter((item) => item.kind === "WARNING")
       .map((item) => item.label),
-    customRequirementsNotes: "",
+    customRequirementsNotes: customRequirements
+      .filter((item) => item.kind === "NOTE")
+      .map((item) => item.label)
+      .join("; "),
     transport,
     splitDirection: "owner-dropoff",
     distance: payload.boarding?.maxProviderDistanceMeters
       ? `${payload.boarding.maxProviderDistanceMeters / 1000} km`
       : "No preference",
-    area: payload.location?.regionLabel ?? "Saved map location",
+    area:
+      payload.location?.label ??
+      payload.location?.regionLabel ??
+      "Saved map location",
     location: {
       lat: payload.location?.lat ?? 34.6545,
       lng: payload.location?.lon ?? 135.5155,
+      ...(payload.location?.label ? { label: payload.location.label } : {}),
       ...(payload.location?.regionLabel
         ? { regionLabel: payload.location.regionLabel }
         : {}),
@@ -1006,6 +1037,8 @@ function petPayload(pet: PetDraft) {
   return {
     clientPetKey: pet.id,
     sourcePetId: pet.sourcePetId ?? null,
+    attachmentId: pet.photoAttachmentId ?? null,
+    attachmentUrl: optionalText(pet.photo) ?? null,
     profileAction,
     quantity: pet.quantity,
     ...(optionalText(pet.name) ? { name: pet.name.trim() } : {}),
@@ -1146,7 +1179,7 @@ function distanceMeters(value: string) {
 
 function requirementList(
   entries: Array<{
-    kind: "ENVIRONMENT_REQUIRED" | "UNACCEPTABLE" | "OTHER_NEED" | "WARNING";
+    kind: "ENVIRONMENT_REQUIRED" | "UNACCEPTABLE" | "OTHER_NEED" | "WARNING" | "NOTE";
     label: string;
     petKey?: string | null;
   }>,
@@ -1172,6 +1205,20 @@ export function mapLegacyNeedDraftV3(
   const minAmount = toMinor(draft.budget.amount, currency);
   const maxAmount = toMinor(draft.budget.maximum, currency);
   const mode = modeFor(draft.careType);
+  const clientPetKeyByReference = new Map<string, string>();
+  draft.pets.forEach((pet) => {
+    clientPetKeyByReference.set(pet.id, pet.id);
+    if (pet.sourcePetId) clientPetKeyByReference.set(pet.sourcePetId, pet.id);
+  });
+  const canonicalPetKeys = (petIds: string[]) =>
+    Array.from(
+      new Set(
+        petIds.flatMap((petId) => {
+          const clientPetKey = clientPetKeyByReference.get(petId);
+          return clientPetKey ? [clientPetKey] : [];
+        }),
+      ),
+    );
   const boardingOptions =
     draft.careType === "boarding"
       ? boardingSupplyOptions(draft.pets, draft.customBoardingSupplies)
@@ -1232,7 +1279,14 @@ export function mapLegacyNeedDraftV3(
       ? { startsAt: zonedMidnight(draft.dates.startDate, timeZone) }
       : {}),
     ...(zonedMidnight(draft.dates.endDate, timeZone)
-      ? { endsAt: zonedMidnight(nextDate(draft.dates.endDate), timeZone) }
+      ? {
+          endsAt: zonedMidnight(
+            draft.careType === "boarding"
+              ? draft.dates.endDate
+              : nextDate(draft.dates.endDate),
+            timeZone,
+          ),
+        }
       : {}),
     timeZone,
     pets: draft.pets.map(petPayload),
@@ -1244,6 +1298,7 @@ export function mapLegacyNeedDraftV3(
               : {}),
             lat: draft.location.lat,
             lon: draft.location.lng,
+            label: optionalText(draft.location.label) ?? null,
             regionLabel: optionalText(draft.location.regionLabel) ?? null,
             displayPrecision: draft.location.displayPrecision ?? "MAP_POINT",
           },
@@ -1296,7 +1351,9 @@ export function mapLegacyNeedDraftV3(
           preferredLocalTime: null,
         };
       }),
-      tasks: draft.visitPlans.map((task) => basicTask(task)),
+      tasks: draft.visitPlans.map((task) =>
+        basicTask({ ...task, petIds: canonicalPetKeys(task.petIds) }),
+      ),
     };
   } else if (draft.careType === "boarding") {
     const supplies = boardingSupplyOptions(
@@ -1329,7 +1386,12 @@ export function mapLegacyNeedDraftV3(
     });
     payload.boarding = {
       tasks: draft.boardingRoutines.flatMap((config) =>
-        config.routines.map((routine) => boardingTask(config, routine)),
+        config.routines.map((routine) =>
+          boardingTask(config, {
+            ...routine,
+            petIds: canonicalPetKeys(routine.petIds),
+          }),
+        ),
       ),
       supplies,
       supplyNotes: optionalText(draft.boardingSupplyNotes),
@@ -1339,7 +1401,7 @@ export function mapLegacyNeedDraftV3(
           .filter(([, choice]) => choice === "not-ok")
           .map(([label]) => ({ kind: "UNACCEPTABLE" as const, label })),
         ...(optionalText(draft.boardingHomeNotes)
-          ? [{ kind: "OTHER_NEED" as const, label: draft.boardingHomeNotes }]
+          ? [{ kind: "NOTE" as const, label: draft.boardingHomeNotes }]
           : []),
       ]),
       transportMode:
@@ -1362,12 +1424,14 @@ export function mapLegacyNeedDraftV3(
     };
   } else if (draft.careType === "custom") {
     payload.custom = {
-      tasks: draft.customPlans.map((task) => customTask(task)),
+      tasks: draft.customPlans.map((task) =>
+        customTask({ ...task, petIds: canonicalPetKeys(task.petIds) }),
+      ),
       requirements: requirementList([
         ...draft.customNeeds.map((label) => ({ kind: "OTHER_NEED" as const, label })),
         ...draft.customWarnings.map((label) => ({ kind: "WARNING" as const, label })),
         ...(draft.customRequirementsNotes?.trim()
-          ? [{ kind: "OTHER_NEED" as const, label: draft.customRequirementsNotes.trim() }]
+          ? [{ kind: "NOTE" as const, label: draft.customRequirementsNotes.trim() }]
           : []),
       ]),
       timePreference: toTimePreference(draft.dates.timeOfDay),

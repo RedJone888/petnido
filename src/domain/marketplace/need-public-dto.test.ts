@@ -1,8 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import type { PublicLegacyNeedSource, PublicNeedV2Source } from "./need-public-dto";
-import { toPublicLegacyNeedDto, toPublicNeedV2Dto } from "./need-public-dto";
+import type { PublicNeedV2Source } from "./need-public-dto";
+import { toPublicNeedV2Dto } from "./need-public-dto";
 
 const owner = {
   id: "owner-1",
@@ -17,7 +17,6 @@ function v2Fixture(): PublicNeedV2Source {
   return {
     id: "need-1",
     idempotencyKey: "private-idempotency",
-    legacyNeedId: null,
     ownerId: "owner-1",
     mode: "HOME_VISIT",
     state: "OPEN",
@@ -37,17 +36,21 @@ function v2Fixture(): PublicNeedV2Source {
     archivedAt: null,
     createdAt: new Date("2026-08-01T00:00:00.000Z"),
     updatedAt: new Date("2026-08-02T00:00:00.000Z"),
+    sourceDraft: null,
     owner,
     locationSnapshot: {
       id: "private-location-id",
       sourceLocationId: "private-saved-location",
       lat: new Prisma.Decimal("35.681236"),
       lon: new Prisma.Decimal("139.767125"),
+      label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan",
       regionLabel: "Chiyoda, Tokyo",
       displayPrecision: "DISTRICT",
       createdAt: new Date("2026-08-01T00:00:00.000Z"),
     },
     pets: [{
+      id: "pet-snapshot-1",
+      order: 0,
       name: "Mochi",
       petType: "CAT",
       customPetType: null,
@@ -58,6 +61,7 @@ function v2Fixture(): PublicNeedV2Source {
       sex: "MALE",
       neutered: "YES",
       careNotes: null,
+      attachments: [{ attachment: { url: "/mochi.jpg" } }],
       sourcePet: {
         breed: "Ragdoll",
         birthDate: null,
@@ -65,10 +69,10 @@ function v2Fixture(): PublicNeedV2Source {
         sex: "MALE",
         neutered: "YES",
         notes: null,
-        photos: [{ url: "/mochi.jpg" }],
       },
     }],
     tasks: [{
+      id: "task-1",
       category: "FEEDING",
       label: "Feed dinner",
       instructions: null,
@@ -108,18 +112,27 @@ function v2Fixture(): PublicNeedV2Source {
 }
 
 describe("public need DTO", () => {
+  it("returns the persisted full label and public region as separate fields", () => {
+    const dto = toPublicNeedV2Dto(v2Fixture(), null);
+    expect(dto.location.label).toBe(
+      "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan",
+    );
+    expect(dto.location.regionLabel).toBe("Chiyoda, Tokyo");
+  });
+
   it("shows safe discovery fields while excluding exact location and care snapshots", () => {
     const dto = toPublicNeedV2Dto(v2Fixture(), 1250);
     expect(dto).toMatchObject({
       publicId: "v2:need-1",
       scheduleNotes: "Access after 18:00",
       location: {
+        label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan",
         regionLabel: "Chiyoda, Tokyo",
         displayPrecision: "DISTRICT",
         distanceMeters: 1250,
         mapPoint: { lat: 35.681236, lon: 139.767125 },
       },
-      title: "Mochi · Home visit care",
+      title: "Mochi · Feeding",
       pets: [
         {
           name: "Mochi",
@@ -176,41 +189,7 @@ describe("public need DTO", () => {
       null,
     );
 
-    expect(dto.title).toBe("Sugar glider · Pet boarding");
-  });
-
-  it("normalizes legacy display amounts to minor units without exposing raw address text", () => {
-    const legacy = {
-      id: "legacy-1",
-      ownerId: "owner-1",
-      title: "Legacy care",
-      category: "OTHER",
-      requirement: "Vet transport",
-      startDate: new Date("2026-08-10T00:00:00.000Z"),
-      endDate: new Date("2026-08-11T00:00:00.000Z"),
-      frequencyType: null,
-      customDays: null,
-      customTimes: null,
-      addressRaw: "must never be returned",
-      addressLat: 35.68,
-      addressLon: 139.76,
-      currency: "USD",
-      fosterRange: null,
-      transportMethod: null,
-      status: "OPEN",
-      priceAmount: null,
-      totalPrice: 12.5,
-      createdAt: new Date("2026-08-01T00:00:00.000Z"),
-      updatedAt: new Date("2026-08-02T00:00:00.000Z"),
-      archivedAt: null,
-      owner,
-      photos: [],
-      needPets: [{ petCategory: "CAT", petType: null, count: 1, tags: [], photos: [] }],
-    } as unknown as PublicLegacyNeedSource;
-    const dto = toPublicLegacyNeedDto(legacy, null);
-    expect(dto.budget.minAmountMinor).toBe(1250);
-    expect(dto.location.mapPoint).toEqual({ lat: 35.68, lon: 139.76 });
-    expect(JSON.stringify(dto)).not.toContain("must never be returned");
+    expect(dto.title).toBe("2 Sugar gliders · Feeding");
   });
 
   it("exposes a custom need preferred time in the schedule", () => {
@@ -228,5 +207,50 @@ describe("public need DTO", () => {
       timePreference: "MORNING",
       exactTime: null,
     });
+  });
+
+  it("restores a legacy custom requirements note from its publishing workspace", () => {
+    const dto = toPublicNeedV2Dto(
+      {
+        ...v2Fixture(),
+        mode: "CUSTOM",
+        sourceDraft: {
+          payloadJson: JSON.stringify({
+            workspace: {
+              draftByMode: {
+                custom: { customRequirementsNotes: "Use the side entrance" },
+              },
+            },
+          }),
+        },
+        requirements: [
+          {
+            id: "requirement-1",
+            kind: "OTHER_NEED",
+            label: "Medication experience",
+            pet: null,
+          },
+          {
+            id: "requirement-2",
+            kind: "OTHER_NEED",
+            label: "Use the side entrance",
+            pet: null,
+          },
+        ],
+      },
+      null,
+    );
+
+    expect(dto.requirements).toEqual([
+      expect.objectContaining({
+        label: "Medication experience",
+        kind: "OTHER_NEED",
+      }),
+      expect.objectContaining({
+        label: "Use the side entrance",
+        kind: "NOTE",
+      }),
+    ]);
+    expect(JSON.stringify(dto)).not.toContain("draftByMode");
   });
 });

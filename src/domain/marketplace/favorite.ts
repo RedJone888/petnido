@@ -7,14 +7,14 @@ export const favoriteTargetSchema = z.object({
   const separator = input.publicId.indexOf(":");
   const prefix = input.publicId.slice(0, separator);
   const targetId = input.publicId.slice(separator + 1);
-  if (!targetId || (prefix !== "v2" && prefix !== "legacy")) {
+  if (!targetId || prefix !== "v2") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "INVALID_PUBLIC_ID" });
     return z.NEVER;
   }
   return {
     kind: input.kind,
     publicId: input.publicId,
-    source: prefix === "v2" ? "V2" as const : "LEGACY" as const,
+    source: "V2" as const,
     targetId,
   };
 });

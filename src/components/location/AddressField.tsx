@@ -1,9 +1,18 @@
+import dynamic from "next/dynamic";
 import { useLocationController } from "@/hooks/useLocationController";
 import LocationInput from "@/components/location/LocationInput";
-import MapLibreMap from "@/components/location/MapLibreMap";
 import CurrencySelect from "@/components/location/CurrencySelect";
 import cn from "@/lib/cn";
 import { useLanguage } from "@/components/providers/language-provider";
+
+const MapLibreMap = dynamic(() => import("@/components/location/MapLibreMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full min-h-[16rem] bg-slate-100/90 animate-pulse rounded-xl flex items-center justify-center">
+      <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  ),
+});
 interface AddressInputProps {
   controller: ReturnType<typeof useLocationController>;
   inputId?: string;

@@ -10,12 +10,16 @@ import { useLanguage } from "@/components/providers/language-provider";
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const isNeedCreationFlow = pathname === "/needs/create" || pathname.startsWith("/needs/create/");
+  const isNeedPublishingFlow =
+    pathname === "/needs/create" ||
+    pathname.startsWith("/needs/create/") ||
+    pathname.startsWith("/needs/edit/") ||
+    /^\/(en|zh|ja)\/needs\/(create|edit)(?:\/|$)/.test(pathname);
 
   useEffect(() => {
-    if (isNeedCreationFlow) return;
+    if (isNeedPublishingFlow) return;
     window.sessionStorage.setItem(NEED_ENTRY_STORAGE_KEY, `${window.location.pathname}${window.location.search}`);
-  }, [isNeedCreationFlow, pathname]);
+  }, [isNeedPublishingFlow, pathname]);
 
   return (
     <>
@@ -26,7 +30,14 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
         {t.nav.skipToContent}
       </a>
       <Navbar />
-      <div id="main-content" className="flex flex-1 flex-col pt-16">
+      <div
+        id="main-content"
+        className={
+          isNeedPublishingFlow
+            ? "h-dvh min-h-0 flex-none overflow-hidden"
+            : "flex flex-1 flex-col pt-16"
+        }
+      >
         {children}
       </div>
     </>

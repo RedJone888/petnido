@@ -87,6 +87,7 @@ export function toServiceV2EditPayload(service: OwnerServiceV2) {
       sourceLocationId: service.locationSnapshot.sourceLocationId ?? undefined,
       lat: Number(service.locationSnapshot.lat),
       lon: Number(service.locationSnapshot.lon),
+      label: service.locationSnapshot.label,
       regionLabel: service.locationSnapshot.regionLabel,
       displayPrecision: service.locationSnapshot.displayPrecision,
     },
@@ -160,6 +161,7 @@ export function toPublicServiceV2Dto(service: OwnerServiceV2) {
     serviceRadiusMeters: owner.serviceRadiusMeters,
     maxPetCapacity: owner.mode === "BOARDING" ? owner.maxPetCapacity : null,
     location: {
+      label: owner.locationSnapshot.label,
       regionLabel: owner.locationSnapshot.regionLabel,
       displayPrecision: owner.locationSnapshot.displayPrecision,
     },

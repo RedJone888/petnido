@@ -8,7 +8,7 @@ function nextDate(value: string) {
   return date.toISOString();
 }
 
-function intervalDays(value: string, custom: number) {
+export function visitIntervalDays(value: string, custom: number) {
   if (value === "every-2-days") return 2;
   if (value === "every-3-days") return 3;
   if (value === "custom") return Math.max(1, custom || 1);
@@ -56,7 +56,10 @@ export function pricingInputFromDraft({
 }): NeedPricingInput {
   const mode = careType === "visit" ? "HOME_VISIT" : careType === "boarding" ? "BOARDING" : "CUSTOM";
   const startsAt = `${dates.startDate}T00:00:00.000Z`;
-  const endsAt = nextDate(dates.endDate);
+  const endsAt =
+    careType === "boarding"
+      ? `${dates.endDate}T00:00:00.000Z`
+      : nextDate(dates.endDate);
   const input: NeedPricingInput = {
     mode,
     startsAt,
@@ -96,7 +99,7 @@ export function pricingInputFromDraft({
   if (careType === "visit") {
     input.schedule = {
       homeVisit: {
-        intervalDays: intervalDays(visitFrequency, customInterval),
+        intervalDays: visitIntervalDays(visitFrequency, customInterval),
         firstServiceDate: firstVisitDate || dates.startDate,
         visitsPerServiceDay: visitsPerDay,
       },

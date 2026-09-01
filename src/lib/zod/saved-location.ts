@@ -3,7 +3,7 @@ import { z } from "zod";
 import { mapLocationSchema } from "./location";
 
 export const savedLocationCreateSchema = mapLocationSchema.extend({
-  label: z.string().trim().min(1).max(50).nullable().optional(),
+  label: z.string().trim().min(1).max(240).nullable().optional(),
   makeDefault: z.boolean().default(false),
 });
 

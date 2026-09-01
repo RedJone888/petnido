@@ -9,7 +9,6 @@ function serviceFixture(mode: "HOME_VISIT" | "BOARDING" | "CUSTOM"): OwnerServic
   return {
     id: "service-1",
     idempotencyKey: "private-key",
-    legacyServiceId: null,
     serviceProfileId: "private-profile",
     mode,
     state: "ACTIVE",
@@ -28,6 +27,7 @@ function serviceFixture(mode: "HOME_VISIT" | "BOARDING" | "CUSTOM"): OwnerServic
       sourceLocationId: "private-saved-location",
       lat: new Prisma.Decimal("35.681236"),
       lon: new Prisma.Decimal("139.767125"),
+      label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan",
       regionLabel: "Chiyoda, Tokyo",
       displayPrecision: "DISTRICT",
       createdAt: new Date("2026-08-01T00:00:00.000Z"),
@@ -138,7 +138,7 @@ describe("Service V2 DTOs", () => {
     const dto = toPublicServiceV2Dto(serviceFixture("HOME_VISIT"));
     const serialized = JSON.stringify(dto);
     expect(dto).toMatchObject({
-      location: { regionLabel: "Chiyoda, Tokyo", displayPrecision: "DISTRICT" },
+      location: { label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan", regionLabel: "Chiyoda, Tokyo", displayPrecision: "DISTRICT" },
       maxPetCapacity: null,
       serviceRadiusMeters: 5000,
       attachments: [{ id: "photo-1", url: "/photo.jpg", purpose: "EXPERIENCE" }],

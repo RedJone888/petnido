@@ -25,6 +25,7 @@ const MapLibreMap = dynamic(() => import("@/components/location/MapLibreMap"), {
 
 type LocationSeed = {
   id: string | null;
+  label: string;
   regionLabel: string;
   lat: number;
   lon: number;
@@ -33,6 +34,7 @@ type LocationSeed = {
 
 const emptyLocation: LocationSeed = {
   id: null,
+  label: "",
   regionLabel: "",
   lat: 34.6937,
   lon: 135.5023,
@@ -52,6 +54,7 @@ function LocationEditor({
   onCancel: () => void;
   onSave: (values: {
     id: string | null;
+    label: string;
     regionLabel: string;
     lat: number;
     lon: number;
@@ -80,7 +83,8 @@ function LocationEditor({
   const [makeDefault, setMakeDefault] = useState(seed.makeDefault);
   const controller = useLocationController({
     location: {
-      label: seed.regionLabel,
+      label: seed.label || seed.regionLabel,
+      regionLabel: seed.regionLabel || null,
       lat: seed.lat,
       lon: seed.lon,
     },
@@ -96,7 +100,10 @@ function LocationEditor({
     if (!selected || controller.isReverseLoading) return;
     await onSave({
       id: seed.id,
-      regionLabel: controller.location.label.trim(),
+      label: controller.location.label.trim(),
+      regionLabel:
+        controller.location.regionLabel?.trim() ||
+        controller.location.label.trim(),
       lat: controller.location.lat,
       lon: controller.location.lon,
       makeDefault,
@@ -191,7 +198,7 @@ function LocationEditor({
 }
 
 export function LocationSettings() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const copy = t.settings.locations;
   const confirm = useConfirm();
   const setConfirmLoading = useConfirmStore((state) => state.setIsDeleting);
@@ -199,6 +206,7 @@ export function LocationSettings() {
   const utils = trpc.useUtils();
   const locations = trpc.savedLocation.listMine.useQuery();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [editingDefault, setEditingDefault] = useState(false);
   const [editorSeed, setEditorSeed] = useState<LocationSeed | null>(null);
   const [editorVersion, setEditorVersion] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -238,6 +246,28 @@ export function LocationSettings() {
     return Number(a.createdAt) - Number(b.createdAt);
   });
   const defaultLocation = orderedLocations[0];
+  const defaultDisplayName = defaultLocation
+    ? defaultLocation.label ||
+      defaultLocation.regionLabel ||
+      (Number.isFinite(Number(defaultLocation.lat)) &&
+      Number.isFinite(Number(defaultLocation.lon))
+        ? `${Number(defaultLocation.lat).toFixed(4)}, ${Number(defaultLocation.lon).toFixed(4)}`
+        : copy.unnamed)
+    : copy.notSet;
+  const profileCopy = {
+    en: {
+      selectUsed: "Select from used addresses",
+      addDefault: "Set default address from new",
+    },
+    zh: {
+      selectUsed: "从使用过的地址中选择",
+      addDefault: "从新地址设置默认地址",
+    },
+    ja: {
+      selectUsed: "使用履歴のある住所から選択",
+      addDefault: "新しい住所を既定に設定",
+    },
+  }[lang];
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -267,13 +297,14 @@ export function LocationSettings() {
 
   async function saveLocation(values: {
     id: string | null;
+    label: string;
     regionLabel: string;
     lat: number;
     lon: number;
     makeDefault: boolean;
   }) {
     const payload = {
-      label: null,
+      label: values.label,
       regionLabel: values.regionLabel,
       lat: values.lat,
       lon: values.lon,
@@ -290,6 +321,7 @@ export function LocationSettings() {
       }
       toast.success(values.id ? copy.updateSuccess : copy.createSuccess);
       setEditorSeed(null);
+      setEditingDefault(false);
     } catch {
       toast.error(copy.saveError);
     }
@@ -300,6 +332,7 @@ export function LocationSettings() {
     if (id === effectiveDefaultId || setDefault.isLoading) return;
     try {
       await setDefault.mutateAsync({ id });
+      setEditingDefault(false);
       toast.success(copy.setDefaultSuccess);
     } catch {
       toast.error(copy.setDefaultError);
@@ -307,83 +340,65 @@ export function LocationSettings() {
   }
 
   return (
-    <section
-      id="locations"
-      className="grid gap-3 py-4 md:grid-cols-[112px_minmax(0,1fr)] md:items-start md:gap-5"
-      data-profile-row="address"
-    >
-      <p className="text-sm font-bold text-slate-700 md:flex md:h-11 md:items-center">
-        {copy.label}
-      </p>
-      <div className="min-w-0 max-w-3xl">
+    <section id="locations" data-profile-row="address">
+      <div className="grid min-h-11 gap-3 md:grid-cols-[112px_minmax(0,1fr)] md:items-center md:gap-5">
+        <p className="text-sm font-bold text-slate-700">{copy.label}</p>
         {locations.isLoading ? (
-          <div className="motion-safe:animate-pulse">
-            <div className="h-11 max-w-md rounded-xl bg-slate-200/80" />
-          </div>
-        ) : orderedLocations.length === 0 ? (
-          <div className="flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center">
-            <p
-              data-empty-address-field
-              className="flex min-h-11 min-w-0 items-center rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-500 sm:max-w-md sm:flex-1"
-            >
-              {copy.notSet}
-            </p>
-            <button
-              type="button"
-              onClick={() => openEditor(emptyLocation)}
-              className={`${softActionButtonClass} shrink-0`}
-            >
-              {copy.add}
-            </button>
-          </div>
+          <div className="h-5 max-w-xs animate-pulse rounded bg-slate-200" />
         ) : (
-          <div ref={dropdownRef} className="relative max-w-md">
-            <button
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={dropdownOpen}
-              aria-controls="saved-address-menu"
-              onClick={() => setDropdownOpen((value) => !value)}
-              className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 transition hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-purple-100"
-            >
-              <span className="min-w-0 truncate">
-                {defaultLocation
-                  ? defaultLocation.regionLabel ||
-                    defaultLocation.label ||
-                    (Number.isFinite(Number(defaultLocation.lat)) &&
-                    Number.isFinite(Number(defaultLocation.lon))
-                      ? `${Number(defaultLocation.lat).toFixed(4)}, ${Number(defaultLocation.lon).toFixed(4)}`
-                      : copy.unnamed)
-                  : copy.none}
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 text-slate-500 transition ${dropdownOpen ? "rotate-180" : ""}`}
-                aria-hidden="true"
-              />
-            </button>
-
-            {dropdownOpen ? (
-              <div
-                id="saved-address-menu"
-                role="menu"
-                data-address-dropdown
-                className={`absolute left-0 right-0 z-40 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ${
-                  addressDropdown.placement === "top"
-                    ? "bottom-full mb-2"
-                    : "top-full mt-2"
-                }`}
-                style={{ maxHeight: addressDropdown.maxHeight }}
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-sm font-semibold text-slate-800">{defaultDisplayName}</p>
+            {!editingDefault ? (
+              <button
+                type="button"
+                onClick={() => setEditingDefault(true)}
+                className={`${softActionButtonClass} !min-h-9 !px-3 !py-1.5 !text-xs`}
               >
-                {locations.isLoading ? (
-                  <p className="px-3 py-2 text-sm text-slate-500">
-                    {copy.loading}
-                  </p>
-                ) : orderedLocations.length ? (
-                  orderedLocations.map((location) => {
+                {copy.change}
+              </button>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {editingDefault ? <div className="mt-3 flex flex-col gap-3 md:ml-[132px] md:flex-row md:items-center">
+        <button
+          type="button"
+          data-address-add
+          onClick={() => openEditor(emptyLocation)}
+          className={`${softActionButtonClass} shrink-0 !min-h-11 !px-3 !py-1.5 !text-xs`}
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          {profileCopy.addDefault}
+        </button>
+
+        {orderedLocations.length ? (
+          <div ref={dropdownRef} className="relative w-full max-w-sm">
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={dropdownOpen}
+                aria-controls="saved-address-menu"
+                onClick={() => setDropdownOpen((value) => !value)}
+                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 transition hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-purple-100"
+              >
+                <span className="min-w-0 truncate text-slate-500">{profileCopy.selectUsed}</span>
+                <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition ${dropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {dropdownOpen ? (
+                <div
+                  id="saved-address-menu"
+                  role="menu"
+                  data-address-dropdown
+                  className={`absolute left-0 right-0 z-40 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ${addressDropdown.placement === "top" ? "bottom-full mb-2" : "top-full mt-2"}`}
+                  style={{ maxHeight: addressDropdown.maxHeight }}
+                >
+                  {orderedLocations.map((location) => {
                     const isDefault = location.id === effectiveDefaultId;
                     const displayName =
-                      location.regionLabel ||
                       location.label ||
+                      location.regionLabel ||
                       (Number.isFinite(Number(location.lat)) &&
                       Number.isFinite(Number(location.lon))
                         ? `${Number(location.lat).toFixed(4)}, ${Number(location.lon).toFixed(4)}`
@@ -419,6 +434,10 @@ export function LocationSettings() {
                           onClick={() =>
                             openEditor({
                               id: location.id,
+                              label:
+                                location.label ??
+                                location.regionLabel ??
+                                "",
                               regionLabel:
                                 location.regionLabel ?? location.label ?? "",
                               lat: Number(location.lat),
@@ -460,23 +479,18 @@ export function LocationSettings() {
                         </button>
                       </div>
                     );
-                  })
-                ) : null}
-                <button
-                  type="button"
-                  role="menuitem"
-                  data-address-add
-                  onClick={() => openEditor(emptyLocation)}
-                  className={`${softActionButtonClass} mt-1 w-full !justify-start`}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  {copy.add}
-                </button>
-              </div>
-            ) : null}
-          </div>
-        )}
-      </div>
+                  })}
+                </div>
+              ) : null}
+            </div>
+        ) : null}
+      </div> : null}
+
+      {mapAvailable && defaultLocation ? (
+        <div className="mt-3 h-52 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 md:ml-[132px]">
+          <MapLibreMap lat={Number(defaultLocation.lat)} lon={Number(defaultLocation.lon)} editable={false} />
+        </div>
+      ) : null}
 
       {editorSeed ? (
         <LocationEditor

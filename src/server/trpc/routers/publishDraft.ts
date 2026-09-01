@@ -13,24 +13,7 @@ import { canEditPublishedNeed } from "@/domain/need/state-machine";
 import { publishNeedV2Transaction } from "@/server/domains/publishing/publish-need-v2";
 import { publishServiceV2Transaction } from "@/server/domains/publishing/publish-service-v2";
 import { consumePostPublishEmailPrompt } from "@/server/domains/notification/email-preference";
-import {
-  profileDefaultsV2Enabled,
-  publishingV2ReadEnabled,
-  publishingV2WriteEnabled,
-} from "@/server/feature-flags/publishing-v2";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
-
-function requirePublishingV2Read() {
-  if (!publishingV2ReadEnabled()) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-  }
-}
-
-function requirePublishingV2Write() {
-  if (!publishingV2WriteEnabled()) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-  }
-}
 
 function serializePayload(payload: Record<string, unknown>) {
   return JSON.stringify(payload);
@@ -50,13 +33,12 @@ export const publishDraftRouter = router({
   publishService: protectedProcedure
     .input(servicePublishSchema)
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       const now = new Date();
       let result;
       try {
         result = await ctx.prisma.$transaction(
-          (tx) => publishServiceV2Transaction(tx, ownerId, input, now, { saveProfileDefaults: profileDefaultsV2Enabled() }),
+          (tx) => publishServiceV2Transaction(tx, ownerId, input, now, { saveProfileDefaults: true }),
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
       } catch (error) {
@@ -97,7 +79,6 @@ export const publishDraftRouter = router({
   publishNeed: protectedProcedure
     .input(needPublishSchema)
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       const now = new Date();
       let result;
@@ -148,7 +129,6 @@ export const publishDraftRouter = router({
   create: protectedProcedure
     .input(publishDraftCreateSchema)
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const userId = ctx.session.user.id;
       // The browser can enqueue the first autosave while the auth redirect
       // is settling, and another tab may submit the same id at the same time.
@@ -182,7 +162,6 @@ export const publishDraftRouter = router({
   save: protectedProcedure
     .input(publishDraftSaveSchema)
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const userId = ctx.session.user.id;
       const owned = await ctx.prisma.publishDraftV2.findFirst({
         where: { id: input.id, ownerId: userId },
@@ -257,9 +236,8 @@ export const publishDraftRouter = router({
     }),
 
   getMine: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }).strict())
+    .input(z.object({ id: z.string().min(1) }).strict())
     .query(async ({ ctx, input }) => {
-      requirePublishingV2Read();
       const draft = await ctx.prisma.publishDraftV2.findFirst({
         where: { id: input.id, ownerId: ctx.session.user.id },
       });
@@ -280,7 +258,6 @@ export const publishDraftRouter = router({
         .default({ includeAbandoned: false }),
     )
     .query(async ({ ctx, input }) => {
-      requirePublishingV2Read();
       const drafts = await ctx.prisma.publishDraftV2.findMany({
         where: {
           ownerId: ctx.session.user.id,
@@ -302,9 +279,8 @@ export const publishDraftRouter = router({
     }),
 
   abandon: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }).strict())
+    .input(z.object({ id: z.string().min(1) }).strict())
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const userId = ctx.session.user.id;
       const draft = await ctx.prisma.publishDraftV2.findFirst({
         where: { id: input.id, ownerId: userId },

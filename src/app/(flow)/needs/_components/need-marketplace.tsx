@@ -11,6 +11,7 @@ import { messages } from "@/i18n/messages";
 import cn from "@/lib/cn";
 import { isPetTypeCode } from "@/modules/need-publishing/domain/pet-types";
 import { trpc } from "@/utils/trpc";
+import type { RouterOutputs } from "@/server/trpc";
 import { NeedCard, NeedCardSkeleton, type MarketplaceNeedItem, type Mode } from "./need-card";
 import { NeedMarketplaceHeader } from "./need-marketplace-header";
 
@@ -35,12 +36,17 @@ const NeedMarketplaceMap = dynamic(
   },
 );
 
-export function NeedMarketplace({ initialLanguage }: { initialLanguage?: Lang } = {}) {
+export function NeedMarketplace({
+  initialLanguage,
+  initialData,
+}: {
+  initialLanguage?: Lang;
+  initialData?: any;
+} = {}) {
   const lang = usePageLanguage(initialLanguage);
   const t = messages[lang];
   const copy = t.core.marketplace;
   const prefix = initialLanguage ? `/${initialLanguage}` : "";
-  const utils = trpc.useUtils();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const leftPaneRef = useRef<HTMLDivElement>(null);
@@ -57,8 +63,6 @@ export function NeedMarketplace({ initialLanguage }: { initialLanguage?: Lang } 
     null,
   );
   const [cursor, setCursor] = useState<string | undefined>();
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
   const [hoveredNeedId, setHoveredNeedId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
 
@@ -146,16 +150,9 @@ export function NeedMarketplace({ initialLanguage }: { initialLanguage?: Lang } 
           if (typeof parsed.availableFrom === "string") setAvailableFrom(parsed.availableFrom);
           if (typeof parsed.availableTo === "string") setAvailableTo(parsed.availableTo);
           if (typeof parsed.radiusKm === "number") setRadiusKm(parsed.radiusKm);
-          if (
-            parsed.origin &&
-            typeof parsed.origin.lat === "number" &&
-            typeof parsed.origin.lon === "number"
-          ) {
-            setOrigin(parsed.origin);
-            setLocationQuery(parsed.locationQuery || parsed.origin.label || "");
-          } else if (typeof parsed.locationQuery === "string") {
-            setLocationQuery(parsed.locationQuery);
-          }
+          // Location is intentionally not restored from session storage.
+          // Visiting /needs starts without an implicit address filter; only
+          // URL parameters or a new explicit user selection may set one.
         }
       }
     } catch {
@@ -164,62 +161,6 @@ export function NeedMarketplace({ initialLanguage }: { initialLanguage?: Lang } 
       isHydratedRef.current = true;
     }
   }, [copy.selectedLocation]);
-
-  const locateUser = useCallback(async () => {
-    if (typeof window === "undefined" || !navigator.geolocation) return;
-    setIsLocating(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        const language = lang === "zh" || lang === "en" || lang === "ja" ? lang : "ja";
-        try {
-          const results = await utils.location.reverse.fetch({
-            lat,
-            lon,
-            language,
-          });
-          const first = results[0];
-          const displayLabel = first?.regionLabel || first?.label || copy.currentLocation;
-          update(() => {
-            setLocationQuery(displayLabel);
-            setOrigin({
-              lat,
-              lon,
-              label: displayLabel,
-            });
-          });
-        } catch {
-          update(() => {
-            setLocationQuery(copy.currentLocation);
-            setOrigin({
-              lat,
-              lon,
-              label: copy.currentLocation,
-            });
-          });
-        } finally {
-          setIsLocating(false);
-        }
-      },
-      () => {
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: false, maximumAge: 300_000, timeout: 8000 },
-    );
-  }, [copy.currentLocation, lang, utils.location.reverse]);
-
-  // Auto-detect current user location as default filter on initial mount/refresh if no location is specified
-  const hasAutoLocatedRef = useRef(false);
-  useEffect(() => {
-    if (!isHydratedRef.current || hasAutoLocatedRef.current) return;
-    hasAutoLocatedRef.current = true;
-    const hasExistingLocation = Boolean(origin || locationQuery.trim());
-    if (hasExistingLocation) return;
-    locateUser();
-  }, [locateUser, locationQuery, origin]);
 
   // Sync active filters to URL search params and sessionStorage
   useEffect(() => {
@@ -328,7 +269,10 @@ export function NeedMarketplace({ initialLanguage }: { initialLanguage?: Lang } 
 
   const needs = trpc.marketplaceNeed.list.useQuery(
     { filter, limit: 20, cursor },
-    { enabled: !dateRangeInvalid },
+    {
+      enabled: !dateRangeInvalid,
+      initialData: !cursor && initialData ? initialData : undefined,
+    },
   );
 
   // Compute number of columns based on left pane width (keeping each column in 240px - 280px range)
@@ -457,10 +401,10 @@ export function NeedMarketplace({ initialLanguage }: { initialLanguage?: Lang } 
             locationQuery={locationQuery}
             locationResults={locationSearch.data ?? []}
             locationLoading={locationSearch.isFetching}
-            locationError={locationError}
+            locationError={null}
             dateRangeInvalid={dateRangeInvalid}
             totalCount={needs.data?.items.length}
-            isLocating={isLocating}
+            isLocating={false}
             onLocationChange={(value) =>
               update(() => {
                 setLocationQuery(value);

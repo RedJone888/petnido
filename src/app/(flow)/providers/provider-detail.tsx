@@ -9,12 +9,26 @@ import { usePageLanguage } from "@/components/providers/language-provider";
 import type { Lang } from "@/domain/lang/types";
 import { messages } from "@/i18n/messages";
 
-export function ProviderDetail({ providerId, initialLanguage }: { providerId: string; initialLanguage?: Lang }) {
+export function ProviderDetail({
+  providerId,
+  initialLanguage,
+  initialData,
+}: {
+  providerId: string;
+  initialLanguage?: Lang;
+  initialData?: any;
+}) {
   const lang = usePageLanguage(initialLanguage);
   const t = messages[lang];
   const copy = t.core.marketplace;
   const prefix = initialLanguage ? `/${initialLanguage}` : "";
-  const result = trpc.marketplaceService.getProvider.useQuery({ providerId });
+  const result = trpc.marketplaceService.getProvider.useQuery(
+    { providerId },
+    {
+      initialData: initialData ?? undefined,
+      refetchOnMount: false,
+    },
+  );
   if (result.isLoading) return <main className="min-h-screen p-10 text-center text-sm text-slate-500">{copy.loadingProvider}</main>;
   if (!result.data) return <main className="min-h-screen p-10 text-center text-sm text-danger-text">{copy.providerUnavailable}</main>;
   const { provider, services } = result.data;

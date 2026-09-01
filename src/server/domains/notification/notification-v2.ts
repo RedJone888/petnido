@@ -15,6 +15,9 @@ export async function createNotificationEvent(
   },
 ) {
   if (input.recipientId === input.actorId) return null;
+  // PetNido has no separate system-updates inbox. Persist notification events
+  // only for actual new messages, which also back the instant email alert.
+  if (input.type !== "MESSAGE_RECEIVED") return null;
   const notification = await tx.notificationV2.upsert({
     where: { eventKey: input.eventKey },
     update: {},

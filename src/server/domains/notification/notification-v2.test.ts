@@ -6,18 +6,27 @@ describe("NotificationV2 events", () => {
   it("uses an event key upsert so command retries cannot duplicate a notification", async () => {
     const tx = { notificationV2: { upsert: vi.fn().mockResolvedValue({ id: "notification-1" }) }, user: { findFirst: vi.fn().mockResolvedValue(null) }, emailOutboxV2: { upsert: vi.fn() } };
     const input = {
-      eventKey: "booking:booking-1:confirmed",
+      eventKey: "message:message-1:recipient:customer",
       recipientId: "customer",
       actorId: "provider",
-      type: "BOOKING_CONFIRMED" as const,
-      resourceKind: "BOOKING" as const,
-      resourceId: "booking-1",
+      type: "MESSAGE_RECEIVED" as const,
+      resourceKind: "CONVERSATION" as const,
+      resourceId: "conversation-1",
       subject: "Boarding",
     };
     await createNotificationEvent(tx as never, input);
     await createNotificationEvent(tx as never, input);
     expect(tx.notificationV2.upsert).toHaveBeenCalledTimes(2);
     expect(tx.notificationV2.upsert.mock.calls[0][0].where).toEqual(tx.notificationV2.upsert.mock.calls[1][0].where);
+  });
+
+  it("does not persist workflow updates in a separate updates inbox", async () => {
+    const tx = { notificationV2: { upsert: vi.fn() }, user: { findFirst: vi.fn() }, emailOutboxV2: { upsert: vi.fn() } };
+    await expect(createNotificationEvent(tx as never, {
+      eventKey: "booking:booking-1:confirmed", recipientId: "customer", actorId: "provider",
+      type: "BOOKING_CONFIRMED", resourceKind: "BOOKING", resourceId: "booking-1", subject: "Boarding",
+    })).resolves.toBeNull();
+    expect(tx.notificationV2.upsert).not.toHaveBeenCalled();
   });
 
   it("does not notify an actor about their own event", async () => {

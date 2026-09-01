@@ -1,11 +1,5 @@
-import { Suspense } from "react";
-
-import { RequestDetailPreview } from "@/modules/need-publishing/client";
+import { redirect } from "next/navigation";
 
 export default function NeedPreviewDetailPage() {
-  return (
-    <Suspense fallback={<div className="min-h-dvh bg-[#fbfaf8]" />}>
-      <RequestDetailPreview />
-    </Suspense>
-  );
+  redirect("/needs/create");
 }

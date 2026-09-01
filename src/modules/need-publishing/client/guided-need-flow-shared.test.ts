@@ -86,4 +86,21 @@ describe("groupTaskRowsByPetGroup", () => {
       "pet-a",
     ]);
   });
+
+  it("merges adjacent assignments after removing duplicate pet ids", () => {
+    const taskRows: TaskRowItem[] = [
+      { petIds: ["pet-a", "pet-b"], state: createTask("Task 1", 1) },
+      {
+        petIds: ["pet-b", "pet-a", "pet-a"],
+        state: createTask("Task 2", 2),
+      },
+      { petIds: ["pet-a", "pet-b"], state: createTask("Task 3", 3) },
+    ];
+
+    const groups = groupTaskRowsByPetGroup(taskRows);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].petIds).toEqual(["pet-a", "pet-b"]);
+    expect(groups[0].items).toHaveLength(3);
+  });
 });

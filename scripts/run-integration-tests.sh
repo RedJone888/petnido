@@ -16,4 +16,4 @@ cleanup
 npx prisma generate --schema prisma/validation/schema.prisma
 npx prisma db push --schema prisma/validation/schema.prisma --skip-generate
 node scripts/install-validation-triggers.mjs
-npx vitest run --project integration
+npx vitest run --project integration --no-file-parallelism

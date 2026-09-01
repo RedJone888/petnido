@@ -1,8 +1,13 @@
 import type { Prisma } from "@prisma/client";
+import {
+  customRequirementNoteFromDraftPayload,
+  isLegacyCustomRequirementNote,
+} from "@/domain/publishing/requirement-notes";
 import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
 import { normalizeTaskIdentity } from "@/modules/need-publishing/domain/task-catalog";
 
 export const publicNeedV2Include = {
+  sourceDraft: { select: { payloadJson: true } },
   owner: {
     select: {
       id: true,
@@ -11,20 +16,16 @@ export const publicNeedV2Include = {
       createdAt: true,
       profile: { select: { bio: true } },
       _count: {
-        select: {
-          // The V2 validation database intentionally contains only the V2
-          // models and therefore has no legacy User.needs relation. Keep the
-          // shared V2 include valid for both Prisma clients; legacy records
-          // still use publicLegacyNeedSelect below.
-          needsV2: true,
-        },
+        select: { needsV2: true },
       },
     },
   },
   locationSnapshot: true,
   pets: {
-    orderBy: { id: "asc" as const },
+    orderBy: { order: "asc" as const },
     select: {
+      id: true,
+      order: true,
       name: true,
       petType: true,
       customPetType: true,
@@ -35,6 +36,11 @@ export const publicNeedV2Include = {
       sex: true,
       neutered: true,
       careNotes: true,
+      attachments: {
+        orderBy: { order: "asc" as const },
+        take: 1,
+        select: { attachment: { select: { url: true } } },
+      },
       sourcePet: {
         select: {
           breed: true,
@@ -43,12 +49,6 @@ export const publicNeedV2Include = {
           sex: true,
           neutered: true,
           notes: true,
-          photos: {
-            where: { status: 1 },
-            orderBy: { order: "asc" as const },
-            take: 1,
-            select: { url: true },
-          },
         },
       },
     },
@@ -56,6 +56,7 @@ export const publicNeedV2Include = {
   tasks: {
     orderBy: { order: "asc" as const },
     select: {
+      id: true,
       category: true,
       label: true,
       instructions: true,
@@ -70,6 +71,7 @@ export const publicNeedV2Include = {
         select: {
           pet: {
             select: {
+              id: true,
               name: true,
               petType: true,
             },
@@ -83,11 +85,22 @@ export const publicNeedV2Include = {
   visitWindows: { orderBy: { visitNumber: "asc" as const } },
   supplies: {
     orderBy: { id: "asc" as const },
-    select: { category: true, label: true, providedBy: true },
+    select: {
+      id: true,
+      category: true,
+      label: true,
+      providedBy: true,
+      pet: { select: { id: true, name: true, petType: true } },
+    },
   },
   requirements: {
     orderBy: { id: "asc" as const },
-    select: { kind: true, label: true },
+    select: {
+      id: true,
+      kind: true,
+      label: true,
+      pet: { select: { id: true, name: true, petType: true } },
+    },
   },
   additionalCosts: { orderBy: { kind: "asc" as const } },
   attachments: {
@@ -100,69 +113,8 @@ export type PublicNeedV2Source = Prisma.NeedV2GetPayload<{
   include: typeof publicNeedV2Include;
 }>;
 
-export const publicLegacyNeedSelect = {
-  id: true,
-  title: true,
-  category: true,
-  requirement: true,
-  startDate: true,
-  endDate: true,
-  frequencyType: true,
-  customDays: true,
-  customTimes: true,
-  addressLat: true,
-  addressLon: true,
-  currency: true,
-  fosterRange: true,
-  transportMethod: true,
-  status: true,
-  archivedAt: true,
-  totalPrice: true,
-  createdAt: true,
-  owner: {
-    select: {
-      id: true,
-      name: true,
-      image: true,
-      createdAt: true,
-      profile: { select: { bio: true } },
-      _count: {
-        select: {
-          needs: true,
-          needsV2: true,
-        },
-      },
-    },
-  },
-  photos: {
-    where: { status: 1 },
-    orderBy: { order: "asc" as const },
-    select: { id: true, url: true },
-  },
-  needPets: {
-    orderBy: { id: "asc" as const },
-    select: {
-      petCategory: true,
-      petType: true,
-      count: true,
-      tags: true,
-      photos: {
-        where: { status: 1 },
-        orderBy: { order: "asc" as const },
-        take: 1,
-        select: { url: true },
-      },
-    },
-  },
-} as const;
-
-export type PublicLegacyNeedSource = Prisma.NeedGetPayload<{
-  select: typeof publicLegacyNeedSelect;
-}>;
-
-function ownerDto(owner: PublicNeedV2Source["owner"] | PublicLegacyNeedSource["owner"]) {
-  const countObj = (owner as { _count?: { needs?: number; needsV2?: number } })._count;
-  const requestsCount = (countObj?.needs ?? 0) + (countObj?.needsV2 ?? 0);
+function ownerDto(owner: PublicNeedV2Source["owner"]) {
+  const requestsCount = owner._count.needsV2;
   return {
     id: owner.id,
     nickname: owner.name,
@@ -173,22 +125,64 @@ function ownerDto(owner: PublicNeedV2Source["owner"] | PublicLegacyNeedSource["o
   };
 }
 
-function legacyAmountMinor(amount: number, currency: string) {
-  return Math.round(amount * (currency === "JPY" || currency === "KRW" ? 1 : 100));
-}
-
 export function toPublicNeedV2Dto(
   need: PublicNeedV2Source,
   distanceMeters: number | null,
-  regionLabelOverride?: string | null,
 ) {
+  const legacyCustomNote =
+    need.mode === "CUSTOM"
+      ? customRequirementNoteFromDraftPayload(need.sourceDraft?.payloadJson)
+      : null;
+  const mappedTasks = need.tasks.map((task) => ({
+    id: task.id,
+    ...(() => {
+      const category = task.category ?? "";
+      const upperCategory = category.toUpperCase();
+      const custom =
+        upperCategory === "CUSTOM" || upperCategory.startsWith("CUSTOM-");
+      const identity = normalizeTaskIdentity({
+        category,
+        label: task.label,
+        custom,
+      });
+      return {
+        category: identity.custom
+          ? custom
+            ? "CUSTOM"
+            : category
+          : identity.code.toUpperCase(),
+        label: identity.label,
+      };
+    })(),
+    instructions: task.instructions ?? null,
+    priority: task.priority,
+    scheduleKind: task.scheduleKind,
+    visitNumbers: task.visitNumbers,
+    order: task.order,
+    orderByVisit: Object.fromEntries(
+      task.visitOrders.map((visitOrder) => [
+        visitOrder.visitNumber,
+        visitOrder.order,
+      ]),
+    ),
+    pets: task.petLinks.map((link) => ({
+      id: link.pet.id,
+      name: link.pet.name,
+      petType: link.pet.petType,
+    })),
+  }));
+
   return {
+    id: need.id,
     publicId: `v2:${need.id}`,
     source: "V2" as const,
     mode: need.mode,
+    state: need.state,
+    updatedAt: need.updatedAt,
     title: buildNeedDisplayTitle({
       mode: need.mode,
       pets: need.pets,
+      tasks: mappedTasks,
     }),
     description: need.description,
     scheduleNotes: need.scheduleNotes,
@@ -196,7 +190,8 @@ export function toPublicNeedV2Dto(
     endsAt: need.endsAt,
     timeZone: need.timeZone,
     location: {
-      regionLabel: need.locationSnapshot.regionLabel || regionLabelOverride || null,
+      label: need.locationSnapshot.label || need.locationSnapshot.regionLabel || null,
+      regionLabel: need.locationSnapshot.regionLabel || null,
       displayPrecision: need.locationSnapshot.displayPrecision,
       distanceMeters,
       mapPoint: {
@@ -212,6 +207,8 @@ export function toPublicNeedV2Dto(
       negotiable: need.negotiable,
     },
     pets: need.pets.map((pet) => ({
+      id: pet.id,
+      order: pet.order,
       name: pet.name,
       petType: pet.petType,
       customPetType: pet.customPetType,
@@ -222,43 +219,9 @@ export function toPublicNeedV2Dto(
       sex: pet.sex || pet.sourcePet?.sex || null,
       neutered: pet.neutered || pet.sourcePet?.neutered || null,
       careNotes: pet.careNotes || pet.sourcePet?.notes || null,
-      image: pet.sourcePet?.photos[0]?.url ?? null,
+      image: pet.attachments[0]?.attachment.url ?? null,
     })),
-    tasks: need.tasks.map((task) => ({
-      ...(() => {
-        const category = task.category ?? "";
-        const upperCategory = category.toUpperCase();
-        const custom =
-          upperCategory === "CUSTOM" || upperCategory.startsWith("CUSTOM-");
-        const identity = normalizeTaskIdentity({
-          category,
-          label: task.label,
-          custom,
-        });
-        return {
-          category: identity.custom
-            ? custom
-              ? "CUSTOM"
-              : category
-            : identity.code.toUpperCase(),
-          label: identity.label,
-        };
-      })(),
-      instructions: task.instructions ?? null,
-      priority: task.priority,
-      scheduleKind: task.scheduleKind,
-      visitNumbers: task.visitNumbers,
-      orderByVisit: Object.fromEntries(
-        task.visitOrders.map((visitOrder) => [
-          visitOrder.visitNumber,
-          visitOrder.order,
-        ]),
-      ),
-      pets: task.petLinks.map((link) => ({
-        name: link.pet.name,
-        petType: link.pet.petType,
-      })),
-    })),
+    tasks: mappedTasks,
     schedule: {
       homeVisit: need.homeVisitDetail
         ? {
@@ -277,6 +240,7 @@ export function toPublicNeedV2Dto(
             transportMode: need.boardingDetail.transportMode,
             handoffDirection: need.boardingDetail.handoffDirection,
             maxProviderDistanceMeters: need.boardingDetail.maxProviderDistanceMeters,
+            supplyNotes: need.boardingDetail.supplyNotes,
           }
         : null,
       custom: need.customTimePreference
@@ -286,8 +250,21 @@ export function toPublicNeedV2Dto(
           }
         : null,
     },
-    supplies: need.supplies,
-    requirements: need.requirements,
+    supplies: need.supplies.map((supply) => ({
+      id: supply.id,
+      category: supply.category,
+      label: supply.label,
+      providedBy: supply.providedBy,
+      pet: supply.pet,
+    })),
+    requirements: need.requirements.map((requirement) => ({
+      id: requirement.id,
+      kind: isLegacyCustomRequirementNote(requirement, legacyCustomNote)
+        ? ("NOTE" as const)
+        : requirement.kind,
+      label: requirement.label,
+      pet: requirement.pet,
+    })),
     additionalCosts: need.additionalCosts.map((cost) => ({
       kind: cost.kind,
       mode: cost.mode,
@@ -304,87 +281,5 @@ export function toPublicNeedV2Dto(
   };
 }
 
-export function toPublicLegacyNeedDto(
-  need: PublicLegacyNeedSource,
-  distanceMeters: number | null,
-) {
-  const mode = need.category === "VISIT" ? "HOME_VISIT" : need.category === "FOSTER" ? "BOARDING" : "CUSTOM";
-  return {
-    publicId: `legacy:${need.id}`,
-    source: "LEGACY" as const,
-    mode,
-    title: need.title,
-    description: need.requirement,
-    startsAt: need.startDate,
-    endsAt: need.endDate,
-    timeZone: null,
-    location: {
-      regionLabel: null,
-      displayPrecision: "MAP_POINT",
-      distanceMeters,
-      mapPoint: { lat: need.addressLat, lon: need.addressLon },
-    },
-    budget: {
-      kind: "EXACT" as const,
-      minAmountMinor: legacyAmountMinor(need.totalPrice, need.currency),
-      maxAmountMinor: null,
-      currency: need.currency,
-      negotiable: false,
-    },
-    pets: need.needPets.map((pet) => ({
-      name: null,
-      petType: pet.petType || pet.petCategory,
-      quantity: pet.count,
-      breed: null,
-      birthDate: null,
-      weightGrams: null,
-      sex: null,
-      neutered: null,
-      careNotes: null,
-      image: pet.photos[0]?.url ?? null,
-    })),
-    tasks: need.needPets.flatMap((pet) => pet.tags).map((tag) => ({
-      category: tag,
-      label: tag,
-      instructions: null,
-      priority: mode === "HOME_VISIT" ? ("MUST" as const) : null,
-      scheduleKind: mode === "BOARDING" ? ("DAILY" as const) : null,
-      visitNumbers: [],
-      orderByVisit: {},
-      pets: [],
-    })),
-    schedule: {
-      homeVisit: need.category === "VISIT"
-        ? {
-            intervalDays: need.customDays ?? null,
-            firstServiceDate: need.startDate,
-            visitsPerServiceDay: need.customTimes ?? null,
-            visitWindows: [],
-            excludedDates: [],
-          }
-        : null,
-      boarding: need.category === "FOSTER"
-        ? {
-            transportMode: need.transportMethod,
-            handoffDirection: null,
-            maxProviderDistanceMeters: null,
-          }
-        : null,
-    },
-    supplies: [],
-    requirements: [],
-    additionalCosts: [],
-    attachments: need.photos.map((attachment, order) => ({
-      id: attachment.id,
-      url: attachment.url,
-      purpose: "GENERAL",
-      order,
-    })),
-    owner: ownerDto(need.owner),
-    createdAt: need.createdAt,
-  };
-}
-
 export type PublicNeedV2Dto = ReturnType<typeof toPublicNeedV2Dto>;
-export type PublicLegacyNeedDto = ReturnType<typeof toPublicLegacyNeedDto>;
-export type PublicNeedItemDto = PublicNeedV2Dto | PublicLegacyNeedDto;
+export type PublicNeedItemDto = PublicNeedV2Dto;

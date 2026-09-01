@@ -8,7 +8,6 @@ import {
   PiBookmarkSimple,
   PiBookmarkSimpleFill,
   PiCalendarBlank,
-  PiClock,
   PiHandHeart,
   PiHouseLine,
   PiMapPinLine,
@@ -24,8 +23,16 @@ import { messages } from "@/i18n/messages";
 import { getNeedPublishingMessages } from "@/modules/need-publishing/i18n/messages";
 import { trpc } from "@/utils/trpc";
 import cn from "@/lib/cn";
-import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
+import {
+  buildNeedDisplayTitle,
+  buildNeedTitleParts,
+  type NeedTitleParts,
+} from "@/modules/need-publishing/domain/display-title";
 import { localizeTaskLabel } from "@/modules/need-publishing/domain/task-catalog";
+import { petAvatarPosition } from "@/domain/pet/avatar";
+import { resolveNeedCardPetMedia } from "@/domain/marketplace/need-card-media";
+import { isAreaLevelLocationLabel } from "@/domain/location/public-region-label";
+import { needDisplayDateRange } from "@/domain/marketplace/need-date-range";
 
 export type Mode = "HOME_VISIT" | "BOARDING" | "CUSTOM";
 
@@ -42,15 +49,18 @@ export type PublicTask = {
   label: string;
   priority?: string | null;
   scheduleKind?: string | null;
+  order?: number | null;
+  orderByVisit?: Record<string | number, number> | null;
 };
 
 export type MarketplaceNeedItem = {
   publicId: string;
-  source: "V2" | "LEGACY";
+  source: "V2";
   title: string;
   mode: string;
   startsAt: Date | string;
   endsAt: Date | string;
+  timeZone?: string | null;
   tasks?: PublicTask[];
   schedule: {
     homeVisit: {
@@ -89,60 +99,43 @@ export type MarketplaceNeedItem = {
 
 export function localizedNeedTitle(need: MarketplaceNeedItem, lang: Lang) {
   return need.source === "V2"
-    ? buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, lang })
+    ? buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, tasks: need.tasks, lang })
     : need.title;
 }
 
-const requestModeIcons: Record<Mode, ElementType> = {
-  HOME_VISIT: PiHouseLine,
-  BOARDING: PiWarehouse,
-  CUSTOM: PiHandHeart,
-};
-
-const modeBadgeThemes: Record<Mode, string> = {
-  HOME_VISIT: "bg-emerald-600 text-white shadow-emerald-950/20",
-  BOARDING: "bg-amber-600 text-white shadow-amber-950/20",
-  CUSTOM: "bg-violet-600 text-white shadow-violet-950/20",
-};
-
-function petAvatarPosition(petType: string) {
-  const normalized = petType.trim().toUpperCase();
-  if (normalized === "DOG") return "0% 0%";
-  if (normalized === "CAT") return "33.333% 0%";
-  if (normalized === "RABBIT") return "66.667% 0%";
-  if (normalized === "BIRD") return "100% 0%";
-  if (normalized === "HAMSTER") return "0% 50%";
-  if (normalized === "GUINEA_PIG") return "33.333% 50%";
-  if (normalized === "CHINCHILLA") return "0% 100%";
-  return "33.333% 100%";
+export function localizedNeedTitleParts(need: MarketplaceNeedItem, lang: Lang): NeedTitleParts {
+  if (need.source === "V2") {
+    return buildNeedTitleParts({ mode: need.mode, pets: need.pets, tasks: need.tasks, lang });
+  }
+  return { petSummary: "", taskSummary: need.title, title: need.title };
 }
 
-function PetPhotoCover({ pet, label }: { pet: PublicPet; label: string }) {
-  const [orientation, setOrientation] = useState<"landscape" | "square" | "portrait">("square");
-  const heightClass =
-    orientation === "portrait"
-      ? "h-[220px] sm:h-[250px]"
-      : orientation === "landscape"
-        ? "h-[145px] sm:h-[165px]"
-        : "h-[180px] sm:h-[205px]";
+import {
+  modeBadgeThemes,
+  requestModeIcons,
+} from "@/domain/care/care-themes";
 
+
+function PetPhotoCover({
+  imageUrl,
+  fallbackPetType,
+  label,
+}: {
+  imageUrl?: string | null;
+  fallbackPetType: string;
+  label: string;
+}) {
   return (
     <div
-      className={`${heightClass} overflow-hidden bg-[#fff8e8] transition-[height] duration-300`}
-      data-photo-orientation={orientation}
+      className="h-[180px] overflow-hidden bg-[#fff8e8] sm:h-[205px]"
     >
-      {pet.image ? (
+      {imageUrl ? (
         <div className="h-full overflow-hidden bg-slate-100">
           <AppImage
-            src={pet.image}
+            src={imageUrl}
             alt={label}
             width={640}
             height={480}
-            onLoad={(event) => {
-              const ratio =
-                event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
-              setOrientation(ratio > 1.15 ? "landscape" : ratio < 0.87 ? "portrait" : "square");
-            }}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
           />
         </div>
@@ -153,7 +146,7 @@ function PetPhotoCover({ pet, label }: { pet: PublicPet; label: string }) {
           className="block h-full w-full bg-[#fff8e8] bg-no-repeat transition duration-500 group-hover:scale-[1.04]"
           style={{
             backgroundImage: "url('/images/pet-default-avatars-v2.png')",
-            backgroundPosition: petAvatarPosition(pet.petType),
+            backgroundPosition: petAvatarPosition(fallbackPetType),
             backgroundSize: "400% auto",
           }}
         />
@@ -200,13 +193,6 @@ export function compactDate(value: Date | string, lang: Lang) {
   });
 }
 
-function isAreaLevelLabel(value: string | null | undefined) {
-  if (!value) return false;
-  if (/(expressway|highway|route|street|road|avenue|line|高速|道路|街道)/i.test(value))
-    return false;
-  return /[市区町村]|\b(city|ward|district|town|village)\b/i.test(value);
-}
-
 export function NeedLocationLabel({
   regionLabel,
   mapPoint,
@@ -223,15 +209,15 @@ export function NeedLocationLabel({
   const reverse = trpc.location.reverse.useQuery(
     { lat: mapPoint.lat, lon: mapPoint.lon, language: lang },
     {
-      enabled: !isAreaLevelLabel(regionLabel),
+      enabled: !isAreaLevelLocationLabel(regionLabel),
       staleTime: 24 * 60 * 60 * 1000,
       refetchOnWindowFocus: false,
     },
   );
   const resolved = reverse.data?.[0]?.regionLabel;
-  const area: string = isAreaLevelLabel(regionLabel)
+  const area: string = isAreaLevelLocationLabel(regionLabel)
     ? regionLabel!
-    : isAreaLevelLabel(resolved)
+    : isAreaLevelLocationLabel(resolved)
       ? resolved!
       : fallback;
   const label =
@@ -264,13 +250,21 @@ export function formatNeedCardBudget(need: MarketplaceNeedItem, fallback: string
   return formatNeedEstimatedBadge(pricing, fallback);
 }
 
-export function formatPetsSummary(
+export type PetsSummaryInfo = {
+  details: string;
+  totalBadge: string | null;
+  fullText: string;
+};
+
+export function formatPetsSummaryInfo(
   pets: PublicPet[],
   lang: Lang,
   t: (typeof messages)[Lang],
   needCopy: ReturnType<typeof getNeedPublishingMessages>,
-): string {
-  if (!pets || pets.length === 0) return "";
+): PetsSummaryInfo {
+  if (!pets || pets.length === 0) {
+    return { details: "", totalBadge: null, fullText: "" };
+  }
 
   const counts: Record<string, number> = {};
   let totalCount = 0;
@@ -283,7 +277,9 @@ export function formatPetsSummary(
   }
 
   const typeEntries = Object.entries(counts);
-  if (typeEntries.length === 0) return "";
+  if (typeEntries.length === 0) {
+    return { details: "", totalBadge: null, fullText: "" };
+  }
 
   const petUnits: Record<
     Lang,
@@ -307,14 +303,35 @@ export function formatPetsSummary(
     return `${typeLabel} ${count}${config.unit}`;
   });
 
+  const details = parts.join(config.separator);
+
   if (typeEntries.length === 1 && totalCount === typeEntries[0][1]) {
-    return parts[0];
+    return {
+      details,
+      totalBadge: null,
+      fullText: details,
+    };
   }
 
-  if (lang === "en") {
-    return `${parts.join(config.separator)} · ${totalCount}${config.totalSuffix}`;
-  }
-  return `${parts.join(config.separator)} · ${config.totalPrefix}${totalCount}${config.totalSuffix}`;
+  const totalBadge =
+    lang === "en"
+      ? `${totalCount}${config.totalSuffix}`
+      : `${config.totalPrefix}${totalCount}${config.totalSuffix}`;
+
+  return {
+    details,
+    totalBadge,
+    fullText: `${details} · ${totalBadge}`,
+  };
+}
+
+export function formatPetsSummary(
+  pets: PublicPet[],
+  lang: Lang,
+  t: (typeof messages)[Lang],
+  needCopy: ReturnType<typeof getNeedPublishingMessages>,
+): string {
+  return formatPetsSummaryInfo(pets, lang, t, needCopy).fullText;
 }
 
 export function NeedCard({
@@ -404,20 +421,25 @@ export function NeedCard({
     const petTypeLabel = t.core.pets[pet.petType as keyof typeof t.core.pets] ?? pet.petType;
     return pet.name?.trim() || petTypeLabel;
   };
-  const featuredPet = need.pets.find((pet) => pet.image) ?? need.pets[0];
-  const petsSummary = formatPetsSummary(need.pets, lang, t, needCopy);
+  const { firstPet, featuredPet, coverImage, fallbackPetType } =
+    resolveNeedCardPetMedia(need.pets);
+  const petsSummaryInfo = formatPetsSummaryInfo(need.pets, lang, t, needCopy);
+  const titleInfo = localizedNeedTitleParts(need, lang);
 
   // 1. Date string calculation per mode
-  const startDateStr = compactDate(need.startsAt, lang);
-  const endDateStr = compactDate(need.endsAt, lang);
-  const isSameDay =
-    new Date(need.startsAt).toDateString() === new Date(need.endsAt).toDateString();
+  const displayDates = needDisplayDateRange(need);
+  const startDateStr = compactDate(displayDates.startDate, lang);
+  const endDateStr = compactDate(displayDates.endDate, lang);
+  const isSameDay = displayDates.startDate === displayDates.endDate;
 
-  let timeDisplay = "";
+  let dateRangeText = "";
+  const scheduleBadges: string[] = [];
+
   if (mode === "BOARDING") {
-    // 寄养模式: 时间 · 总night数
+    // 寄养模式: 时间 + 总晚数
+    dateRangeText = `${startDateStr} – ${endDateStr}`;
     const nights = calculateBoardingNights(need.startsAt, need.endsAt);
-    timeDisplay = `${startDateStr} – ${endDateStr} · ${copy.nightsTotal.replace("{n}", String(nights))}`;
+    scheduleBadges.push(copy.nightsTotal.replace("{n}", String(nights)));
   } else if (mode === "CUSTOM") {
     // 自定义需求: 时间 (同一天显示单日，加具体时间/时间段偏好)
     const timePrefKey = need.schedule.custom?.timePreference;
@@ -428,45 +450,22 @@ export function NeedCard({
         need.schedule.custom?.exactTime ??
         "")
       : (need.schedule.custom?.exactTime ?? "");
-    const baseDate = isSameDay ? startDateStr : `${startDateStr} – ${endDateStr}`;
-    timeDisplay = timePref ? `${baseDate} · ${timePref}` : baseDate;
+    dateRangeText = isSameDay ? startDateStr : `${startDateStr} – ${endDateStr}`;
+    if (timePref) {
+      scheduleBadges.push(timePref);
+    }
   } else {
-    // 上门模式: 时间 · 总天数
-    const days = inclusiveDayCount(need.startsAt, need.endsAt);
-    timeDisplay = isSameDay
-      ? `${startDateStr} · ${copy.daysTotal.replace("{n}", "1")}`
-      : `${startDateStr} – ${endDateStr} · ${copy.daysTotal.replace("{n}", String(days))}`;
-  }
-
-  // 2. Line 4 Content (Task/Visits) - only for HOME_VISIT and CUSTOM
-  let line4LeftIcon: ElementType | null = null;
-  let line4LeftText: string | null = null;
-
-  if (mode === "HOME_VISIT") {
-    // 上门模式: 总visit数
+    // 上门模式: 时间 + 总天数 + 总上门次数
+    dateRangeText = isSameDay ? startDateStr : `${startDateStr} – ${endDateStr}`;
+    const days = inclusiveDayCount(displayDates.startDate, displayDates.endDate);
+    scheduleBadges.push(copy.daysTotal.replace("{n}", String(days)));
     const totalVisits = totalHomeVisits(need.startsAt, need.endsAt, need.schedule.homeVisit);
-    const days = inclusiveDayCount(need.startsAt, need.endsAt);
-    line4LeftIcon = PiClock;
-    line4LeftText =
-      totalVisits === null
-        ? copy.daysTotal.replace("{n}", String(days))
-        : copy.visitsTotal.replace("{n}", String(totalVisits));
-  } else if (mode === "CUSTOM") {
-    // 自定义需求: 第一个任务
-    const firstTask = need.tasks?.[0];
-    const taskCategory = firstTask?.category ?? "";
-    const taskCategoryUpper = taskCategory.toUpperCase();
-    const localizedTask = firstTask
-      ? localizeTaskLabel(firstTask.label, lang, {
-          category: taskCategory,
-          custom:
-            taskCategoryUpper === "CUSTOM" ||
-            taskCategoryUpper.startsWith("CUSTOM-"),
-        })
-      : copy.careDetails;
-    line4LeftIcon = PiHandHeart;
-    line4LeftText = localizedTask;
+    if (totalVisits !== null) {
+      scheduleBadges.push(copy.visitsTotal.replace("{n}", String(totalVisits)));
+    }
   }
+
+  const timeDisplayFull = [dateRangeText, ...scheduleBadges].join(" · ");
 
   // 3. Line 1 Extra Suffix (寄养需求范围)
   const boardingMaxDistanceMeters = need.schedule.boarding?.maxProviderDistanceMeters;
@@ -479,11 +478,12 @@ export function NeedCard({
   return (
     <Link
       href={detailHref}
-      aria-label={`${t.core.modes[mode as keyof typeof t.core.modes] ?? mode} · ${timeDisplay}`}
+      prefetch={true}
+      aria-label={`${t.core.modes[mode as keyof typeof t.core.modes] ?? mode} · ${timeDisplayFull}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={cn(
-        "group relative block w-full overflow-hidden rounded-2xl border bg-white text-left transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        "group relative flex w-full flex-col overflow-hidden rounded-2xl border bg-white text-left transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         isHovered
           ? "border-primary/60 -translate-y-1 shadow-[0_16px_36px_-18px_rgba(109,40,217,0.35)] ring-2 ring-primary/20"
           : "border-slate-200/80 shadow-[0_2px_12px_-4px_rgba(25,15,45,0.06)] hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(50,25,90,0.18)] hover:border-slate-300",
@@ -491,7 +491,11 @@ export function NeedCard({
     >
       {/* 1. TOP: Clean, Unobscured Pet Photo Area */}
       <div className="relative overflow-hidden">
-        <PetPhotoCover pet={featuredPet} label={petLabel(featuredPet)} />
+        <PetPhotoCover
+          imageUrl={coverImage}
+          fallbackPetType={fallbackPetType}
+          label={petLabel(featuredPet)}
+        />
 
         {/* High-Distinction Mode Badge on top-left */}
         <div
@@ -530,15 +534,6 @@ export function NeedCard({
           )}
         </button>
 
-        {/* Pet Name/Type Tag on bottom-left */}
-        <div className="absolute bottom-2 left-2.5 inline-flex items-center gap-1 rounded-full bg-slate-950/65 px-2 py-0.5 text-[10.5px] font-bold text-white shadow-sm backdrop-blur-sm">
-          <span>
-            {featuredPet.quantity > 1
-              ? `${petLabel(featuredPet)} ×${featuredPet.quantity}`
-              : petLabel(featuredPet)}
-          </span>
-        </div>
-
         {/* Total Budget Badge on bottom-right */}
         <div className="absolute bottom-2 right-2.5 inline-flex items-center rounded-full bg-slate-950/75 px-2.5 py-0.5 text-xs sm:text-[13px] font-black tracking-tight text-white shadow-md backdrop-blur-md border border-white/15">
           <span>{budgetFormatted}</span>
@@ -546,7 +541,18 @@ export function NeedCard({
       </div>
 
       {/* 2. BODY: Clean Content Area (White background, high contrast, natural height) */}
-      <div className="p-3 sm:p-3.5 space-y-2.5">
+      <div className="flex flex-1 flex-col p-3 sm:p-3.5">
+        <h3 className="mb-2.5 flex min-h-[22px] items-center gap-1.5 min-w-0 text-sm font-black text-slate-900" title={titleInfo.title}>
+          {titleInfo.petSummary ? (
+            <span className="shrink-0 inline-flex items-center rounded-md bg-purple-50 px-1.5 py-0.5 text-[11px] font-bold text-primary ring-1 ring-inset ring-purple-500/15">
+              {titleInfo.petSummary}
+            </span>
+          ) : null}
+          <span className="min-w-0 truncate text-slate-900">
+            {titleInfo.taskSummary}
+          </span>
+        </h3>
+
         <div className="space-y-2">
           {/* Line 1: Address (with boarding radius if applicable) */}
           <div className="flex min-h-[18px] items-center gap-1.5 text-slate-700 font-semibold">
@@ -564,54 +570,41 @@ export function NeedCard({
           </div>
 
           {/* Line 2: Date & Time */}
-          <div className="flex min-h-[18px] items-center gap-1.5 text-slate-500 font-medium">
+          <div className="flex min-h-[18px] items-center gap-1.5 text-slate-700 font-medium">
             <PiCalendarBlank size={13} className="shrink-0 text-slate-400" aria-hidden="true" />
-            <p className="min-w-0 truncate text-[11.5px]" title={timeDisplay}>
-              {timeDisplay}
-            </p>
+            <div className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px]" title={timeDisplayFull}>
+              <span className="shrink-0 font-semibold text-slate-700">
+                {dateRangeText}
+              </span>
+              {scheduleBadges.map((badge, idx) => (
+                <span
+                  key={idx}
+                  className="shrink-0 inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200/70"
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Line 3: Pet summary: 几只宠物、什么类别 (例如：猫 2只、兔子 1只 · 共3只) */}
-          {petsSummary ? (
-            <div className="flex min-h-[18px] items-center gap-1.5 text-slate-600 font-medium">
-              <PiPawPrint size={13} className="shrink-0 text-slate-400" aria-hidden="true" />
-              <p className="min-w-0 truncate text-[11.5px]" title={petsSummary}>
-                {petsSummary}
-              </p>
+          <div className="flex min-h-[18px] items-center gap-1.5 text-slate-600 font-medium">
+            <PiPawPrint size={13} className="shrink-0 text-slate-400" aria-hidden="true" />
+            <div className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px]" title={petsSummaryInfo.fullText || undefined}>
+              <span className="shrink-0 font-medium text-slate-700">
+                {petsSummaryInfo.details || "\u00a0"}
+              </span>
+              {petsSummaryInfo.totalBadge ? (
+                <span className="shrink-0 inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200/70">
+                  {petsSummaryInfo.totalBadge}
+                </span>
+              ) : null}
             </div>
-          ) : null}
-
-          {/* Line 4: Task / Frequency / Service details */}
-          {line4LeftText && line4LeftIcon ? (
-            <div className="flex min-h-[18px] items-center gap-1.5 text-slate-700 font-semibold">
-              {line4LeftIcon === PiClock ? (
-                <PiClock
-                  size={13}
-                  className="shrink-0 text-emerald-600"
-                  aria-hidden="true"
-                />
-              ) : line4LeftIcon === PiWarehouse ? (
-                <PiWarehouse
-                  size={13}
-                  className="shrink-0 text-amber-600"
-                  aria-hidden="true"
-                />
-              ) : (
-                <PiHandHeart
-                  size={13}
-                  className="shrink-0 text-violet-600"
-                  aria-hidden="true"
-                />
-              )}
-              <p className="min-w-0 truncate text-[11.5px]" title={line4LeftText}>
-                {line4LeftText}
-              </p>
-            </div>
-          ) : null}
+          </div>
         </div>
 
         {/* 3. FOOTER: Publisher Info (Left) + Detail CTA Button (Right) */}
-        <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
           {/* Owner info */}
           <div className="flex min-w-0 items-center gap-2">
             <span className="shrink-0 rounded-full ring-1 ring-slate-200">
@@ -640,19 +633,18 @@ export function NeedCardSkeleton() {
       className="group w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_-4px_rgba(25,15,45,0.06)] animate-pulse"
     >
       {/* 1. TOP Photo Cover Skeleton */}
-      <div className="relative aspect-[4/3] w-full bg-slate-200">
+      <div className="relative h-[180px] w-full bg-slate-200 sm:h-[205px]">
         {/* Mode badge pill skeleton */}
         <div className="absolute left-2.5 top-2.5 h-5 w-16 rounded-full bg-slate-300/80" />
         {/* Favorite circle skeleton */}
         <div className="absolute right-2.5 top-2.5 h-7 w-7 rounded-full bg-slate-300/80" />
-        {/* Pet type tag skeleton */}
-        <div className="absolute bottom-2 left-2.5 h-4.5 w-14 rounded-full bg-slate-400/40" />
         {/* Budget badge skeleton */}
         <div className="absolute bottom-2 right-2.5 h-5 w-18 rounded-full bg-slate-400/50" />
       </div>
 
       {/* 2. BODY Content Skeleton */}
       <div className="p-3 sm:p-3.5 space-y-2.5">
+        <div className="h-4 w-3/4 rounded-md bg-slate-200" />
         <div className="space-y-2">
           {/* Line 1: Location */}
           <div className="flex items-center gap-1.5">

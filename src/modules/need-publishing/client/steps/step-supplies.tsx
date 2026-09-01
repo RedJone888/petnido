@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PiBowlFood,
   PiCaretDown,
@@ -123,6 +123,10 @@ export function StepSupplies({
   const [modalRows, setModalRows] = useState<SupplyRow[]>([]);
   const [rowErrors, setRowErrors] = useState<Record<string, RowError>>({});
   const [modalValidationAttempted, setModalValidationAttempted] = useState(false);
+  const [pendingCategoryFocusRowId, setPendingCategoryFocusRowId] = useState<
+    string | null
+  >(null);
+  const modalRowRefs = useRef(new Map<string, HTMLTableRowElement>());
   const editingGroup = petGroups.find((group) => group.key === editingGroupKey);
   const createRow = (petIds: readonly string[]): SupplyRow => ({
     id: crypto.randomUUID(),
@@ -180,7 +184,18 @@ export function StepSupplies({
     setModalRows([]);
     setRowErrors({});
     setModalValidationAttempted(false);
+    setPendingCategoryFocusRowId(null);
   };
+  useEffect(() => {
+    if (!pendingCategoryFocusRowId) return;
+    const frame = requestAnimationFrame(() => {
+      modalRowRefs.current
+        .get(pendingCategoryFocusRowId)
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      setPendingCategoryFocusRowId(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [modalRows, pendingCategoryFocusRowId]);
   const updateRow = (rowId: string, patch: Partial<SupplyRow>) => {
     const nextRows = modalRows.map((row) =>
       row.id === rowId ? { ...row, ...patch } : row,
@@ -259,11 +274,11 @@ export function StepSupplies({
         return (
           <section key={petGroup.key} className="space-y-3 rounded-2xl border border-[var(--primary-border)] bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
+              <div className="flex flex-wrap items-center gap-2.5">
                 <h4 className="font-bold text-[#35243f]">{groupPets[0] ? displayPetType(groupPets[0]) : petGroup.label}</h4>
-                <div className="mt-1 flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   {groupPets.map((pet) => (
-                    <span key={pet.id} className="inline-flex items-center gap-1.5 rounded-lg bg-[#f7f2fa] px-2 py-1 text-[11px] font-semibold text-[#625a68]">
+                    <span key={pet.id} className="inline-flex items-center gap-1.5 rounded-full bg-[#f7f2fa] px-2.5 py-1 text-xs font-bold text-[#625a68]">
                       <span className="h-5 w-5 overflow-hidden rounded-full"><PetDraftAvatar pet={pet} /></span>
                       {pet.name || displayPetType(pet)}
                     </span>
@@ -316,28 +331,59 @@ export function StepSupplies({
                     );
                   })}
                 </div>
-                <div className="hidden overflow-x-auto rounded-xl border border-[#e6ddea] md:block">
+                <div className="hidden max-h-[260px] overflow-y-auto overflow-x-auto rounded-xl border border-[#EDE8E1] md:block">
                 <table className="w-full min-w-[720px] table-auto border-collapse text-xs">
-                  <thead className="bg-[var(--primary-fixed)] text-[var(--on-primary-fixed-variant)]">
+                  <thead className="sticky top-0 z-10 border-b border-[#EDE8E1] bg-[#FAF6F0] text-[var(--on-primary-fixed-variant)]">
                     <tr>
-                      <th className="px-3 py-2.5 text-left">{ui.petGroup}</th>
-                      <th className="px-3 py-2.5 text-left">{ui.category}</th>
-                      <th className="px-3 py-2.5 text-left">{ui.item}</th>
-                      <th className="px-3 py-2.5 text-center">{ui.provider}</th>
+                      <th className="px-3 py-2.5 text-left font-bold">{ui.petGroup}</th>
+                      <th className="px-3 py-2.5 text-left font-bold">{ui.category}</th>
+                      <th className="px-3 py-2.5 text-left font-bold">{ui.item}</th>
+                      <th className="px-3 py-2.5 text-center font-bold">{ui.provider}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#eee9ef]">
-                    {assignmentGroups.flatMap((assignmentGroup) =>
-                      assignmentGroup.items.map((row, index) => {
+                  <tbody className="divide-y divide-[#EDE8E1]">
+                    {assignmentGroups.flatMap((assignmentGroup) => {
+                      const groupItems = assignmentGroup.items;
+                      const categorySpans: number[] = new Array(groupItems.length).fill(0);
+                      let catIdx = 0;
+                      while (catIdx < groupItems.length) {
+                        let span = 1;
+                        const curCat = categoryLabel(groupItems[catIdx].category, groupItems[catIdx].categoryLabel);
+                        while (
+                          catIdx + span < groupItems.length &&
+                          categoryLabel(groupItems[catIdx + span].category, groupItems[catIdx + span].categoryLabel) === curCat
+                        ) {
+                          span++;
+                        }
+                        categorySpans[catIdx] = span;
+                        catIdx += span;
+                      }
+
+                      const providerSpans: number[] = new Array(groupItems.length).fill(0);
+                      let provIdx = 0;
+                      while (provIdx < groupItems.length) {
+                        let span = 1;
+                        const curProv = groupItems[provIdx].provision;
+                        while (
+                          provIdx + span < groupItems.length &&
+                          groupItems[provIdx + span].provision === curProv
+                        ) {
+                          span++;
+                        }
+                        providerSpans[provIdx] = span;
+                        provIdx += span;
+                      }
+
+                      return groupItems.map((row, index) => {
                         const rowPets = assignmentGroup.petIds.flatMap((petId) => {
                           const pet = petById.get(petId);
                           return pet ? [pet] : [];
                         });
                         const ItemIcon = supplyItemIcon(row.sourceLabel || row.label);
                         return (
-                          <tr key={`${row.key}-${index}`}>
+                          <tr key={`${row.key}-${index}`} className="bg-white">
                             {index === 0 ? (
-                              <td rowSpan={assignmentGroup.items.length} className="px-3 py-3 align-middle">
+                              <td rowSpan={groupItems.length} className="border-r border-[#EDE8E1] bg-white px-3 py-3 align-top">
                                 <div className="flex flex-wrap gap-1.5">
                                   {rowPets.map((pet) => (
                                     <span key={pet.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#ded9e0] px-2 py-1.5 font-semibold">
@@ -348,22 +394,34 @@ export function StepSupplies({
                                 </div>
                               </td>
                             ) : null}
-                            <td className="px-3 py-3 font-semibold">{categoryLabel(row.category, row.categoryLabel)}</td>
-                            <td className="px-3 py-3">
-                              <span className="inline-flex items-center gap-2 font-semibold">
-                                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f6f2f7] text-[#8a5d34]"><ItemIcon size={16} /></span>
+                            {categorySpans[index] > 0 ? (
+                              <td
+                                rowSpan={categorySpans[index]}
+                                className="border-r border-[#EDE8E1] bg-white px-3 py-3 font-semibold text-slate-700 align-top"
+                              >
+                                {categoryLabel(row.category, row.categoryLabel)}
+                              </td>
+                            ) : null}
+                            <td className="border-r border-[#EDE8E1] bg-white px-3 py-3 align-middle">
+                              <span className="inline-flex items-center gap-2 font-semibold text-slate-900">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f6f2f7] text-[#8a5d34]"><ItemIcon size={16} /></span>
                                 {localItem(row.label, row.custom)}
                               </span>
                             </td>
-                            <td className="px-3 py-3 text-center">
-                              <span className={cn("rounded-full border px-2.5 py-1 text-[10px] font-bold", row.provision === "owner" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-amber-300 bg-amber-50 text-amber-800")}>
-                                {row.provision === "owner" ? copy.owner : copy.sitter}
-                              </span>
-                            </td>
+                            {providerSpans[index] > 0 ? (
+                              <td
+                                rowSpan={providerSpans[index]}
+                                className="bg-white px-3 py-3 text-center align-top"
+                              >
+                                <span className={cn("inline-block rounded-full border px-2.5 py-1 text-[10px] font-bold", row.provision === "owner" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-amber-300 bg-amber-50 text-amber-800")}>
+                                  {row.provision === "owner" ? copy.owner : copy.sitter}
+                                </span>
+                              </td>
+                            ) : null}
                           </tr>
                         );
-                      }),
-                    )}
+                      });
+                    })}
                   </tbody>
                 </table>
                 </div>
@@ -376,15 +434,22 @@ export function StepSupplies({
       <Field label={ui.notes} optional><textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} className={cn(textareaClass, "min-h-24 resize-y")} placeholder={ui.notesPlaceholder} maxLength={2000} /></Field>
 
       {editingGroup ? (
-        <ModalShell title={`${ui.configure} · ${editingGroup.label}`} closeLabel={ui.cancel} cancelLabel={ui.cancel} saveLabel={ui.save} onClose={closeEditor} onCancel={closeEditor} onSave={saveEditor} panelClassName="max-h-[80dvh] max-w-[1180px] rounded-[20px] border-[#d8c9e3] bg-white" bodyClassName="bg-white md:px-6">
-          <div className="overflow-y-auto overflow-x-hidden rounded-[14px] border border-[var(--primary-border)] bg-white md:max-h-[450px] md:overflow-auto">
+        <ModalShell title={`${ui.configure} · ${editingGroup.label}`} closeLabel={ui.cancel} cancelLabel={ui.cancel} saveLabel={ui.save} onClose={closeEditor} onCancel={closeEditor} onSave={saveEditor} panelClassName="max-h-[85dvh] max-w-[1180px] rounded-[20px] border-[#d8c9e3] bg-white flex flex-col" bodyClassName="bg-white md:px-6">
+          <div className="max-h-[min(50dvh,360px)] overflow-y-auto overflow-x-hidden rounded-[14px] border border-[var(--primary-border)] bg-white md:overflow-auto">
             <table className="block w-full border-collapse text-xs md:table md:min-w-[1100px] md:table-fixed">
               <thead className="sticky top-0 z-10 hidden bg-[var(--primary-fixed)] text-[var(--on-primary-fixed-variant)] md:table-header-group"><tr><th className="w-[27%] px-3 py-2.5">{ui.petGroup}</th><th className="w-[21%] px-3 py-2.5">{ui.category}</th><th className="w-[25%] px-3 py-2.5">{ui.item}</th><th className="w-[16%] px-3 py-2.5">{ui.provider}</th><th className="w-[11%] px-3 py-2.5">{ui.actions}</th></tr></thead>
               <tbody className="block space-y-3 bg-[#f9f6fa] p-3 md:table-row-group md:divide-y md:divide-[#eee9ef] md:bg-white md:p-0">
                 {modalRows.map((row, index) => (
-                  <tr key={row.id} className="block rounded-xl border border-[#e6ddea] bg-white p-3 md:table-row md:border-0 md:p-0">
+                  <tr
+                    key={row.id}
+                    ref={(node) => {
+                      if (node) modalRowRefs.current.set(row.id, node);
+                      else modalRowRefs.current.delete(row.id);
+                    }}
+                    className="block rounded-xl border border-[#e6ddea] bg-white p-3 md:table-row md:border-0 md:p-0"
+                  >
                     <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><div className="mb-3 flex items-center gap-2 border-b border-[#eee9ef] pb-2 md:hidden"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--primary)] text-[11px] font-bold text-white">{index + 1}</span><span className="text-xs font-bold text-[#514956]">{ui.item} {index + 1}</span></div><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{ui.petGroup}</span><div className="flex flex-wrap gap-1.5">{editingGroup.petIds.flatMap((petId) => { const pet = petById.get(petId); return pet ? [pet] : []; }).map((pet) => { const selected = row.petIds.includes(pet.id); return <button key={pet.id} type="button" aria-pressed={selected} onClick={() => updateRow(row.id, { petIds: selected ? row.petIds.filter((id) => id !== pet.id) : [...row.petIds, pet.id] })} className={cn("inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-semibold", selected ? "border-[var(--primary)] bg-[var(--primary-fixed)] text-[var(--primary)]" : "border-[#ded9e0] text-[#817a85]")}><span className="h-5 w-5 overflow-hidden rounded-full"><PetDraftAvatar pet={pet} /></span><span className="max-w-20 truncate">{pet.name || displayPetType(pet)}</span>{selected ? <PiCheck size={12} /> : null}</button>; })}</div>{rowErrors[row.id]?.pets ? <p className="mt-1.5 text-[11px] font-semibold text-danger-text">{rowErrors[row.id]?.pets}</p> : null}</td>
-                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{ui.category}</span><VisitTaskNameCombobox ariaLabel={`${ui.category} ${index + 1}`} value={row.categoryId} customValue={row.customCategory} customValueKey={customCategoryId} options={[{ value: "food", label: copy.food, icon: PiBowlFood }, { value: "stay", label: copy.stay, icon: PiHouseSimple }, { value: "travel", label: copy.travel, icon: PiSuitcase }]} placeholder={ui.categoryPlaceholder} error={rowErrors[row.id]?.category} errorId={`supply-category-error-${row.id}`} onChange={(next) => updateRow(row.id, { categoryId: next.value as SupplyRow["categoryId"], customCategory: next.customValue, itemId: next.value === row.categoryId ? row.itemId : "", customItem: next.value === row.categoryId ? row.customItem : "" })} /></td>
+                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{ui.category}</span><VisitTaskNameCombobox ariaLabel={`${ui.category} ${index + 1}`} value={row.categoryId} customValue={row.customCategory} customValueKey={customCategoryId} options={[{ value: "food", label: copy.food, icon: PiBowlFood }, { value: "stay", label: copy.stay, icon: PiHouseSimple }, { value: "travel", label: copy.travel, icon: PiSuitcase }]} placeholder={ui.categoryPlaceholder} autoFocus={pendingCategoryFocusRowId === row.id} error={rowErrors[row.id]?.category} errorId={`supply-category-error-${row.id}`} onChange={(next) => { const existingItem = resolvedItem(row); const categoryChanged = next.value !== row.categoryId; updateRow(row.id, { categoryId: next.value as SupplyRow["categoryId"], customCategory: next.customValue, ...(categoryChanged && existingItem ? { itemId: customItemId, customItem: existingItem } : {}) }); }} /></td>
                     <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{ui.item}</span><VisitTaskNameCombobox ariaLabel={`${ui.item} ${index + 1}`} value={row.itemId} customValue={row.customItem} customValueKey={customItemId} options={itemOptions(row)} suggestionsEnabled={itemOptions(row).length > 0} placeholder={ui.itemPlaceholder} error={rowErrors[row.id]?.item} errorId={`supply-item-error-${row.id}`} onChange={(next) => updateRow(row.id, { itemId: next.value, customItem: next.customValue })} /></td>
                     <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{ui.provider}</span><VisitSelect ariaLabel={`${ui.provider} ${index + 1}`} value={row.provision} options={[{ value: "owner", label: copy.owner }, { value: "sitter", label: copy.sitter }]} onChange={(next) => updateRow(row.id, { provision: next as SelectedProvision })} /></td>
                     <td className="block py-2 align-top md:table-cell md:px-2 md:py-3"><div className="flex justify-end gap-1 md:justify-center"><button type="button" disabled={index === 0} onClick={() => setModalRows((current) => { const rows = [...current]; [rows[index - 1], rows[index]] = [rows[index], rows[index - 1]]; return rows; })} className="flex h-8 w-8 items-center justify-center rounded-lg disabled:opacity-30"><PiCaretUp size={16} /></button><button type="button" disabled={index === modalRows.length - 1} onClick={() => setModalRows((current) => { const rows = [...current]; [rows[index], rows[index + 1]] = [rows[index + 1], rows[index]]; return rows; })} className="flex h-8 w-8 items-center justify-center rounded-lg disabled:opacity-30"><PiCaretDown size={16} /></button><button type="button" onClick={() => setModalRows((current) => current.filter((candidate) => candidate.id !== row.id))} className="flex h-8 w-8 items-center justify-center rounded-lg bg-danger-bg text-danger-text"><PiTrash size={15} /></button></div></td>
@@ -394,7 +459,7 @@ export function StepSupplies({
             </table>
           </div>
           {!modalRows.length ? <p className="mt-3 text-xs font-semibold text-[#817a85]">{ui.empty}</p> : null}
-          <button type="button" onClick={() => setModalRows((current) => [...current, createRow(editingGroup.petIds)])} className="mt-3 inline-flex h-9 items-center gap-2 rounded-full border border-dashed border-[var(--primary-border)] bg-[var(--primary-subtle)] px-3 text-xs font-bold text-[var(--primary)]"><PiPlus size={15} />{ui.add}</button>
+          <button type="button" onClick={() => { const row = createRow(editingGroup.petIds); setModalRows((current) => [...current, row]); setPendingCategoryFocusRowId(row.id); }} className="mt-3 inline-flex h-9 items-center gap-2 rounded-full border border-dashed border-[var(--primary-border)] bg-[var(--primary-subtle)] px-3 text-xs font-bold text-[var(--primary)]"><PiPlus size={15} />{ui.add}</button>
         </ModalShell>
       ) : null}
     </div>

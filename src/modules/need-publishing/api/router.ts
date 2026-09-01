@@ -13,24 +13,12 @@ import {
   publishSchemaVersion,
 } from "@/domain/publishing/contracts";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
-import {
-  publishingV2ReadEnabled,
-  publishingV2WriteEnabled,
-} from "@/server/feature-flags/publishing-v2";
 import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
 import { normalizeTaskIdentity } from "@/modules/need-publishing/domain/task-catalog";
-
-function requirePublishingV2Read() {
-  if (!publishingV2ReadEnabled()) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-  }
-}
-
-function requirePublishingV2Write() {
-  if (!publishingV2WriteEnabled()) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-  }
-}
+import {
+  customRequirementNoteFromDraftPayload,
+  isLegacyCustomRequirementNote,
+} from "@/domain/publishing/requirement-notes";
 
 function minorAmount(value: bigint | null) {
   return value === null ? null : Number(value);
@@ -50,19 +38,15 @@ function numberArray(value: unknown): number[] {
 }
 
 const ownerNeedInclude = {
+  sourceDraft: { select: { payloadJson: true } },
   locationSnapshot: true,
   pets: {
-    orderBy: { id: "asc" as const },
+    orderBy: { order: "asc" as const },
     include: {
-      sourcePet: {
-        select: {
-          photos: {
-            where: { status: 1 },
-            orderBy: { order: "asc" as const },
-            take: 1,
-            select: { url: true },
-          },
-        },
+      attachments: {
+        orderBy: { order: "asc" as const },
+        take: 1,
+        include: { attachment: { select: { id: true, url: true } } },
       },
     },
   },
@@ -94,12 +78,28 @@ type OwnerNeed = Prisma.NeedV2GetPayload<{
 }>;
 
 function toOwnerDto(need: OwnerNeed, now: Date) {
+  const { sourceDraft: _sourceDraft, ...needWithoutSourceDraft } = need;
+  const mappedTasks = need.tasks.map((task) => ({
+    ...task,
+    ...canonicalTaskReadFields(task),
+    visitNumbers: numberArray(task.visitNumbers),
+    orderByVisit: Object.fromEntries(
+      task.visitOrders.map((visitOrder) => [
+        visitOrder.visitNumber,
+        visitOrder.order,
+      ]),
+    ),
+    petIds: task.petLinks.map((link: { petId: string }) => link.petId),
+    petLinks: undefined,
+    visitOrders: undefined,
+  }));
+
   return {
-    ...need,
+    ...needWithoutSourceDraft,
     // Titles are derived at read time. The dashboard currently receives an
     // English fallback; locale-aware clients can derive the same value from
     // mode + pets without persisting localized text.
-    title: buildNeedDisplayTitle({ mode: need.mode, pets: need.pets }),
+    title: buildNeedDisplayTitle({ mode: need.mode, pets: need.pets, tasks: mappedTasks }),
     minAmountMinor: minorAmount(need.minAmountMinor),
     maxAmountMinor: minorAmount(need.maxAmountMinor),
     expired: need.state === "OPEN" && new Date(need.endsAt) <= now,
@@ -108,24 +108,11 @@ function toOwnerDto(need: OwnerNeed, now: Date) {
       lat: Number(need.locationSnapshot.lat),
       lon: Number(need.locationSnapshot.lon),
     },
-    tasks: need.tasks.map((task) => ({
-      ...task,
-      ...canonicalTaskReadFields(task),
-      visitNumbers: numberArray(task.visitNumbers),
-      orderByVisit: Object.fromEntries(
-        task.visitOrders.map((visitOrder) => [
-          visitOrder.visitNumber,
-          visitOrder.order,
-        ]),
-      ),
-      petIds: task.petLinks.map((link: { petId: string }) => link.petId),
-      petLinks: undefined,
-      visitOrders: undefined,
-    })),
+    tasks: mappedTasks,
     pets: need.pets.map((pet) => ({
       ...pet,
-      image: pet.sourcePet?.photos?.[0]?.url ?? null,
-      sourcePet: undefined,
+      image: pet.attachments[0]?.attachment.url ?? null,
+      attachments: undefined,
     })),
     additionalCosts: need.additionalCosts.map((cost) => ({
       ...cost,
@@ -168,17 +155,25 @@ function canonicalTaskReadFields(task: {
 
 function toEditPayload(need: OwnerNeed) {
   const petKeys = new Map(
-    need.pets.map((pet) => [pet.id, pet.clientPetKey]),
+    need.pets.map((pet, index) => [
+      pet.id,
+      pet.clientPetKey || `pet-${index + 1}`,
+    ]),
   );
   const tasks = need.tasks.map((task) => ({
     clientTaskKey: task.clientTaskKey,
     ...canonicalTaskReadFields(task),
     instructions: task.instructions,
     priority: task.priority,
-    petKeys: task.petLinks.flatMap((link) => {
-      const key = petKeys.get(link.petId);
-      return key ? [key] : [];
-    }),
+    petKeys:
+      task.petLinks.length > 0
+        ? task.petLinks.flatMap((link) => {
+            const key = petKeys.get(link.petId);
+            return key ? [key] : [];
+          })
+        : need.pets.length === 1
+          ? [need.pets[0].clientPetKey || "pet-1"]
+          : [],
     scheduleKind: task.scheduleKind,
     visitNumbers: numberArray(task.visitNumbers),
     // HOME_VISIT rows intentionally have no global order now that ordering is
@@ -196,8 +191,14 @@ function toEditPayload(need: OwnerNeed) {
         }
       : {}),
   }));
+  const legacyCustomNote =
+    need.mode === "CUSTOM"
+      ? customRequirementNoteFromDraftPayload(need.sourceDraft?.payloadJson)
+      : null;
   const requirements = need.requirements.map((requirement) => ({
-    kind: requirement.kind,
+    kind: isLegacyCustomRequirementNote(requirement, legacyCustomNote)
+      ? ("NOTE" as const)
+      : requirement.kind,
     label: requirement.label,
     petKey: requirement.petId ? petKeys.get(requirement.petId) ?? null : null,
   }));
@@ -207,9 +208,11 @@ function toEditPayload(need: OwnerNeed) {
     startsAt: need.startsAt.toISOString(),
     endsAt: need.endsAt.toISOString(),
     timeZone: need.timeZone,
-    pets: need.pets.map((pet) => ({
-      clientPetKey: pet.clientPetKey,
+    pets: need.pets.map((pet, index) => ({
+      clientPetKey: pet.clientPetKey || `pet-${index + 1}`,
       sourcePetId: pet.sourcePetId,
+      attachmentId: pet.attachments[0]?.attachment.id ?? null,
+      attachmentUrl: pet.attachments[0]?.attachment.url ?? null,
       quantity: pet.quantity,
       name: pet.name?.trim() ? pet.name.trim() : undefined,
       petType: pet.petType,
@@ -217,16 +220,32 @@ function toEditPayload(need: OwnerNeed) {
       breed: pet.breed,
       birthDate: dateOnly(pet.birthDate),
       weightGrams: pet.weightGrams,
-      sex: pet.sex,
-      neutered: pet.neutered,
+      sex:
+        pet.sex?.toUpperCase() === "FEMALE"
+          ? ("FEMALE" as const)
+          : pet.sex?.toUpperCase() === "MALE"
+            ? ("MALE" as const)
+            : ("UNKNOWN" as const),
+      neutered:
+        pet.neutered?.toUpperCase() === "YES"
+          ? ("YES" as const)
+          : pet.neutered?.toUpperCase() === "NO"
+            ? ("NO" as const)
+            : ("UNKNOWN" as const),
       careNotes: pet.careNotes,
     })),
     location: {
       sourceLocationId: need.locationSnapshot.sourceLocationId ?? undefined,
       lat: Number(need.locationSnapshot.lat),
       lon: Number(need.locationSnapshot.lon),
+      label: need.locationSnapshot.label,
       regionLabel: need.locationSnapshot.regionLabel,
-      displayPrecision: need.locationSnapshot.displayPrecision,
+      displayPrecision:
+        (need.locationSnapshot.displayPrecision as
+          | "MAP_POINT"
+          | "NEIGHBORHOOD"
+          | "DISTRICT"
+          | "CITY") || "MAP_POINT",
     },
     budget: {
       kind: need.budgetKind,
@@ -335,7 +354,6 @@ function toReusePayload(need: OwnerNeed) {
 
 export const needPublishingRouter = router({
   listMine: protectedProcedure.query(async ({ ctx }) => {
-    requirePublishingV2Read();
     const now = new Date();
     const needs = await ctx.prisma.needV2.findMany({
       where: { ownerId: ctx.session.user.id, archivedAt: null },
@@ -348,7 +366,6 @@ export const needPublishingRouter = router({
   getMine: protectedProcedure
     .input(z.object({ id: z.string().min(1) }).strict())
     .query(async ({ ctx, input }) => {
-      requirePublishingV2Read();
       const need = await ctx.prisma.needV2.findFirst({
         where: {
           id: input.id,
@@ -366,7 +383,6 @@ export const needPublishingRouter = router({
   beginEdit: protectedProcedure
     .input(z.object({ id: z.string().min(1) }).strict())
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
         const need = await tx.needV2.findFirst({
@@ -433,7 +449,7 @@ export const needPublishingRouter = router({
     .input(
       z
         .object({
-          id: z.string().uuid(),
+          id: z.string().min(1),
           needId: z.string().min(1),
           mode: z.enum(["HOME_VISIT", "BOARDING", "CUSTOM"]),
           currentStep: z.string().min(1).max(80),
@@ -442,7 +458,6 @@ export const needPublishingRouter = router({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
         const need = await tx.needV2.findFirst({
@@ -531,7 +546,6 @@ export const needPublishingRouter = router({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
         const existing = await tx.needV2.findFirst({
@@ -626,7 +640,6 @@ export const needPublishingRouter = router({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
         const need = await tx.needV2.findFirst({

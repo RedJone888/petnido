@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { trpc } from "@/utils/trpc";
-import { LegacyCompatibilityPanel } from "@/components/publishing/legacy-compatibility-panel";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useConfirmStore } from "@/store/useConfirmStore";
@@ -68,7 +67,6 @@ export function ServiceV2List({ mutable }: { mutable: boolean }) {
 
   return (
     <section className="mx-6 mt-6 rounded-3xl border border-purple-100 bg-white p-5 shadow-sm" aria-labelledby="v2-services-title">
-      <LegacyCompatibilityPanel kind="SERVICE" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="v2-services-title" className="text-xl font-black text-slate-950">{t.core.management.myServices}</h2>
         {mutable ? <Link href="/dashboard/serviceprofile/services/new" className="rounded-xl bg-primary px-4 py-3 text-sm font-black text-white">{t.core.management.addService}</Link> : <span className="rounded-xl bg-slate-100 px-4 py-3 text-xs font-bold text-slate-600">{t.core.management.readOnly}</span>}

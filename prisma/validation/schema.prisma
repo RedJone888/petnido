@@ -315,6 +315,7 @@ model Attachment {
   order          Int                   @default(0)
   createdAt      DateTime              @default(now())
   needV2Links    NeedV2Attachment[]
+  needPetSnapshotV2Links NeedPetSnapshotV2Attachment[]
   serviceV2Links ServiceV2Attachment[]
   petId          String?
   pet            Pet?                  @relation(fields: [petId], references: [id], onDelete: Cascade)
@@ -356,6 +357,7 @@ model LocationSnapshotV2 {
   sourceLocationId String?
   lat              Float
   lon              Float
+  label            String?
   regionLabel      String?
   displayPrecision String
   need             NeedV2?
@@ -366,7 +368,6 @@ model LocationSnapshotV2 {
 model NeedV2 {
   id                 String                 @id @default(cuid())
   idempotencyKey     String                 @unique
-  legacyNeedId       String?                @unique
   ownerId            String
   owner              User                   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   mode               String
@@ -440,6 +441,7 @@ model NeedPetSnapshotV2 {
   needId       String
   need         NeedV2              @relation(fields: [needId], references: [id], onDelete: Cascade)
   clientPetKey String
+  order        Int                 @default(0)
   sourcePetId  String?
   sourcePet    Pet?                @relation(fields: [sourcePetId], references: [id], onDelete: SetNull)
   quantity     Int                 @default(1)
@@ -455,9 +457,23 @@ model NeedPetSnapshotV2 {
   taskLinks    NeedTaskPetV2[]
   supplies     NeedSupplyV2[]
   requirements NeedRequirementV2[]
+  attachments  NeedPetSnapshotV2Attachment[]
 
   @@unique([needId, clientPetKey])
+  @@index([needId, order])
   @@index([sourcePetId])
+}
+
+model NeedPetSnapshotV2Attachment {
+  petSnapshotId String
+  petSnapshot   NeedPetSnapshotV2 @relation(fields: [petSnapshotId], references: [id], onDelete: Cascade)
+  attachmentId  String
+  attachment    Attachment        @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  order         Int               @default(0)
+
+  @@id([petSnapshotId, attachmentId])
+  @@unique([petSnapshotId, order])
+  @@index([attachmentId])
 }
 
 model NeedTaskV2 {
@@ -555,7 +571,6 @@ model NeedV2Attachment {
 model ServiceV2 {
   id                     String                           @id @default(cuid())
   idempotencyKey         String                           @unique
-  legacyServiceId        String?                          @unique
   serviceProfileId       String
   serviceProfile         ServiceProfile                   @relation(fields: [serviceProfileId], references: [id], onDelete: Restrict)
   mode                   String

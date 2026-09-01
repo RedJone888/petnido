@@ -13,6 +13,7 @@ import {
   formatPetsSummary,
   type MarketplaceNeedItem,
 } from "./need-card";
+import { needDisplayDateRange } from "@/domain/marketplace/need-date-range";
 
 type Props = {
   needs: MarketplaceNeedItem[];
@@ -90,8 +91,9 @@ export function NeedMarketplaceMap({
         const needCopy = getNeedPublishingMessages(lang || "en");
         const petSummary = formatPetsSummary(need.pets || [], lang || "en", t, needCopy);
         const budgetText = formatNeedCardBudget(need, t.core.common.openToOffers);
-        const startDateStr = need.startsAt ? compactDate(need.startsAt, lang || "en") : "";
-        const endDateStr = need.endsAt ? compactDate(need.endsAt, lang || "en") : "";
+        const displayDates = needDisplayDateRange(need);
+        const startDateStr = displayDates.startDate ? compactDate(displayDates.startDate, lang || "en") : "";
+        const endDateStr = displayDates.endDate ? compactDate(displayDates.endDate, lang || "en") : "";
         const dateText =
           startDateStr && endDateStr
             ? startDateStr === endDateStr

@@ -1,10 +1,5 @@
-import { redirect } from "next/navigation";
-
-import { publicMarketplaceV2Enabled } from "@/server/feature-flags/publishing-v2";
-
-import { ProviderMarketplace } from "./provider-marketplace";
+import { MarketplaceComingSoon } from "@/components/marketplace/marketplace-coming-soon";
 
 export default function ProvidersPage() {
-  if (!publicMarketplaceV2Enabled()) redirect("/public/sitters");
-  return <ProviderMarketplace />;
+  return <MarketplaceComingSoon kind="providers" />;
 }

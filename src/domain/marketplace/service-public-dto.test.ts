@@ -13,7 +13,7 @@ const service: PublicServiceDto = {
   currency: "JPY" as const,
   serviceRadiusMeters: null,
   maxPetCapacity: 3,
-  location: { regionLabel: "Tokyo", displayPrecision: "DISTRICT", distanceMeters: null },
+  location: { label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan", regionLabel: "Tokyo", displayPrecision: "DISTRICT", distanceMeters: null },
   availabilityRules: [{ kind: "WEEKLY" as const, weekdays: [1, 2, 3, 4, 5], startsOn: null, endsOn: null, includesHolidays: false }],
   availabilityExceptions: [{ date: "2026-08-04", available: false }],
   petPolicies: [{ petType: "CAT", size: "ANY", ageBand: "ANY", accepted: true, notes: null }],
@@ -52,7 +52,6 @@ describe("public services and providers", () => {
     const source = {
       id: "service-1",
       idempotencyKey: "private-idempotency",
-      legacyServiceId: null,
       serviceProfileId: "private-profile-id",
       mode: "HOME_VISIT",
       state: "ACTIVE",
@@ -79,6 +78,7 @@ describe("public services and providers", () => {
         sourceLocationId: "private-default-location",
         lat: 35.681236,
         lon: 139.767125,
+        label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan",
         regionLabel: "Tokyo",
         displayPrecision: "DISTRICT",
         createdAt: new Date(),
@@ -93,7 +93,7 @@ describe("public services and providers", () => {
       attachments: [{ serviceId: "service-1", attachmentId: "photo-1", purpose: "EXPERIENCE", order: 0, attachment: { id: "photo-1", url: "/photo.jpg" } }],
     } as unknown as PublicServiceV2Source;
     const dto = toPublicServiceV2MarketplaceDto(source, 900);
-    expect(dto.location).toEqual({ regionLabel: "Tokyo", displayPrecision: "DISTRICT", distanceMeters: 900 });
+    expect(dto.location).toEqual({ label: "Tokyo Station, Marunouchi, Chiyoda, Tokyo, Japan", regionLabel: "Tokyo", displayPrecision: "DISTRICT", distanceMeters: 900 });
     const serialized = JSON.stringify(dto);
     for (const value of ["35.681236", "139.767125", "private-idempotency", "private-profile-id", "private-location-id", "private-default-location", "sourceLocationId", "signature"]) {
       expect(serialized).not.toContain(value);

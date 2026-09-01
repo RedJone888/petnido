@@ -164,7 +164,7 @@ export function StepBudget({
     careType === "boarding" &&
     sitterSupplyCount > 0 &&
     supplyCostMode === "fixed" &&
-    Number(value.supplyAmount) <= 0
+    (value.supplyAmount.trim() === "" || Number(value.supplyAmount) < 0)
       ? copy.errors.supply
       : "";
   const boardingTransportNeedsBudget =
@@ -234,7 +234,7 @@ export function StepBudget({
     sitterSupplyCount === 0
       ? `${symbol}0`
       : supplyCostMode === "fixed"
-        ? Number(value.supplyAmount) > 0
+        ? Number(value.supplyAmount) >= 0 && value.supplyAmount.trim() !== ""
           ? `${symbol}${Number(value.supplyAmount).toLocaleString()}`
           : "—"
         : supplyCostMode === "reimburse"
@@ -247,7 +247,7 @@ export function StepBudget({
         ? `${symbol}0`
         : copy.handoverUnconfirmed
     : value.travelMode === "fixed"
-      ? Number(value.travelAmount) > 0
+      ? Number(value.travelAmount) >= 0 && value.travelAmount.trim() !== ""
         ? `${symbol}${Number(value.travelAmount).toLocaleString()}`
         : "—"
       : value.travelMode === "actual"
@@ -294,7 +294,7 @@ export function StepBudget({
 
   if (careType === "boarding") {
     return (
-      <div className="grid w-full items-start justify-start gap-4 lg:grid-cols-[fit-content(60%)_fit-content(40%)]">
+      <div className="grid min-h-full w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-2.5 lg:col-start-1">
           <label htmlFor="budget-currency" className={visitLabelClass}>
             {copy.currency}
@@ -565,7 +565,7 @@ export function StepBudget({
           </div>
         </section>
 
-        <section className="min-w-0 w-full lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:w-fit lg:min-w-[260px] lg:max-w-[40vw] lg:self-end">
+        <section className="min-w-0 w-full flex flex-col justify-end lg:sticky lg:bottom-0 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:self-end z-10">
           <div className="overflow-hidden rounded-[16px] border border-[#d9cdea] bg-[#f7f3fa] px-5 pb-5 shadow-[0_16px_34px_-27px_rgba(82,48,112,0.55)] sm:px-6">
             <h3 className="-mx-5 mb-4 border-b border-[#dcd0e6] bg-[#eee7f4] px-5 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#79508b] sm:-mx-6 sm:px-6">
               {boardingCopy.summary}
@@ -626,11 +626,15 @@ export function StepBudget({
                   displayValue: boardingSupplyLabel,
                   negotiable: false,
                 },
-                {
-                  label: boardingCopy.transport,
-                  displayValue: boardingTransportLabel,
-                  negotiable: false,
-                },
+                ...(boardingTransportNeedsBudget
+                  ? [
+                      {
+                        label: boardingCopy.transport,
+                        displayValue: boardingTransportLabel,
+                        negotiable: false,
+                      },
+                    ]
+                  : []),
               ].map(({ label, displayValue, negotiable }) => (
                 <div
                   key={label}
@@ -656,7 +660,7 @@ export function StepBudget({
 
   if (careType === "custom") {
     return (
-      <div className="grid w-full items-start justify-start gap-4 lg:grid-cols-[fit-content(60%)_fit-content(40%)]">
+      <div className="grid min-h-full w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-2.5 lg:col-start-1">
           <label htmlFor="budget-currency" className={visitLabelClass}>
             {copy.currency}
@@ -713,34 +717,23 @@ export function StepBudget({
                     error={amountError}
                   />
                 </div>
-                <label className="block w-full sm:w-[250px] sm:pt-7">
-                  <button
-                    type="button"
-                    onClick={() =>
+                <label
+                  htmlFor="budget-custom-negotiable"
+                  className="mt-6 flex items-center gap-2 text-xs font-semibold text-[#514a58]"
+                >
+                  <input
+                    id="budget-custom-negotiable"
+                    type="checkbox"
+                    checked={value.exactNegotiable}
+                    onChange={(event) =>
                       onChange({
                         ...value,
-                        exactNegotiable: !value.exactNegotiable,
+                        exactNegotiable: event.target.checked,
                       })
                     }
-                    className={cn(
-                      "flex h-10 w-auto items-center gap-2 text-left text-sm font-semibold transition",
-                      value.exactNegotiable
-                        ? "text-[var(--primary-strong)]"
-                        : "text-[#706a78]",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                        value.exactNegotiable
-                          ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                          : "border-[#bcb5bf] bg-white",
-                      )}
-                    >
-                      {value.exactNegotiable && <PiCheck size={10} />}
-                    </span>
-                    <span>{copy.allowSuggestions}</span>
-                  </button>
+                    className="h-4 w-4 rounded border-[#bcb5bf] text-[var(--primary)] focus:ring-[var(--primary)]"
+                  />
+                  {visitCopy.negotiable}
                 </label>
               </div>
             )}
@@ -769,7 +762,7 @@ export function StepBudget({
           </div>
         </section>
 
-        <section className="min-w-0 w-full lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:w-fit lg:min-w-[260px] lg:max-w-[40vw] lg:self-end">
+        <section className="min-w-0 w-full flex flex-col justify-end lg:sticky lg:bottom-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-end z-10">
           <div className="overflow-hidden rounded-[16px] border border-[#d9cdea] bg-[#f7f3fa] px-5 pb-5 shadow-[0_16px_34px_-27px_rgba(82,48,112,0.55)] sm:px-6">
             <h3 className="-mx-5 mb-4 border-b border-[#dcd0e6] bg-[#eee7f4] px-5 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#79508b] sm:-mx-6 sm:px-6">
               {customCopy.summary}
@@ -799,6 +792,9 @@ export function StepBudget({
                   </span>
                 ) : null}
               </div>
+              <p className="mt-2 text-[11px] font-medium leading-5 text-[#776d7c]">
+                {`${boardingCopy.estimateEquals} ${pricingFormula}`}
+              </p>
             </div>
             <dl className="mt-5 space-y-3 px-1 text-xs">
               <div className="flex items-start justify-between gap-4">
@@ -831,7 +827,7 @@ export function StepBudget({
   }
 
   return (
-    <div className="grid w-full items-start justify-start gap-4 lg:grid-cols-[fit-content(60%)_fit-content(40%)]">
+    <div className="grid min-h-full w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-2.5 lg:col-start-1">
         <label htmlFor="budget-currency" className={visitLabelClass}>
           {copy.currency}
@@ -874,7 +870,7 @@ export function StepBudget({
             />
           </div>
           {value.mode === "exact" && (
-            <div className="mt-3 flex flex-wrap items-start gap-x-5 gap-y-3">
+            <div className="mt-3 flex flex-wrap items-end gap-x-5 gap-y-3">
               <div className="w-full max-w-[268px]">
                 <CompactMoneyField
                   label={`${visitCopy.budget} · ${unit}`}
@@ -886,35 +882,37 @@ export function StepBudget({
                   error={amountError}
                 />
               </div>
-              <label className="block w-full sm:w-[250px] sm:pt-7">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onChange({
-                      ...value,
-                      exactNegotiable: !value.exactNegotiable,
-                    })
-                  }
+              <button
+                id="budget-visit-negotiable"
+                type="button"
+                role="checkbox"
+                aria-checked={value.exactNegotiable}
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    exactNegotiable: !value.exactNegotiable,
+                  })
+                }
+                className={cn(
+                  "flex h-10 items-center gap-2 text-left text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2",
+                  value.exactNegotiable
+                    ? "text-[var(--primary-strong)]"
+                    : "text-[#514a58]",
+                )}
+              >
+                <span
+                  aria-hidden="true"
                   className={cn(
-                    "flex h-10 w-auto items-center gap-2 text-left text-sm font-semibold transition",
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition",
                     value.exactNegotiable
-                      ? "text-[var(--primary-strong)]"
-                      : "text-[#706a78]",
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                      : "border-[#bcb5bf] bg-white",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                      value.exactNegotiable
-                        ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                        : "border-[#bcb5bf] bg-white",
-                    )}
-                  >
-                    {value.exactNegotiable && <PiCheck size={10} />}
-                  </span>
-                  <span>{visitCopy.allowSuggestions}</span>
-                </button>
-              </label>
+                  {value.exactNegotiable ? <PiCheck size={10} /> : null}
+                </span>
+                <span>{visitCopy.negotiable}</span>
+              </button>
             </div>
           )}
           {value.mode === "range" && (
@@ -994,7 +992,7 @@ export function StepBudget({
         </div>
       </section>
 
-      <section className="min-w-0 w-full lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:w-fit lg:min-w-[260px] lg:max-w-[40vw] lg:self-end">
+      <section className="min-w-0 w-full flex flex-col justify-end lg:sticky lg:bottom-0 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-end z-10">
         <div className="overflow-hidden rounded-[16px] border border-[#d9cdea] bg-[#f7f3fa] px-5 pb-5 shadow-[0_16px_34px_-27px_rgba(82,48,112,0.55)] sm:px-6">
           <h3 className="-mx-5 mb-4 border-b border-[#dcd0e6] bg-[#eee7f4] px-5 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#79508b] sm:-mx-6 sm:px-6">
             {visitCopy.estimateTitle}

@@ -60,9 +60,9 @@ describe("pending action token", () => {
   it("accepts only source-qualified targets at the public start route", () => {
     expect(pendingActionStartSchema.parse({
       action: "FAVORITE_SERVICE",
-      targetId: "legacy:service_123",
-      returnTo: "/services/legacy%3Aservice_123",
-    })).toMatchObject({ targetId: "legacy:service_123" });
+      targetId: "v2:service_123",
+      returnTo: "/services/v2%3Aservice_123",
+    })).toMatchObject({ targetId: "v2:service_123" });
     expect(pendingActionStartSchema.safeParse({
       action: "FAVORITE_NEED",
       targetId: "need_123",

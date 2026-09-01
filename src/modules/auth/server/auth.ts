@@ -84,11 +84,12 @@ const nextAuth = NextAuth({
   ],
   events: {
     async linkAccount({ account, profile, user }) {
-      if (account.provider !== "google" || typeof profile.email !== "string") return;
-      const providerEmail = normalizeEmail(profile.email);
-      const providerEmailVerified = Boolean(
-        "email_verified" in profile && profile.email_verified,
-      );
+      const providerEmail = typeof profile.email === "string"
+        ? normalizeEmail(profile.email)
+        : null;
+      const providerDisplayName = typeof profile.name === "string"
+        ? profile.name.trim() || null
+        : null;
       await prisma.account.update({
         where: {
           provider_providerAccountId: {
@@ -96,9 +97,12 @@ const nextAuth = NextAuth({
             providerAccountId: account.providerAccountId,
           },
         },
-        data: { providerEmail },
+        data: { providerEmail, providerDisplayName },
       });
-
+      if (account.provider !== "google" || !providerEmail) return;
+      const providerEmailVerified = Boolean(
+        "email_verified" in profile && profile.email_verified,
+      );
       // Auth.js creates the User before it creates the Google Account. Persist
       // Google's verified-email claim as soon as the account is linked instead
       // of relying on an extra property returned by the provider mapper.
@@ -129,10 +133,14 @@ const nextAuth = NextAuth({
                 db: prisma,
                 rawToken: connectToken,
                 account,
+                displayName:
+                  profile && typeof profile.name === "string"
+                    ? profile.name
+                    : null,
               });
               const connectResult =
                 result.status === "already-linked" ? "already" : "success";
-              return `/dashboard/settings?connectProvider=line&connectResult=${connectResult}`;
+              return `/dashboard/settings/security?connectProvider=line&connectResult=${connectResult}`;
             } catch (error) {
               if (error instanceof AuthPolicyError) {
                 return oauthConnectError("line", error.code);
@@ -162,7 +170,7 @@ const nextAuth = NextAuth({
               googleEmail,
             });
             return result.status === "already-linked"
-              ? "/dashboard/settings?connectProvider=google&connectResult=already"
+              ? "/dashboard/settings/security?connectProvider=google&connectResult=already"
               : `/auth/link-account?connectProvider=google&pending=${encodeURIComponent(result.pendingId)}`;
           } catch (error) {
             if (error instanceof AuthPolicyError) {
@@ -213,6 +221,12 @@ const nextAuth = NextAuth({
               data: { emailVerified: new Date() },
             });
           }
+        }
+        if (account.provider === "line" && profile && typeof profile.name === "string") {
+          await prisma.account.update({
+            where: { id: linked.id },
+            data: { providerDisplayName: profile.name.trim() || null },
+          });
         }
         return true;
       }

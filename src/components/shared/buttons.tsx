@@ -42,10 +42,10 @@ export function LogoutButton() {
   return (
     <Button
       variant="ghost"
-      className="rounded-xl px-4 py-2 text-md gap-4"
+      className="min-h-9 self-center rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 gap-2 hover:bg-slate-100 hover:text-slate-700"
       onClick={handleLogout}
     >
-      <LogOut size={18} className="text-primary" />
+      <LogOut size={15} aria-hidden="true" />
       {copy.signOut}
     </Button>
   );

@@ -14,8 +14,7 @@ function dateOnly(value: Date | null) { return value ? value.toISOString().slice
 
 async function resolveBookableService(tx: Prisma.TransactionClient, target: ConversationContextTarget, actorId: string) {
   if (target.kind !== "SERVICE") throw new BookingCommandError("RESOURCE_NOT_FOUND");
-  if (target.source === "V2") {
-    const service = await tx.serviceV2.findFirst({
+  const service = await tx.serviceV2.findFirst({
       where: { id: target.contextId, state: "ACTIVE", archivedAt: null, serviceProfile: { isAccepting: true } },
       select: {
         title: true, mode: true, timeZone: true, maxPetCapacity: true,
@@ -27,31 +26,12 @@ async function resolveBookableService(tx: Prisma.TransactionClient, target: Conv
     });
     if (!service) throw new BookingCommandError("RESOURCE_NOT_FOUND");
     if (service.serviceProfile.userId === actorId) throw new BookingCommandError("FORBIDDEN_RESOURCE_ACTION");
-    return {
-      providerId: service.serviceProfile.userId, title: service.title, mode: service.mode, timeZone: service.timeZone,
-      maxPetCapacity: service.maxPetCapacity,
-      rules: service.availabilityRules.map((rule) => ({ ...rule, weekdays: rule.weekdays, startsOn: dateOnly(rule.startsOn), endsOn: dateOnly(rule.endsOn) })),
-      exceptions: service.availabilityExceptions.map((item) => ({ date: dateOnly(item.date)!, available: item.available })),
-      acceptedPetTypes: service.petPolicies.map((item) => item.petType),
-    };
-  }
-  const service = await tx.service.findFirst({
-    where: { id: target.contextId, isActive: true, archivedAt: null, serviceProfile: { isAccepting: true } },
-    select: {
-      serviceType: true, customType: true, availabilityRangeType: true, availabilityWeekPattern: true,
-      availableFrom: true, availableTo: true, petTypes: true, serviceProfile: { select: { userId: true } },
-    },
-  });
-  if (!service) throw new BookingCommandError("RESOURCE_NOT_FOUND");
-  if (service.serviceProfile.userId === actorId) throw new BookingCommandError("FORBIDDEN_RESOURCE_ACTION");
-  const mode = service.serviceType === "VISIT" ? "HOME_VISIT" : service.serviceType === "FOSTER" ? "BOARDING" : "CUSTOM";
-  const weekdays = service.availabilityWeekPattern === "WEEKDAYS_ONLY" ? [1, 2, 3, 4, 5] : service.availabilityWeekPattern === "WEEKENDS_ONLY" ? [6, 7] : [1, 2, 3, 4, 5, 6, 7];
   return {
-    providerId: service.serviceProfile.userId,
-    title: mode === "CUSTOM" && service.customType ? service.customType : mode === "HOME_VISIT" ? "Home visit care" : "Boarding care",
-    mode, timeZone: "Asia/Tokyo", maxPetCapacity: null,
-    rules: [{ kind: service.availabilityRangeType === "DATE_RANGE" ? "DATE_RANGE" : "WEEKLY", weekdays: service.availabilityRangeType === "DATE_RANGE" ? [] : weekdays, startsOn: dateOnly(service.availableFrom), endsOn: dateOnly(service.availableTo) }],
-    exceptions: [], acceptedPetTypes: service.petTypes.map(String),
+    providerId: service.serviceProfile.userId, title: service.title, mode: service.mode, timeZone: service.timeZone,
+    maxPetCapacity: service.maxPetCapacity,
+    rules: service.availabilityRules.map((rule) => ({ ...rule, weekdays: rule.weekdays, startsOn: dateOnly(rule.startsOn), endsOn: dateOnly(rule.endsOn) })),
+    exceptions: service.availabilityExceptions.map((item) => ({ date: dateOnly(item.date)!, available: item.available })),
+    acceptedPetTypes: service.petPolicies.map((item) => item.petType),
   };
 }
 
@@ -112,7 +92,7 @@ export async function confirmServiceBooking(prisma: PrismaClient, input: { provi
     if (!booking) throw new BookingCommandError("RESOURCE_NOT_FOUND");
     if (booking.state === "CONFIRMED") return { bookingId: booking.id, state: booking.state };
     if (booking.state !== "PENDING" || booking.endsAt <= now) throw new BookingCommandError("INVALID_STATE_TRANSITION");
-    if (options.enforceBoardingCapacity !== false && booking.serviceSource === "V2" && booking.serviceModeSnapshot === "BOARDING") {
+    if (options.enforceBoardingCapacity !== false && booking.serviceModeSnapshot === "BOARDING") {
       const service = await tx.serviceV2.findFirst({ where: { id: booking.serviceId, serviceProfile: { userId: input.providerId } }, select: { mode: true, maxPetCapacity: true } });
       if (!service) throw new BookingCommandError("RESOURCE_NOT_FOUND");
       if (service.mode === "BOARDING" && service.maxPetCapacity !== null) {

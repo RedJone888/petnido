@@ -1,10 +1,5 @@
-import { redirect } from "next/navigation";
-
-import { publicMarketplaceV2Enabled } from "@/server/feature-flags/publishing-v2";
-
-import { ServiceMarketplace } from "./_components/service-marketplace";
+import { MarketplaceComingSoon } from "@/components/marketplace/marketplace-coming-soon";
 
 export default function ServicesPage() {
-  if (!publicMarketplaceV2Enabled()) redirect("/public/sitters");
-  return <ServiceMarketplace />;
+  return <MarketplaceComingSoon kind="services" />;
 }

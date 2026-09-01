@@ -3,6 +3,19 @@ const nextConfig = {
   ...(process.env.NEXT_DIST_DIR
     ? { distDir: process.env.NEXT_DIST_DIR }
     : {}),
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "date-fns",
+      "echarts",
+      "echarts-for-react",
+      "recharts",
+      "maplibre-gl",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+      "@dnd-kit/utilities",
+    ],
+  },
   images: {
     remotePatterns: [
       {

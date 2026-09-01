@@ -1,5 +1,5 @@
-import { NeedForm } from "../_components/form";
-import { NeedCreateInput } from "@/lib/zod/needs";
+import { redirect } from "next/navigation";
+
 export default function NeedNewPage() {
-  return <NeedForm />;
+  redirect("/needs/create");
 }

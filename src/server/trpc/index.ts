@@ -1,11 +1,8 @@
 //appRouter的最终聚合（唯一appRouter)
 import { router } from "@/server/trpc/trpc";
 import { authRouter } from "@/modules/auth/api/router";
-import { needRouter } from "@/server/trpc/routers/need";
 import { serviceProfileRouter } from "@/server/trpc/routers/serviceProfile";
-import { serviceRouter } from "@/server/trpc/routers/service";
 import { serviceV2Router } from "@/server/trpc/routers/serviceV2";
-import { publishingCompatibilityRouter } from "@/server/trpc/routers/publishingCompatibility";
 import { marketplaceNeedRouter } from "@/server/trpc/routers/marketplaceNeed";
 import { marketplaceServiceRouter } from "@/server/trpc/routers/marketplaceService";
 import { favoriteRouter } from "@/server/trpc/routers/favorite";
@@ -25,11 +22,8 @@ import { notificationRouter } from "@/server/trpc/routers/notification";
 import { dashboardSummaryRouter } from "@/server/trpc/routers/dashboardSummary";
 export const appRouter = router({
   auth: authRouter,
-  need: needRouter,
   serviceProfile: serviceProfileRouter,
-  service: serviceRouter,
   serviceV2: serviceV2Router,
-  publishingCompatibility: publishingCompatibilityRouter,
   marketplaceNeed: marketplaceNeedRouter,
   marketplaceService: marketplaceServiceRouter,
   favorite: favoriteRouter,

@@ -181,7 +181,7 @@ export function PublishFeedback({
               </div>
               {publishOutcome.shouldPromptForEmail ? (
                 <Link
-                  href="/dashboard/settings#preferences"
+                  href="/dashboard/messages"
                   className="mt-3 inline-flex text-xs font-bold text-[var(--primary)] underline"
                 >
                   {copy.emailNotifications}

@@ -1,18 +1,28 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 
 import { publicDetailMetadata } from "@/domain/content/public-detail-metadata";
 import { resolvePublicDetailSubject } from "@/server/domains/marketplace/public-detail-metadata";
-import { publicMarketplaceV2Enabled } from "@/server/feature-flags/publishing-v2";
+import { createServerCaller } from "@/server/trpc/server-caller";
 
 import { PublicServiceDetail } from "../_components/public-service-detail";
 
+const getCachedServiceDetail = cache(async (publicId: string) => {
+  const trpc = await createServerCaller();
+  return trpc.marketplaceService.get({ publicId }).catch(() => null);
+});
+
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const publicId = decodeURIComponent(params.id);
-  return publicDetailMetadata("service", "en", `/services/${encodeURIComponent(publicId)}`, await resolvePublicDetailSubject({ kind: "service", publicId }));
+  const detail = await getCachedServiceDetail(publicId);
+  const subject = detail?.title ?? (await resolvePublicDetailSubject({ kind: "service", publicId }));
+  return publicDetailMetadata("service", "en", `/services/${encodeURIComponent(publicId)}`, subject);
 }
 
-export default function ServiceDetailPage({ params }: { params: { id: string } }) {
-  if (!publicMarketplaceV2Enabled()) redirect("/public/sitters");
-  return <PublicServiceDetail publicId={decodeURIComponent(params.id)} />;
+export default async function ServiceDetailPage({ params }: { params: { id: string } }) {
+  const publicId = decodeURIComponent(params.id);
+  const initialData = await getCachedServiceDetail(publicId);
+  if (!initialData) notFound();
+  return <PublicServiceDetail publicId={publicId} initialData={initialData} />;
 }

@@ -22,7 +22,7 @@ export function PendingApplicationAction({
   const [body, setBody] = useState("");
   const provider = trpc.serviceProfile.getSettings.useQuery();
   const application = trpc.needApplication.create.useMutation({
-    onSuccess: (result) => router.replace(`/dashboard/notifications?view=conversations&conversation=${encodeURIComponent(result.conversationId)}`),
+    onSuccess: (result) => router.replace(`/dashboard/messages?conversation=${encodeURIComponent(result.conversationId)}`),
   });
 
   const submit = () => {

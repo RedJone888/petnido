@@ -127,7 +127,7 @@ describe("V2 need owner management", () => {
     expect(result.items[0]).toMatchObject({
       publicId: `v2:${need.id}`,
       source: "V2",
-      title: "Mochi · Custom pet care",
+      title: "Mochi · Custom help",
       owner: { requestsCount: 1 },
     });
   });
@@ -135,6 +135,26 @@ describe("V2 need owner management", () => {
   it("loads an edit baseline without creating a draft until it is dirty", async () => {
     const owner = await prisma.user.create({ data: { email: "v2-edit@example.com" } });
     const need = await createNeed(owner.id);
+    const sourcePet = await prisma.pet.create({
+      data: {
+        ownerId: owner.id,
+        name: "Mochi",
+        type: "CAT",
+        photos: {
+          create: {
+            userId: owner.id,
+            url: "https://example.com/pets/mochi.jpg",
+            fileKey: "pets/mochi.jpg",
+            signature: "mochi-photo",
+            status: 1,
+          },
+        },
+      },
+    });
+    await prisma.needPetSnapshotV2.updateMany({
+      where: { needId: need.id },
+      data: { sourcePetId: sourcePet.id },
+    });
     const caller = needPublishingRouter.createCaller(context(owner.id));
 
     const first = await caller.beginEdit({ id: need.id });
@@ -156,7 +176,9 @@ describe("V2 need owner management", () => {
         custom: { tasks: [{ clientTaskKey: "task-1" }], requirements: [] },
       },
     });
-    expect(JSON.stringify(first.payload)).not.toMatch(/addressRaw|areaRaw/i);
+    const serializedPayload = JSON.stringify(first.payload);
+    expect(serializedPayload).not.toContain('"photo"');
+    expect(serializedPayload).not.toMatch(/addressRaw|areaRaw/i);
     expect(
       await prisma.publishDraftV2.count({
         where: { ownerId: owner.id, editingNeedId: need.id, status: "ACTIVE" },

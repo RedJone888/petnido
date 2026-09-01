@@ -1,12 +1,10 @@
-export type MarketplaceSource = "V2" | "LEGACY";
+export type MarketplaceSource = "V2";
 
 export type MarketplaceCursor = {
   createdAt: string;
   source: MarketplaceSource;
   id: string;
 };
-
-const sourceRank: Record<MarketplaceSource, number> = { V2: 1, LEGACY: 0 };
 
 export function encodeMarketplaceCursor(cursor: MarketplaceCursor) {
   return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
@@ -19,7 +17,7 @@ export function decodeMarketplaceCursor(value: string | null | undefined): Marke
     if (
       typeof parsed.createdAt !== "string" ||
       Number.isNaN(new Date(parsed.createdAt).valueOf()) ||
-      (parsed.source !== "V2" && parsed.source !== "LEGACY") ||
+      parsed.source !== "V2" ||
       typeof parsed.id !== "string" ||
       !parsed.id
     ) return null;
@@ -35,8 +33,6 @@ export function compareMarketplaceItems(
 ) {
   const date = right.createdAt.valueOf() - left.createdAt.valueOf();
   if (date) return date;
-  const source = sourceRank[right.source] - sourceRank[left.source];
-  if (source) return source;
   return right.id.localeCompare(left.id);
 }
 

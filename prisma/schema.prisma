@@ -34,36 +34,6 @@ enum PetType {
   OTHER
 }
 
-enum NeedStatus {
-  OPEN
-  MATCHED
-  CLOSED
-  CANCELLED
-}
-
-enum ServiceCategory {
-  VISIT // 上门喂养
-  FOSTER // 家庭寄养
-  OTHER // 通用/其他
-}
-
-enum AvailabilityRangeType {
-  LONG_TERM
-  DATE_RANGE
-}
-
-enum AvailabilityWeekPattern {
-  EVERYDAY
-  WEEKDAYS_ONLY
-  WEEKENDS_ONLY
-}
-
-enum PriceUnit {
-  DAY // 1日あたり
-  HOUR // 1時間あたり
-  VISIT // 1回あたり（ドロップインなど）
-}
-
 enum Currency {
   JPY
   USD
@@ -72,20 +42,6 @@ enum Currency {
   TWD
   KRW
   GBP
-}
-
-enum ApplicationStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  CANCELLED
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  COMPLETED
-  CANCELLED
 }
 
 enum PublishKindV2 {
@@ -174,6 +130,7 @@ enum NeedRequirementKindV2 {
   UNACCEPTABLE
   OTHER_NEED
   WARNING
+  NOTE
 }
 
 enum TransportModeV2 {
@@ -237,7 +194,6 @@ enum FavoriteTargetKindV2 {
 
 enum FavoriteTargetSourceV2 {
   V2
-  LEGACY
 }
 
 enum ConversationContextKindV2 {
@@ -247,7 +203,6 @@ enum ConversationContextKindV2 {
 
 enum ConversationContextSourceV2 {
   V2
-  LEGACY
 }
 
 enum MessageKindV2 {
@@ -317,16 +272,10 @@ model User {
 
   profile                 Profile?
   pets                    Pet[]
-  needs                   Need[]
   serviceProfile          ServiceProfile?
   locations               UserLocation[]
   notificationPreference  NotificationPreference?
   attachment              Attachment[]                @relation("AttachmentOwner")
-  applications            Application[]
-  sittings                Booking[]                   @relation("SitterBookings")
-  ownerBookings           Booking[]                   @relation("OwnerBookings")
-  messagesSent            Message[]                   @relation("MessagesFromUser")
-  messagesReceived        Message[]                   @relation("MessagesToUser")
   publishDraftsV2         PublishDraftV2[]
   needsV2                 NeedV2[]
   favoritesV2             FavoriteV2[]
@@ -344,7 +293,6 @@ model User {
   updatedAt DateTime @updatedAt
 
   accounts          Account[]
-  sessions          Session[]
   pendingOAuthLinks PendingOAuthLink[]
   oauthConnectIntents OAuthConnectIntent[]
   authLoginTickets  AuthLoginTicket[]
@@ -563,63 +511,10 @@ model ServiceProfile {
   rating      Float @default(0)
   reviewCount Int   @default(0)
 
-  services   Service[]
   servicesV2 ServiceV2[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model Service {
-  id               String         @id @default(cuid())
-  serviceProfileId String
-  serviceProfile   ServiceProfile @relation(fields: [serviceProfileId], references: [id])
-
-  // 服务基本信息
-  serviceType ServiceCategory
-  customType  String?
-  description String?
-  isActive    Boolean         @default(true)
-
-  // 服务地点（独立于 profile）
-  areaRaw  String
-  areaLat  Float
-  areaLon  Float
-  currency Currency
-
-  photos Attachment[]
-
-  // 可用时间
-  availabilityRangeType   AvailabilityRangeType
-  availabilityWeekPattern AvailabilityWeekPattern
-  includeHolidays         Boolean                 @default(false)
-  availableFrom           DateTime?
-  availableTo             DateTime?
-
-  // 价格
-  priceUnit  PriceUnit
-  priceRules PriceRule[]
-
-  // 可服务宠物（系统推断）
-  petTypes PetType[]
-
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  archivedAt DateTime?
-}
-
-model PriceRule {
-  id        String  @id @default(cuid())
-  serviceId String
-  service   Service @relation(fields: [serviceId], references: [id])
-
-  groupLabel String
-  price      Int    @default(0)
-}
-
-enum ServicePhotoKind {
-  EXPERIENCE
-  HOME
 }
 
 model Attachment {
@@ -633,97 +528,13 @@ model Attachment {
   order       Int               @default(0)
   status      Int               @default(0) //0：TEMP  1：ACTIVE  2：DELETED
   signature   String
-  serviceKind ServicePhotoKind?
-
   createdAt DateTime @default(now())
 
-  serviceId      String?
-  service        Service?              @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  needId         String?
-  need           Need?                 @relation(fields: [needId], references: [id], onDelete: Cascade)
   petId          String?
   pet            Pet?                  @relation(fields: [petId], references: [id], onDelete: Cascade)
-  needPetId      String?
-  needPet        NeedPet?              @relation(fields: [needPetId], references: [id], onDelete: Cascade)
   needV2Links    NeedV2Attachment[]
+  needPetSnapshotV2Links NeedPetSnapshotV2Attachment[]
   serviceV2Links ServiceV2Attachment[]
-}
-
-enum FrequencyType {
-  ONCE_A_DAY
-  TWICE_A_DAY
-  EVERY_2_DAYS
-  EVERY_3_DAYS
-  CUSTOM
-}
-
-enum DistanceRange {
-  WITHIN_3KM
-  WITHIN_5KM
-  WITHIN_10KM
-  NO_LIMIT
-}
-
-enum TransportMethod {
-  SELF
-  SITTER
-  TAXI
-  DISCUSS
-}
-
-model Need {
-  id      String @id @default(cuid())
-  ownerId String
-  owner   User   @relation(fields: [ownerId], references: [id])
-
-  title         String
-  category      ServiceCategory
-  // 需求与备注
-  requirement   String
-  // 时间与频率
-  startDate     DateTime
-  endDate       DateTime
-  // 仅在 VISIT 模式下有效
-  frequencyType FrequencyType?
-  customDays    Int?
-  customTimes   Int?
-
-  // 地点逻辑
-  addressRaw      String
-  addressLat      Float
-  addressLon      Float
-  currency        Currency
-  // 仅在 FOSTER 模式下有效
-  fosterRange     DistanceRange?
-  transportMethod TransportMethod?
-  status          NeedStatus       @default(OPEN)
-
-  // 关联
-  needPets NeedPet[]
-  photos   Attachment[]
-
-  // 价格体系
-  priceAmount Int? // 单价
-  totalPrice  Int // 最终显示给用户的总价（由前端计算或手动输入后传回）
-
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  archivedAt   DateTime?
-  applications Application[]
-  bookings     Booking[]
-}
-
-model NeedPet {
-  id          String       @id @default(cuid())
-  needId      String
-  need        Need         @relation(fields: [needId], references: [id])
-  petCategory PetType
-  petType     String?
-  count       Int
-  description String?
-  photos      Attachment[]
-  tags        String[]
-  petIds      String[]
 }
 
 model Pet {
@@ -817,6 +628,7 @@ model LocationSnapshotV2 {
   sourceLocationId String?
   lat              Decimal    @db.Decimal(9, 6)
   lon              Decimal    @db.Decimal(9, 6)
+  label            String?
   regionLabel      String?
   displayPrecision String
   need             NeedV2?
@@ -827,7 +639,6 @@ model LocationSnapshotV2 {
 model NeedV2 {
   id                   String                  @id @default(cuid())
   idempotencyKey       String                  @unique
-  legacyNeedId         String?                 @unique
   ownerId              String
   owner                User                    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   mode                 PublishModeV2
@@ -901,6 +712,7 @@ model NeedPetSnapshotV2 {
   needId       String
   need         NeedV2              @relation(fields: [needId], references: [id], onDelete: Cascade)
   clientPetKey String
+  order        Int                 @default(0)
   sourcePetId  String?
   quantity     Int                 @default(1)
   sourcePet    Pet?                @relation(fields: [sourcePetId], references: [id], onDelete: SetNull)
@@ -916,10 +728,24 @@ model NeedPetSnapshotV2 {
   taskLinks    NeedTaskPetV2[]
   supplies     NeedSupplyV2[]
   requirements NeedRequirementV2[]
+  attachments  NeedPetSnapshotV2Attachment[]
 
   @@unique([needId, clientPetKey])
+  @@index([needId, order])
   @@index([sourcePetId])
   @@index([petType, needId])
+}
+
+model NeedPetSnapshotV2Attachment {
+  petSnapshotId String
+  petSnapshot   NeedPetSnapshotV2 @relation(fields: [petSnapshotId], references: [id], onDelete: Cascade)
+  attachmentId  String
+  attachment    Attachment        @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  order         Int               @default(0)
+
+  @@id([petSnapshotId, attachmentId])
+  @@unique([petSnapshotId, order])
+  @@index([attachmentId])
 }
 
 model NeedTaskV2 {
@@ -1024,7 +850,6 @@ model NeedV2Attachment {
 model ServiceV2 {
   id                     String                           @id @default(cuid())
   idempotencyKey         String                           @unique
-  legacyServiceId        String?                          @unique
   serviceProfileId       String
   serviceProfile         ServiceProfile                   @relation(fields: [serviceProfileId], references: [id], onDelete: Restrict)
   mode                   PublishModeV2
@@ -1143,55 +968,6 @@ model ServiceV2Attachment {
   @@index([attachmentId])
 }
 
-model Application {
-  id     String @id @default(cuid())
-  needId String
-  need   Need   @relation(fields: [needId], references: [id])
-
-  sitterId String
-  sitter   User   @relation(fields: [sitterId], references: [id])
-
-  message String?
-  status  ApplicationStatus @default(PENDING)
-  price   Float             @default(0)
-
-  createdAt DateTime @default(now())
-}
-
-model Booking {
-  id      String  @id @default(cuid())
-  // 可选：从一个需求帖发起, 可选：从一个服务帖发起
-  needId  String?
-  need    Need?   @relation(fields: [needId], references: [id])
-  // 双方用户
-  ownerId String
-  owner   User    @relation("OwnerBookings", fields: [ownerId], references: [id])
-
-  sitterId String
-  sitter   User   @relation("SitterBookings", fields: [sitterId], references: [id])
-
-  startDate DateTime
-  endDate   DateTime
-  price     Float         @default(0)
-  status    BookingStatus @default(CONFIRMED)
-
-  createdAt DateTime @default(now())
-}
-
-model Message {
-  id     String @id @default(cuid())
-  fromId String
-  from   User   @relation("MessagesFromUser", fields: [fromId], references: [id])
-
-  toId String
-  to   User   @relation("MessagesToUser", fields: [toId], references: [id])
-
-  content   String
-  createdAt DateTime @default(now())
-
-  // 可以再加 conversationId 做会话归类
-}
-
 // -----------------------
 //  NextAuth Models
 // -----------------------
@@ -1202,6 +978,7 @@ model Account {
   provider          String
   providerAccountId String
   providerEmail     String?
+  providerDisplayName String?
   refresh_token     String?
   access_token      String?
   expires_at        Int?
@@ -1265,24 +1042,7 @@ model AuthLoginTicket {
   @@index([userId, expiresAt])
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id])
-}
-
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-// Petnido signup verification. Kept separate from NextAuth's VerificationToken.
+// Petnido signup verification for the app's email-code flow.
 model EmailVerificationChallenge {
   id              String    @id @default(cuid())
   identifier      String

@@ -6,12 +6,12 @@ import Link from "next/link";
 
 const exploreItems = [
   {
-    href: "/public/sitters",
+    href: "/services",
     icon: Users,
     tone: "purple",
   },
   {
-    href: "/public/needs",
+    href: "/needs",
     icon: ClipboardList,
     tone: "sand",
   },

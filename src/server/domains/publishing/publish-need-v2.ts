@@ -100,15 +100,22 @@ async function verifyOwnedReferences(
     }
   }
 
-  if (input.attachmentIds.length) {
+  const attachmentIds = [
+    ...input.attachmentIds,
+    ...input.pets.flatMap((pet) =>
+      pet.attachmentId ? [pet.attachmentId] : [],
+    ),
+  ];
+  const uniqueAttachmentIds = [...new Set(attachmentIds)];
+  if (uniqueAttachmentIds.length) {
     const count = await tx.attachment.count({
       where: {
-        id: { in: input.attachmentIds },
+        id: { in: uniqueAttachmentIds },
         userId: ownerId,
         status: { in: [0, 1] },
       },
     });
-    if (count !== input.attachmentIds.length) {
+    if (count !== uniqueAttachmentIds.length) {
       throw new TRPCError({ code: "NOT_FOUND", message: "RESOURCE_NOT_FOUND" });
     }
   }
@@ -119,8 +126,42 @@ async function saveLocationDefault(
   ownerId: string,
   input: NeedPublishInput,
 ) {
+  const coordinateLabel = /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/;
+  const rawLabel = input.location.label?.trim();
+  const rawRegionLabel = input.location.regionLabel?.trim();
+  const incomingLabel =
+    (rawLabel && !coordinateLabel.test(rawLabel) ? rawLabel : null) ||
+    (rawRegionLabel && !coordinateLabel.test(rawRegionLabel)
+      ? rawRegionLabel
+      : null) ||
+    "Selected map location";
+  const incomingRegionLabel =
+    (rawRegionLabel && !coordinateLabel.test(rawRegionLabel)
+      ? rawRegionLabel
+      : null) || incomingLabel;
   let savedLocationId = input.location.sourceLocationId ?? null;
   let locationCreated = false;
+  if (savedLocationId) {
+    const savedLocation = await tx.userLocation.findFirst({
+      where: { id: savedLocationId, userId: ownerId, archivedAt: null },
+      select: { id: true, label: true, regionLabel: true },
+    });
+    if (
+      savedLocation &&
+      (!savedLocation.label?.trim() || coordinateLabel.test(savedLocation.label.trim()))
+    ) {
+      await tx.userLocation.update({
+        where: { id: savedLocation.id },
+        data: {
+          label: incomingLabel,
+          ...(!savedLocation.regionLabel?.trim() ||
+          coordinateLabel.test(savedLocation.regionLabel.trim())
+            ? { regionLabel: incomingRegionLabel }
+            : {}),
+        },
+      });
+    }
+  }
   if (!savedLocationId) {
     const existing = await tx.userLocation.findFirst({
       where: {
@@ -129,24 +170,33 @@ async function saveLocationDefault(
         lat: input.location.lat,
         lon: input.location.lon,
       },
-      select: { id: true },
+      select: { id: true, label: true, regionLabel: true },
     });
     if (existing) {
       savedLocationId = existing.id;
+      if (!existing.label?.trim() || coordinateLabel.test(existing.label.trim())) {
+        await tx.userLocation.update({
+          where: { id: existing.id },
+          data: {
+            label: incomingLabel,
+            ...(!existing.regionLabel?.trim() ||
+            coordinateLabel.test(existing.regionLabel.trim())
+              ? { regionLabel: incomingRegionLabel }
+              : {}),
+          },
+        });
+      }
     } else {
       const activeCount = await tx.userLocation.count({
         where: { userId: ownerId, archivedAt: null },
       });
-      const resolvedRegionLabel =
-        input.location.regionLabel?.trim() ||
-        `${Number(input.location.lat).toFixed(4)}, ${Number(input.location.lon).toFixed(4)}`;
       const created = await tx.userLocation.create({
         data: {
           userId: ownerId,
-          label: null,
+          label: incomingLabel,
           lat: input.location.lat,
           lon: input.location.lon,
-          regionLabel: resolvedRegionLabel,
+          regionLabel: incomingRegionLabel,
           displayPrecision: input.location.displayPrecision,
           isDefault: activeCount === 0,
         },
@@ -359,9 +409,10 @@ export async function publishNeedV2Transaction(
     await tx.locationSnapshotV2.update({
       where: { id: editTarget.locationSnapshotId },
       data: {
-        sourceLocationId: input.location.sourceLocationId ?? null,
+        sourceLocationId: profileDefaults.savedLocationId,
         lat: input.location.lat,
         lon: input.location.lon,
+        label: input.location.label ?? null,
         regionLabel: input.location.regionLabel ?? null,
         displayPrecision: input.location.displayPrecision,
       },
@@ -383,9 +434,10 @@ export async function publishNeedV2Transaction(
   } else {
     const location = await tx.locationSnapshotV2.create({
       data: {
-        sourceLocationId: input.location.sourceLocationId ?? null,
+        sourceLocationId: profileDefaults.savedLocationId,
         lat: input.location.lat,
         lon: input.location.lon,
+        label: input.location.label ?? null,
         regionLabel: input.location.regionLabel ?? null,
         displayPrecision: input.location.displayPrecision,
       },
@@ -404,9 +456,10 @@ export async function publishNeedV2Transaction(
   }
 
   await tx.needPetSnapshotV2.createMany({
-    data: input.pets.map((pet) => ({
+    data: input.pets.map((pet, order) => ({
       needId: need.id,
       clientPetKey: pet.clientPetKey,
+      order,
       sourcePetId: petSourceIds.get(pet.clientPetKey) ?? null,
       quantity: pet.quantity,
       name: pet.name,
@@ -422,9 +475,48 @@ export async function publishNeedV2Transaction(
   });
   const petRows = await tx.needPetSnapshotV2.findMany({
     where: { needId: need.id },
-    select: { id: true, clientPetKey: true },
+    select: { id: true, clientPetKey: true, sourcePetId: true },
   });
   const petIds = new Map(petRows.map((pet) => [pet.clientPetKey, pet.id]));
+  const sourcePetIds = [
+    ...new Set(
+      petRows.flatMap((pet) => (pet.sourcePetId ? [pet.sourcePetId] : [])),
+    ),
+  ];
+  const sourceAttachments = sourcePetIds.length
+    ? await tx.attachment.findMany({
+        where: { petId: { in: sourcePetIds }, status: 1 },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        select: { id: true, petId: true },
+      })
+    : [];
+  const attachmentsBySourcePet = new Map<string, string[]>();
+  for (const attachment of sourceAttachments) {
+    if (!attachment.petId) continue;
+    const current = attachmentsBySourcePet.get(attachment.petId) ?? [];
+    current.push(attachment.id);
+    attachmentsBySourcePet.set(attachment.petId, current);
+  }
+  const petAttachmentLinks = petRows.flatMap((pet) => {
+    const inputPet = input.pets.find(
+      (candidate) => candidate.clientPetKey === pet.clientPetKey,
+    );
+    const attachmentIds = inputPet?.attachmentId
+      ? [inputPet.attachmentId]
+      : pet.sourcePetId
+        ? attachmentsBySourcePet.get(pet.sourcePetId) ?? []
+        : [];
+    return attachmentIds.map((attachmentId, order) => ({
+      petSnapshotId: pet.id,
+      attachmentId,
+      order,
+    }));
+  });
+  if (petAttachmentLinks.length) {
+    await tx.needPetSnapshotV2Attachment.createMany({
+      data: petAttachmentLinks,
+    });
+  }
   const tasks =
     input.mode === "HOME_VISIT"
       ? input.homeVisit.tasks

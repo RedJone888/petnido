@@ -81,7 +81,7 @@ describe("Need Pricing Domain Engine", () => {
       },
       additionalCosts: [
         {
-          kind: "SUPPLIES",
+          kind: "SUPPLY",
           mode: "FIXED",
           amountMinor: 1000,
         },
@@ -110,32 +110,6 @@ describe("Need Pricing Domain Engine", () => {
 
     expect(pricing.isEstimateReady).toBe(false);
     expect(formatNeedEstimatedBadge(pricing, "待协商")).toBe("待协商");
-  });
-
-  it("handles legacy needs correctly", () => {
-    const pricing = calculateNeedPricing({
-      publicId: "legacy:need_123",
-      source: "LEGACY",
-      mode: "HOME_VISIT",
-      startsAt: "2026-09-01T00:00:00.000Z",
-      endsAt: "2026-09-05T00:00:00.000Z",
-      schedule: {
-        homeVisit: {
-          intervalDays: 1,
-          visitsPerServiceDay: 2,
-        },
-      },
-      budget: {
-        kind: "EXACT",
-        minAmountMinor: 10000,
-        currency: "JPY",
-      },
-    });
-
-    expect(pricing.isLegacy).toBe(true);
-    expect(pricing.estimatedTotalMinMinor).toBe(10000);
-    expect(pricing.unitRateMinor).toBe(1250); // 10000 / 8 visits
-    expect(formatNeedEstimatedBadge(pricing)).toBe("¥10,000");
   });
 
   it("counts the full visit cadence and marks actual travel separately", () => {

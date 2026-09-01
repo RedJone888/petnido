@@ -31,7 +31,7 @@ export function ServiceBulkManagement() {
   }, [settings.data]);
   const bulk = trpc.serviceProfile.executeBulkCommand.useMutation({
     onSuccess: async (result) => {
-      setNotice(bulkCopy.success.replace("{v2}", String(result.affected.v2)).replace("{legacy}", String(result.affected.legacy)));
+      setNotice(bulkCopy.success.replace("{count}", String(result.affected)));
       await Promise.all([settings.refetch(), utils.serviceProfile.getMine.invalidate(), utils.serviceV2.listMine.invalidate(), utils.dashboardSummary.getMine.invalidate()]);
     },
     onError: () => setError(bulkCopy.error),

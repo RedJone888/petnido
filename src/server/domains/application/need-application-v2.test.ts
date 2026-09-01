@@ -68,7 +68,7 @@ describe("NeedApplicationV2 commands", () => {
     expect(tx.conversationV2.upsert).toHaveBeenCalledOnce();
     expect(tx.messageV2.upsert).toHaveBeenCalledOnce();
     expect(tx.needApplicationV2.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ ownerId: "owner", applicantId: "applicant" }) }));
-    expect(tx.notificationV2.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ type: "APPLICATION_RECEIVED", recipientId: "owner" }) }));
+    expect(tx.notificationV2.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ type: "MESSAGE_RECEIVED", recipientId: "owner" }) }));
   });
 
   it("atomically claims an open need and ends all other pending applications", async () => {
@@ -79,7 +79,7 @@ describe("NeedApplicationV2 commands", () => {
     expect(tx.needV2.updateMany.mock.calls[0][0]).toMatchObject({ where: { state: "OPEN" }, data: { state: "MATCHED" } });
     expect(tx.needApplicationV2.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: { in: ["application-2"] } }), data: expect.objectContaining({ state: "NEED_ENDED" }) }));
     expect(tx.messageV2.upsert).toHaveBeenCalledTimes(2);
-    expect(tx.notificationV2.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ type: "APPLICATION_ACCEPTED", recipientId: "applicant" }) }));
+    expect(tx.notificationV2.upsert).not.toHaveBeenCalled();
   });
 
   it("loses the concurrent accept race when the need is no longer OPEN", async () => {

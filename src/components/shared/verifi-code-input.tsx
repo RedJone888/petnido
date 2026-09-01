@@ -5,11 +5,13 @@ export default function VerificationCodeInput({
   onChange,
   className = "my-5 justify-center",
   digitLabel = "Verification code digit",
+  compact = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   className?: string;
   digitLabel?: string;
+  compact?: boolean;
 }) {
   const inputs = Array.from({ length: 6 });
   const refs = useRef<HTMLInputElement[]>([]);
@@ -49,7 +51,9 @@ export default function VerificationCodeInput({
           aria-label={`${digitLabel} ${i + 1}`}
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
-          className="h-12 w-10 rounded-xl border text-center text-xl outline-none transition focus:ring-2 focus:ring-purple-400 sm:h-14 sm:w-12 sm:text-2xl"
+          className={compact
+            ? "h-10 w-9 rounded-lg border text-center text-base outline-none transition focus:ring-2 focus:ring-purple-400"
+            : "h-12 w-10 rounded-xl border text-center text-xl outline-none transition focus:ring-2 focus:ring-purple-400 sm:h-14 sm:w-12 sm:text-2xl"}
         />
       ))}
     </div>

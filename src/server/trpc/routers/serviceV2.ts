@@ -13,22 +13,6 @@ import {
 import { transitionService } from "@/domain/service/state-machine";
 import { DomainTransitionError } from "@/domain/shared/state-machine";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
-import {
-  publishingV2ReadEnabled,
-  publishingV2WriteEnabled,
-} from "@/server/feature-flags/publishing-v2";
-
-function requirePublishingV2Read() {
-  if (!publishingV2ReadEnabled()) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-  }
-}
-
-function requirePublishingV2Write() {
-  if (!publishingV2WriteEnabled()) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-  }
-}
 
 async function ownedService(
   prisma: Prisma.TransactionClient | PrismaClient,
@@ -51,7 +35,6 @@ async function ownedService(
 
 export const serviceV2Router = router({
   listMine: protectedProcedure.query(async ({ ctx }) => {
-    requirePublishingV2Read();
     const services = await ctx.prisma.serviceV2.findMany({
       where: {
         archivedAt: null,
@@ -66,14 +49,12 @@ export const serviceV2Router = router({
   getMine: protectedProcedure
     .input(z.object({ id: z.string().min(1) }).strict())
     .query(async ({ ctx, input }) => {
-      requirePublishingV2Read();
       return toOwnerServiceV2Dto(await ownedService(ctx.prisma, input.id, ctx.session.user.id));
     }),
 
   beginEdit: protectedProcedure
     .input(z.object({ id: z.string().min(1) }).strict())
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
         const service = await ownedService(tx, input.id, ownerId);
@@ -118,7 +99,6 @@ export const serviceV2Router = router({
   getEditDraft: protectedProcedure
     .input(z.object({ draftId: z.string().uuid() }).strict())
     .query(async ({ ctx, input }) => {
-      requirePublishingV2Read();
       const draft = await ctx.prisma.publishDraftV2.findFirst({
         where: {
           id: input.draftId,
@@ -148,7 +128,6 @@ export const serviceV2Router = router({
       }).strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      requirePublishingV2Write();
       const ownerId = ctx.session.user.id;
       return ctx.prisma.$transaction(async (tx) => {
         const existing = await tx.serviceV2.findFirst({

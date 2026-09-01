@@ -11,6 +11,7 @@ import {
   PiSparkle,
   PiTrash,
   PiWarningCircle,
+  PiX,
 } from "react-icons/pi";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useNeedPublishingMessages } from "@/modules/need-publishing/client";
@@ -42,6 +43,97 @@ import { groupTaskRowsByPetGroup } from "../task-grouping";
 import { PublishingValidationAlert } from "../components/publishing-validation-alert";
 
 const customTaskId = "__custom-boarding-task__";
+
+function frequencyBadgeStyle(freq: BoardingScheduleType) {
+  switch (freq) {
+    case "daily":
+      return "border border-purple-200/80 bg-purple-50 text-purple-800";
+    case "repeating":
+      return "border border-indigo-200/80 bg-indigo-50 text-indigo-800";
+    case "once":
+      return "border border-sky-200/80 bg-sky-50 text-sky-800";
+    case "as-needed":
+    default:
+      return "border border-emerald-200/80 bg-emerald-50 text-emerald-800";
+  }
+}
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/Popover";
+
+function NotesCellInput({
+  value,
+  placeholder,
+  onChange,
+  side = "bottom",
+}: {
+  value: string;
+  placeholder?: string;
+  onChange: (val: string) => void;
+  side?: "top" | "bottom";
+}) {
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpen = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen && inputRef.current) {
+      inputRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={handleOpen}>
+      <div className="relative flex w-full items-center">
+        <PopoverTrigger asChild>
+          <input
+            ref={inputRef}
+            value={value}
+            title={value}
+            readOnly
+            onClick={() => handleOpen(true)}
+            className={cn(
+              inputClass,
+              "h-10 w-full cursor-pointer rounded-lg px-3 text-xs",
+            )}
+            placeholder={placeholder}
+          />
+        </PopoverTrigger>
+      </div>
+
+      <PopoverContent
+        align="start"
+        side={side}
+        avoidCollisions={true}
+        className="z-[1300] w-[300px] sm:w-[340px] rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
+      >
+        <div className="flex items-center justify-between pb-1.5 text-[11px] font-bold text-slate-500">
+          <span>Notes</span>
+          {value ? (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="text-xs font-semibold text-danger-text hover:underline"
+            >
+              Clear all
+            </button>
+          ) : null}
+        </div>
+        <textarea
+          autoFocus
+          value={value}
+          rows={4}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full resize-y rounded-lg border border-slate-200 p-2 text-xs leading-relaxed text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          placeholder={placeholder}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 type BoardingRow = {
   id: string;
@@ -82,7 +174,10 @@ function rowsForPetGroup(
   const rows = new Map<string, BoardingRow>();
   value.forEach((config) => {
     config.routines.forEach((routine) => {
-      const petIds = routine.petIds.filter((petId) => groupSet.has(petId));
+      let petIds = routine.petIds.filter((petId) => groupSet.has(petId));
+      if (!petIds.length && groupPetIds.length === 1) {
+        petIds = groupPetIds;
+      }
       if (!petIds.length) return;
       const key = boardingTaskFingerprint({
         assignmentPetKeys: petIds,
@@ -147,7 +242,7 @@ function replacePetGroupRows(
           ? `custom-${crypto.randomUUID()}`
           : row.templateId,
       label: row.custom
-        ? row.label
+        ? row.customLabel.trim() || row.label.trim()
         : taskPersistenceLabel({
             code: row.templateId,
             label: row.label,
@@ -359,9 +454,9 @@ export function StepBoardingTasks({
           return (
             <article key={group.key} className="rounded-2xl border border-[var(--primary-border)] bg-white p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <div>
+                <div className="flex flex-wrap items-center gap-2.5">
                   <h4 className="font-bold text-[#35243f]">{groupPets[0] ? displayPetType(groupPets[0]) : group.label}</h4>
-                  <div className="mt-1 flex flex-wrap gap-1.5">{groupPets.map((pet) => <span key={pet.id} className="inline-flex items-center gap-1 rounded-full bg-[#f7f2fa] px-2 py-1 text-[11px] font-semibold text-[#625a68]"><span className="h-5 w-5 overflow-hidden rounded-full"><PetDraftAvatar pet={pet} /></span>{pet.name || displayPetType(pet)}</span>)}</div>
+                  <div className="flex flex-wrap items-center gap-1.5">{groupPets.map((pet) => <span key={pet.id} className="inline-flex items-center gap-1.5 rounded-full bg-[#f7f2fa] px-2.5 py-1 text-xs font-bold text-[#625a68]"><span className="h-5 w-5 overflow-hidden rounded-full"><PetDraftAvatar pet={pet} /></span>{pet.name || displayPetType(pet)}</span>)}</div>
                 </div>
                 <button type="button" onClick={() => openEditor(group.key)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[var(--primary)] px-3 text-xs font-bold text-white">
                   {rows.length ? <PiPencilSimple size={15} /> : <PiPlus size={15} />}{rows.length ? taskCopy.edit : copy.addATask}
@@ -390,7 +485,7 @@ export function StepBoardingTasks({
                                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f4ecfa] font-bold text-[var(--primary)]">{absoluteIndex}</span>
                                   <TaskIcon size={16} className="text-[#8a5d34]" />
                                   <span className="min-w-0 break-words font-semibold [overflow-wrap:anywhere]">{localizeTaskLabel(row.label, lang, { templateId: row.templateId, custom: row.custom })}</span>
-                                  <span className="shrink-0 rounded-full bg-[#f4ecfa] px-2 py-1 font-semibold text-[var(--primary)]">{frequencyLabel(row.frequency)}</span>
+                                  <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold", frequencyBadgeStyle(row.frequency))}>{frequencyLabel(row.frequency)}</span>
                                 </div>
                                 {row.notes ? <p className="break-words pl-[52px] text-[#706a78] [overflow-wrap:anywhere]">{row.notes}</p> : null}
                               </div>
@@ -401,20 +496,74 @@ export function StepBoardingTasks({
                     );
                   })}
                 </div>
-                <div className="hidden overflow-x-auto rounded-xl border border-[#e6ddea] md:block">
-                  <table className="w-full min-w-[760px] table-auto border-collapse text-xs">
-                    <thead className="bg-[var(--primary-fixed)] text-[var(--on-primary-fixed-variant)]"><tr><th className="px-3 py-2.5 text-left">{taskCopy.petGroupColumn}</th><th className="w-14 px-3 py-2.5 text-center">{taskCopy.index}</th><th className="px-3 py-2.5 text-left">{taskCopy.taskColumn}</th><th className="px-3 py-2.5 text-center">{taskCopy.frequency}</th><th className="px-3 py-2.5 text-left">{taskCopy.notesColumn}</th></tr></thead>
-                    <tbody className="divide-y divide-[#eee9ef]">
-                      {assignmentGroups.flatMap((assignmentGroup) => {
+                <div className="hidden max-h-[260px] overflow-y-auto overflow-x-auto rounded-xl border border-[#EDE8E1] md:block">
+                  <table className="w-full min-w-[720px] table-auto border-collapse text-xs">
+                    <thead className="sticky top-0 z-10 border-b border-[#EDE8E1] bg-[#FAF6F0] text-[#8A5D34]">
+                      <tr>
+                        <th className="w-[200px] px-4 py-3 text-left font-bold">{taskCopy.whoNeeds}</th>
+                        <th className="px-4 py-3 text-left font-bold">{taskCopy.careTasks}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EDE8E1]">
+                      {assignmentGroups.map((assignmentGroup, groupIdx) => {
                         const rowPets = assignmentGroup.petIds.flatMap((petId) => {
                           const pet = pets.find((candidate) => candidate.id === petId);
                           return pet ? [pet] : [];
                         });
-                        return assignmentGroup.items.map((row, index) => {
-                          const absoluteIndex = rows.findIndex((candidate) => candidate.id === row.id) + 1;
-                          const TaskIcon = localizedOptions.find((option) => option.id === row.templateId)?.icon ?? PiSparkle;
-                          return <tr key={fingerprint(row)}>{index === 0 ? <td rowSpan={assignmentGroup.items.length} className="px-3 py-3 align-middle"><div className="flex flex-wrap gap-1.5">{rowPets.map((pet) => <span key={pet.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#ded9e0] px-2 py-1.5 font-semibold"><span className="h-5 w-5 overflow-hidden rounded-full"><PetDraftAvatar pet={pet} /></span>{pet.name || displayPetType(pet)}</span>)}</div></td> : null}<td className="px-3 py-3 text-center font-bold text-[var(--primary)]">{absoluteIndex}</td><td className="px-3 py-3 font-semibold"><span className="inline-flex items-center gap-2"><TaskIcon size={16} className="text-[#8a5d34]" />{localizeTaskLabel(row.label, lang, { templateId: row.templateId, custom: row.custom })}</span></td><td className="px-3 py-3 text-center"><span className="rounded-full bg-[#f4ecfa] px-2 py-1 font-semibold text-[var(--primary)]">{frequencyLabel(row.frequency)}</span></td><td className="max-w-[300px] break-words px-3 py-3 text-[#706a78]">{row.notes || "—"}</td></tr>;
-                        });
+                        return (
+                          <tr key={`${groupIdx}-${assignmentGroup.petIds.join("-")}`}>
+                            <td className="w-[200px] border-r border-[#EDE8E1] bg-white px-4 py-3 align-top">
+                              <div className="flex flex-wrap gap-2">
+                                {rowPets.map((pet) => (
+                                  <span
+                                    key={pet.id}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#ded9e0] bg-white px-2 py-1.5 text-xs font-semibold"
+                                  >
+                                    <span className="h-5 w-5 overflow-hidden rounded-full">
+                                      <PetDraftAvatar pet={pet} />
+                                    </span>
+                                    {pet.name || displayPetType(pet)}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="bg-white p-0 align-middle">
+                              <div className="flex flex-col justify-center divide-y divide-[#EDE8E1]">
+                                {assignmentGroup.items.map((row) => {
+                                  const absoluteIndex = rows.findIndex((candidate) => candidate.id === row.id) + 1;
+                                  const TaskIcon = localizedOptions.find((option) => option.id === row.templateId)?.icon ?? PiSparkle;
+                                  return (
+                                    <div
+                                      key={fingerprint(row)}
+                                      className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 text-xs sm:flex-nowrap"
+                                    >
+                                      <div className="flex shrink-0 items-center gap-2">
+                                        <span className="w-5 shrink-0 text-center font-bold text-primary">
+                                          {absoluteIndex}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1.5 font-bold leading-5 text-[#2B231D]">
+                                          <TaskIcon size={15} className="text-[#8a5d34]" />
+                                          {localizeTaskLabel(row.label, lang, { templateId: row.templateId, custom: row.custom })}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-semibold text-[11px]",
+                                            frequencyBadgeStyle(row.frequency),
+                                          )}
+                                        >
+                                          {frequencyLabel(row.frequency)}
+                                        </span>
+                                      </div>
+                                      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words leading-5 text-[#514956] [overflow-wrap:anywhere]">
+                                        {row.notes || "—"}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        );
                       })}
                     </tbody>
                   </table>
@@ -429,20 +578,58 @@ export function StepBoardingTasks({
       <Field label={copy.additionalNotes} optional><textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} className={textareaClass} placeholder={copy.additionalNotesPlaceholder} /></Field>
 
       {editingGroup ? (
-        <ModalShell title={`${taskCopy.configureTask} · ${editingGroup.label}`} closeLabel={copy.cancel} cancelLabel={copy.cancel} saveLabel={taskCopy.save} onClose={closeEditor} onCancel={closeEditor} onSave={saveEditor} panelClassName="max-h-[80dvh] max-w-[1180px] rounded-[20px] border-[#d8c9e3] bg-white" bodyClassName="bg-white md:px-6">
-          <div ref={tableRef} className="overflow-y-auto overflow-x-hidden rounded-[14px] border border-[var(--primary-border)] bg-white md:max-h-[450px] md:overflow-auto">
+        <ModalShell title={`${taskCopy.configureTask} · ${editingGroup.label}`} closeLabel={copy.cancel} cancelLabel={copy.cancel} saveLabel={taskCopy.save} onClose={closeEditor} onCancel={closeEditor} onSave={saveEditor} panelClassName="max-h-[85dvh] max-w-[1180px] rounded-[20px] border-[#d8c9e3] bg-white flex flex-col" bodyClassName="bg-white md:px-6">
+          <div ref={tableRef} className="max-h-[min(50dvh,360px)] overflow-y-auto overflow-x-hidden rounded-[14px] border border-[var(--primary-border)] bg-white md:overflow-auto">
             <table className="block w-full border-collapse text-xs md:table md:min-w-[1000px] md:table-fixed">
-              <thead className="sticky top-0 z-10 hidden bg-[var(--primary-fixed)] text-[var(--on-primary-fixed-variant)] md:table-header-group"><tr><th className="w-[22%] px-3 py-2.5">{taskCopy.whoNeeds}</th><th className="w-[25%] px-3 py-2.5">{taskCopy.taskName}</th><th className="w-[20%] px-3 py-2.5">{taskCopy.frequency}</th><th className="w-[22%] px-3 py-2.5">{taskCopy.notesColumn}</th><th className="w-[11%] px-3 py-2.5">{taskCopy.actionsColumn}</th></tr></thead>
+              <thead className="sticky top-0 z-10 hidden bg-[var(--primary-fixed)] text-[var(--on-primary-fixed-variant)] md:table-header-group">
+                <tr>
+                  <th className="w-[22%] px-3 py-2.5">{taskCopy.whoNeeds}</th>
+                  <th className="w-12 px-2 py-2.5 text-center">No.</th>
+                  <th className="w-[24%] px-3 py-2.5">{taskCopy.taskName}</th>
+                  <th className="w-[18%] px-3 py-2.5">{taskCopy.frequency}</th>
+                  <th className="w-[24%] px-3 py-2.5">{taskCopy.notesColumn}</th>
+                  <th className="w-[12%] px-3 py-2.5 text-center">{taskCopy.actionsColumn}</th>
+                </tr>
+              </thead>
               <tbody className="block space-y-3 bg-[#f7f3fa] p-2 md:table-row-group md:space-y-0 md:bg-transparent md:p-0">
-                {modalRows.map((row, index) => (
+                {modalRows.map((row, index) => {
+                  const isNearBottom = index >= Math.max(1, modalRows.length - 2);
+                  const popoverSide = isNearBottom ? "top" : "bottom";
+                  return (
                   <tr key={row.id} className="block rounded-xl border border-[#e6ddea] bg-white p-3 md:table-row md:rounded-none md:border-0 md:p-0">
-                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><div className="mb-3 flex items-center gap-2 border-b border-[#eee9ef] pb-2 md:hidden"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--primary)] text-[11px] font-bold text-white">{index + 1}</span><span className="text-xs font-bold text-[#514956]">{taskCopy.task} {index + 1}</span></div><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{taskCopy.whoNeeds}</span><div className="flex flex-wrap gap-1.5">{editingGroup.petIds.flatMap((petId) => { const pet = pets.find((candidate) => candidate.id === petId); return pet ? [pet] : []; }).map((pet) => { const selected = row.petIds.includes(pet.id); return <button key={pet.id} type="button" aria-pressed={selected} onClick={() => updateRow(row.id, { petIds: selected ? row.petIds.filter((id) => id !== pet.id) : [...row.petIds, pet.id] })} className={cn("inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-semibold", selected ? "border-[var(--primary)] bg-[var(--primary-fixed)] text-[var(--primary)]" : "border-[#ded9e0] text-[#817a85]")}><span className="h-5 w-5 overflow-hidden rounded-full"><PetDraftAvatar pet={pet} /></span>{pet.name || displayPetType(pet)}{selected ? <PiCheck size={12} /> : null}</button>; })}</div>{rowErrors[row.id]?.pets ? <p className="mt-1.5 text-[11px] font-semibold text-danger-text">{rowErrors[row.id]?.pets}</p> : null}</td>
+                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3">
+                      <div className="mb-3 flex items-center gap-2 border-b border-[#eee9ef] pb-2 md:hidden">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--primary)] text-[11px] font-bold text-white">{index + 1}</span>
+                        <span className="text-xs font-bold text-[#514956]">{taskCopy.task} {index + 1}</span>
+                      </div>
+                      <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{taskCopy.whoNeeds}</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {editingGroup.petIds.flatMap((petId) => { const pet = pets.find((candidate) => candidate.id === petId); return pet ? [pet] : []; }).map((pet) => {
+                          const selected = row.petIds.includes(pet.id);
+                          return (
+                            <button
+                              key={pet.id}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => updateRow(row.id, { petIds: selected ? row.petIds.filter((id) => id !== pet.id) : [...row.petIds, pet.id] })}
+                              className={cn("inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-semibold", selected ? "border-[var(--primary)] bg-[var(--primary-fixed)] text-[var(--primary)]" : "border-[#ded9e0] text-[#817a85]")}
+                            >
+                              <span className="h-5 w-5 overflow-hidden rounded-full"><PetDraftAvatar pet={pet} /></span>
+                              {pet.name || displayPetType(pet)}
+                              {selected ? <PiCheck size={12} /> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {rowErrors[row.id]?.pets ? <p className="mt-1.5 text-[11px] font-semibold text-danger-text">{rowErrors[row.id]?.pets}</p> : null}
+                    </td>
+                    <td className="hidden px-2 py-3 text-center font-bold text-[var(--primary)] md:table-cell">{index + 1}</td>
                     <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{taskCopy.taskName}</span><VisitTaskNameCombobox ariaLabel={`${taskCopy.taskName} ${index + 1}`} value={row.templateId} customValue={row.customLabel} customValueKey={customTaskId} options={comboboxOptions} placeholder={taskCopy.taskNamePlaceholder} autoFocus={focusRowId === row.id} error={rowErrors[row.id]?.name} errorId={`boarding-task-error-${row.id}`} onChange={(next) => updateRow(row.id, { templateId: next.value, customLabel: next.customValue, custom: next.value === customTaskId })} /></td>
-                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{taskCopy.frequency}</span><VisitSelect ariaLabel={`${taskCopy.frequency} ${index + 1}`} value={row.frequency} options={frequencyOptions} onChange={(next) => updateRow(row.id, { frequency: next as BoardingScheduleType })} /></td>
-                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{taskCopy.notesColumn}</span><input value={row.notes} title={row.notes} onChange={(event) => updateRow(row.id, { notes: event.target.value })} className={cn(inputClass, "h-10 w-full rounded-lg px-3 text-xs")} placeholder={taskCopy.notesPlaceholder} /></td>
+                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{taskCopy.frequency}</span><VisitSelect ariaLabel={`${taskCopy.frequency} ${index + 1}`} value={row.frequency} options={frequencyOptions} side={popoverSide} onChange={(next) => updateRow(row.id, { frequency: next as BoardingScheduleType })} /></td>
+                    <td className="block py-2 align-top md:table-cell md:px-3 md:py-3"><span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a5d34] md:hidden">{taskCopy.notesColumn}</span><NotesCellInput value={row.notes} placeholder={taskCopy.notesPlaceholder} side={popoverSide} onChange={(notes) => updateRow(row.id, { notes })} /></td>
                     <td className="block pt-2 align-top md:table-cell md:px-2 md:py-3"><div className="flex justify-end gap-1 md:justify-center"><button type="button" disabled={index === 0} onClick={() => moveRow(row.id, -1)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[var(--primary-fixed)] disabled:opacity-30"><PiCaretUp size={16} /></button><button type="button" disabled={index === modalRows.length - 1} onClick={() => moveRow(row.id, 1)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[var(--primary-fixed)] disabled:opacity-30"><PiCaretDown size={16} /></button><button type="button" disabled={modalRows.length === 1} onClick={() => setModalRows((current) => current.filter((candidate) => candidate.id !== row.id))} className="flex h-8 w-8 items-center justify-center rounded-lg bg-danger-bg text-danger-text disabled:cursor-not-allowed disabled:opacity-30"><PiTrash size={15} /></button></div></td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </div>

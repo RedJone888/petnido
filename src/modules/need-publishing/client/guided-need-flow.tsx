@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 import type { IconType } from "react-icons";
 import {
@@ -569,6 +570,7 @@ export function GuidedNeedFlow({
   const appliedPreferredCurrencyRef = useRef(false);
   const supplyCostDefaultAppliedRef = useRef(false);
   const travelCostDefaultAppliedRef = useRef(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const publishNeed = trpc.publishDraft.publishNeed.useMutation();
   const savedPets = trpc.pet.listMine.useQuery(undefined, {
     enabled: authenticatedForDrafts,
@@ -584,6 +586,26 @@ export function GuidedNeedFlow({
     { id: resumeDraftId ?? "00000000-0000-4000-8000-000000000000" },
     { enabled: Boolean(resumeDraftId && authenticatedForDrafts) },
   );
+
+  useEffect(() => {
+    if (!savedPets.data?.length) return;
+    const petMap = new Map(savedPets.data.map((p) => [p.id, p]));
+    setPets((currentPets) => {
+      let changed = false;
+      const nextPets = currentPets.map((pet) => {
+        if (pet.sourcePetId && !pet.photo) {
+          const saved = petMap.get(pet.sourcePetId);
+          const photoUrl = saved?.photos?.[0]?.url;
+          if (photoUrl) {
+            changed = true;
+            return { ...pet, photo: photoUrl };
+          }
+        }
+        return pet;
+      });
+      return changed ? nextPets : currentPets;
+    });
+  }, [savedPets.data, draftReady]);
 
   const captureModeState = useCallback(
     (): NeedModeDraftState => ({
@@ -756,13 +778,26 @@ export function GuidedNeedFlow({
       ...current,
       currency: preferredCurrency.data,
     }));
+    setDraftByMode((items) => ({
+      visit: {
+        ...items.visit,
+        budget: { ...items.visit.budget, currency: preferredCurrency.data },
+      },
+      boarding: {
+        ...items.boarding,
+        budget: { ...items.boarding.budget, currency: preferredCurrency.data },
+      },
+      custom: {
+        ...items.custom,
+        budget: { ...items.custom.budget, currency: preferredCurrency.data },
+      },
+    }));
   }, [draftReady, pendingDraft, preferredCurrency.data]);
 
   useEffect(() => {
     if (
-      currentId !== "area" ||
-      areaConfirmed ||
-      area.trim() ||
+      !draftReady ||
+      pendingDraft ||
       appliedDefaultLocationRef.current
     ) {
       return;
@@ -785,30 +820,97 @@ export function GuidedNeedFlow({
           LocationDraft["displayPrecision"]
         >)
       : "MAP_POINT";
-    setLocation({
-      sourceLocationId: savedLocation.id,
-      displayPrecision,
-      regionLabel: savedLocation.regionLabel,
-      lat,
-      lng,
-    });
     const displayArea =
       savedLocation.label ||
       savedLocation.regionLabel ||
-      (Number.isFinite(lat) && Number.isFinite(lng)
-        ? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-        : needMessages.needPublishingArea.savedLocation);
-    setArea(displayArea);
-    setAreaConfirmed(true);
-  }, [area, areaConfirmed, currentId, savedLocations.data]);
+      needMessages.needPublishingArea.savedLocation;
+    const defaultLocation: LocationDraft = {
+      sourceLocationId: savedLocation.id,
+      displayPrecision,
+      label: displayArea,
+      regionLabel: savedLocation.regionLabel,
+      lat,
+      lng,
+    };
+    setDraftByMode((items) => ({
+      visit: items.visit.area.trim()
+        ? items.visit
+        : { ...items.visit, area: displayArea, location: defaultLocation, areaConfirmed: true },
+      boarding: items.boarding.area.trim()
+        ? items.boarding
+        : { ...items.boarding, area: displayArea, location: defaultLocation, areaConfirmed: true },
+      custom: items.custom.area.trim()
+        ? items.custom
+        : { ...items.custom, area: displayArea, location: defaultLocation, areaConfirmed: true },
+    }));
+    if (!areaConfirmed && !area.trim()) {
+      setLocation(defaultLocation);
+      setArea(displayArea);
+      setAreaConfirmed(true);
+    }
+  }, [
+    area,
+    areaConfirmed,
+    draftReady,
+    needMessages.needPublishingArea.savedLocation,
+    pendingDraft,
+    savedLocations.data,
+  ]);
 
   const applyDraft = (
     draft: NeedDraftSnapshot,
     preferredScreenId = draft.currentId,
   ) => {
+    const restoredModeDrafts = (draft.draftByMode ?? {}) as Partial<
+      Record<CareType, NeedModeDraftState>
+    >;
+    const restoredActiveMode = draft.careType
+      ? restoredModeDrafts[draft.careType]
+      : undefined;
+    const restoredCustomNeeds =
+      restoredActiveMode?.customNeeds ?? draft.customNeeds;
+    const restoredCustomWarnings =
+      restoredActiveMode?.customWarnings ?? draft.customWarnings;
+    const restoredCustomRequirementsNotes =
+      restoredActiveMode?.customRequirementsNotes ??
+      draft.customRequirementsNotes ??
+      "";
     appliedPreferredCurrencyRef.current = true;
+    appliedDefaultLocationRef.current = true;
     setCareType(draft.careType);
-    setPets(draft.pets);
+    const petMap = new Map((savedPets.data ?? []).map((p) => [p.id, p]));
+    const hydratedPets = draft.pets.map((pet) => {
+      if (pet.sourcePetId && !pet.photo) {
+        const saved = petMap.get(pet.sourcePetId);
+        const photoUrl = saved?.photos?.[0]?.url;
+        if (photoUrl) return { ...pet, photo: photoUrl };
+      }
+      return pet;
+    });
+    setPets(hydratedPets);
+    const petIdMap = new Map<string, string>();
+    hydratedPets.forEach((p) => {
+      petIdMap.set(p.id, p.id);
+      if (p.sourcePetId) petIdMap.set(p.sourcePetId, p.id);
+    });
+    const normalizedBoardingRoutines = (draft.boardingRoutines ?? []).map(
+      (config) => ({
+        ...config,
+        routines: config.routines.map((routine) => {
+          let petIds = routine.petIds.flatMap((id) => {
+            const mapped = petIdMap.get(id);
+            return mapped ? [mapped] : [];
+          });
+          if (!petIds.length && hydratedPets.length === 1) {
+            petIds = [hydratedPets[0].id];
+          }
+          return {
+            ...routine,
+            petIds,
+          };
+        }),
+      }),
+    );
     setDates({ timeOfDay: "flexible", exactTime: "", ...draft.dates });
     setVisitFrequency(draft.visitFrequency);
     setCustomInterval(draft.customInterval);
@@ -817,7 +919,7 @@ export function GuidedNeedFlow({
     setVisitTimes(draft.visitTimes);
     setExactTimes(draft.exactTimes);
     setVisitPlans(draft.visitPlans);
-    setBoardingRoutines(draft.boardingRoutines);
+    setBoardingRoutines(normalizedBoardingRoutines);
     setBoardingSupplies(draft.boardingSupplies);
     setCustomBoardingSupplies(draft.customBoardingSupplies);
     setBoardingSupplyNotes(draft.boardingSupplyNotes);
@@ -836,9 +938,9 @@ export function GuidedNeedFlow({
     );
     setCustomHomeSituations(draft.customHomeSituations);
     setBoardingHomeNotes(draft.boardingHomeNotes);
-    setCustomNeeds(draft.customNeeds);
-    setCustomWarnings(draft.customWarnings);
-    setCustomRequirementsNotes(draft.customRequirementsNotes ?? "");
+    setCustomNeeds(restoredCustomNeeds);
+    setCustomWarnings(restoredCustomWarnings);
+    setCustomRequirementsNotes(restoredCustomRequirementsNotes);
     setTransport(draft.transport);
     setSplitDirection(draft.splitDirection);
     setDistance(draft.distance);
@@ -874,9 +976,9 @@ export function GuidedNeedFlow({
       boardingCompatibility: draft.boardingCompatibility,
       customHomeSituations: draft.customHomeSituations,
       boardingHomeNotes: draft.boardingHomeNotes,
-      customNeeds: draft.customNeeds,
-      customWarnings: draft.customWarnings,
-      customRequirementsNotes: draft.customRequirementsNotes ?? "",
+      customNeeds: restoredCustomNeeds,
+      customWarnings: restoredCustomWarnings,
+      customRequirementsNotes: restoredCustomRequirementsNotes,
       transport: draft.transport,
       splitDirection: draft.splitDirection,
       distance: draft.distance,
@@ -887,9 +989,6 @@ export function GuidedNeedFlow({
       confirmedScreenIds: draft.confirmedScreenIds ?? [],
       confirmedScreenSignatures: {},
     };
-    const restoredModeDrafts = (draft.draftByMode ?? {}) as Partial<
-      Record<CareType, NeedModeDraftState>
-    >;
     setDraftByMode((items) => ({
       ...items,
       ...restoredModeDrafts,
@@ -1326,9 +1425,7 @@ export function GuidedNeedFlow({
     authLoading ||
     (authenticatedForDrafts &&
       needsServerDraftSync &&
-      !serverDraftPersistence.isSynced &&
-      serverDraftPersistence.saveState !== "error" &&
-      serverDraftPersistence.saveState !== "conflict");
+      serverDraftPersistence.saveState === "saving");
 
   useEffect(() => {
     if (!draftReady || pendingDraft) return;
@@ -1438,17 +1535,22 @@ export function GuidedNeedFlow({
     boardingSupplies,
     "sitter",
   );
+  const petMatches = (petId: string) =>
+    pets.some(
+      (pet) =>
+        pet.id === petId ||
+        (pet.sourcePetId && pet.sourcePetId === petId),
+    );
   const boardingTasksHavePetMatches =
     boardingRoutineItems.length > 0 &&
-    boardingRoutineItems.every((routine) =>
-      routine.petIds.some((petId) => pets.some((pet) => pet.id === petId)),
+    boardingRoutineItems.every(
+      (routine) =>
+        routine.petIds.some(petMatches),
     );
   const boardingSchedulesValid = true;
   const tasksHavePetMatches =
     activeTasks.length > 0 &&
-    activeTasks.every((task) =>
-      task.petIds.some((petId) => pets.some((pet) => pet.id === petId)),
-    );
+    activeTasks.every((task) => task.petIds.some(petMatches));
   const everyVisitHasTasks =
     careType !== "visit" ||
     Array.from({ length: visitsPerDay }, (_, index) => index + 1).every(
@@ -1458,7 +1560,9 @@ export function GuidedNeedFlow({
     pets.length > 0 &&
     pets.every((pet) =>
       (careType === "boarding" ? boardingRoutineItems : activeTasks).some(
-        (task) => task.petIds.includes(pet.id),
+        (task) =>
+          task.petIds.includes(pet.id) ||
+          (pet.sourcePetId && task.petIds.includes(pet.sourcePetId)),
       ),
     );
   const tasksValid =
@@ -1490,7 +1594,7 @@ export function GuidedNeedFlow({
     careType !== "boarding" ||
     !sitterSupplyCount ||
     supplyCostMode !== "fixed" ||
-    Number(budget.supplyAmount) > 0;
+    (budget.supplyAmount.trim() !== "" && Number(budget.supplyAmount) >= 0);
   const budgetValid = careBudgetValid && travelBudgetValid && supplyBudgetValid;
   useEffect(() => {
     if (currentId !== "budget") return;
@@ -1577,10 +1681,11 @@ export function GuidedNeedFlow({
   };
   const confirmedFor = (id: ScreenId) =>
     confirmedScreenSignatures[id] === screenSignature(id);
-  const frontierIndex = Math.max(
-    0,
-    screens.findIndex((screen) => !confirmedFor(screen.id)),
+  const unconfirmedIndex = screens.findIndex(
+    (screen) => !confirmedFor(screen.id),
   );
+  const frontierIndex =
+    unconfirmedIndex === -1 ? screens.length - 1 : unconfirmedIndex;
   useEffect(() => {
     // A restored edit may have been saved on a later step and then become
     // invalid because an earlier value changed. Once confirmation signatures
@@ -1730,6 +1835,20 @@ export function GuidedNeedFlow({
   const handlePublish = async () => {
     setPublishError(null);
     if (authLoading) return;
+    if (blockingScreenIds.size > 0) {
+      setValidationAttemptedScreenIds((items) => {
+        const next = new Set(items);
+        next.add("preview");
+        blockingScreenIds.forEach((id) => next.add(id));
+        return next;
+      });
+      const firstBlockingScreen = screens.find((screen) =>
+        blockingScreenIds.has(screen.id),
+      );
+      if (firstBlockingScreen) setCurrentId(firstBlockingScreen.id);
+      setPublishError(copy.publishError);
+      return;
+    }
     if (!authenticatedForDrafts) {
       persistDraft();
       const context = needPublishingContinuationToken
@@ -1738,8 +1857,7 @@ export function GuidedNeedFlow({
       openAuthModal(`/needs/create?restore=auth${context}`);
       return;
     }
-    if (serverSyncing) {
-      setPublishError(flowCopy.syncingDraft);
+    if (authLoading) {
       return;
     }
     if (!publishingV2Enabled) {
@@ -1747,6 +1865,7 @@ export function GuidedNeedFlow({
       setShowNotice(true);
       return;
     }
+    setIsPublishing(true);
     try {
       const idempotencyKey = publishIdempotencyKey ?? crypto.randomUUID();
       const publishSnapshot = {
@@ -1775,13 +1894,32 @@ export function GuidedNeedFlow({
           return publishNeed.mutateAsync(input);
         },
       );
-      window.localStorage.removeItem(NEED_DRAFT_STORAGE_KEY);
+      serverDraftPersistence.finalizePublished();
       setPublishOutcome({
         needId: result.needId,
-        shouldPromptForEmail: result.notificationPrompt.shouldPrompt,
         edited: result.edited,
+        shouldPromptForEmail: result.notificationPrompt.shouldPrompt,
       });
+      window.localStorage.removeItem(NEED_DRAFT_STORAGE_KEY);
       setShowNotice(false);
+      toast.success(
+        result.edited
+          ? (lang === "zh" ? "需求已更新" : copy.requestUpdated)
+          : (lang === "zh" ? "需求已发布" : copy.requestPublished),
+      );
+      const returnTo = searchParams.get("returnTo");
+      const entryRoute =
+        typeof window !== "undefined"
+          ? window.sessionStorage.getItem(NEED_ENTRY_STORAGE_KEY)
+          : null;
+      const destination = returnTo
+        ? returnTo
+        : entryRoute &&
+            !entryRoute.startsWith("/needs/create") &&
+            !entryRoute.startsWith("/needs/edit")
+          ? entryRoute
+          : "/dashboard/needs";
+      router.replace(destination);
     } catch (error) {
       console.error("[guided-need-flow] publish error:", error);
       const isExpired =
@@ -1800,12 +1938,35 @@ export function GuidedNeedFlow({
       } else {
         setPublishError(copy.publishError);
       }
+    } finally {
+      setIsPublishing(false);
     }
   };
   const updatePet = (id: string, patch: Partial<PetDraft>) =>
     setPets((items) =>
       items.map((pet) => (pet.id === id ? { ...pet, ...patch } : pet)),
     );
+  const removePet = (id: string) => {
+    const removedPet = pets.find((pet) => pet.id === id);
+    const removedReferences = new Set(
+      [id, removedPet?.sourcePetId].filter(
+        (value): value is string => Boolean(value),
+      ),
+    );
+    setPets((items) => items.filter((pet) => pet.id !== id));
+    const keepTaskWithoutRemovedPet = <T extends { petIds: string[] },>(task: T) => ({
+      ...task,
+      petIds: task.petIds.filter((petId) => !removedReferences.has(petId)),
+    });
+    setVisitPlans((items) => items.map(keepTaskWithoutRemovedPet));
+    setCustomPlans((items) => items.map(keepTaskWithoutRemovedPet));
+    setBoardingRoutines((configs) =>
+      configs.map((config) => ({
+        ...config,
+        routines: config.routines.map(keepTaskWithoutRemovedPet),
+      })),
+    );
+  };
   const changeVisitCount = (count: number) => {
     const safeCount = Math.max(1, Math.min(6, count));
     setVisitsPerDay(safeCount);
@@ -1864,9 +2025,7 @@ export function GuidedNeedFlow({
               setPets((items) => [nextPet, ...items]);
               return nextPet.id;
             }}
-            onRemove={(id) =>
-              setPets((items) => items.filter((pet) => pet.id !== id))
-            }
+            onRemove={removePet}
             showValidation={revealAllValidation || validationAttemptedScreenIds.has("pets")}
           />
         );
@@ -2065,7 +2224,8 @@ export function GuidedNeedFlow({
             supplyCostMode={supplyCostMode}
             taskNotes={taskNotes}
             homeFitNotes={boardingHomeNotes}
-            area={area}
+            requirementsNotes={careType === "custom" ? customRequirementsNotes : ""}
+            location={location}
             distance={distance}
             transport={transport}
             splitDirection={splitDirection}
@@ -2100,6 +2260,10 @@ export function GuidedNeedFlow({
             }}
             supportingImages={supportingImages}
             onBeforeOpenDetail={persistDraft}
+            onEditStep={(stepId) => {
+              const index = screens.findIndex((screen) => screen.id === stepId);
+              if (index >= 0) selectScreen(index);
+            }}
           />
         );
     }
@@ -2159,8 +2323,10 @@ export function GuidedNeedFlow({
         steps={publishingSteps}
         careTypeSelected={Boolean(careType)}
         canPublish={canPublish}
-        publishing={!publishOutcome && (publishNeed.isLoading || serverSyncing)}
-        syncing={!publishOutcome && serverSyncing}
+        publishing={
+          isPublishing || (!publishOutcome && (publishNeed.isLoading || serverSyncing))
+        }
+        syncing={!isPublishing && !publishOutcome && serverSyncing}
         syncingLabel={flowCopy.syncingDraft}
         publishComplete={Boolean(publishOutcome)}
         saveState={

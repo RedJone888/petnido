@@ -55,6 +55,17 @@ export const profileRouter = router({
     }
   }),
 
+  listUsedCurrencies: protectedProcedure.query(async ({ ctx }) => {
+    const [needs, services] = await Promise.all([
+      ctx.prisma.needV2.findMany({ where: { ownerId: ctx.session.user.id }, distinct: ["currency"], select: { currency: true } }),
+      ctx.prisma.serviceV2.findMany({ where: { serviceProfile: { userId: ctx.session.user.id } }, distinct: ["currency"], select: { currency: true } }),
+    ]);
+    return [...new Set([
+      ...needs.map((item) => item.currency),
+      ...services.map((item) => item.currency),
+    ])];
+  }),
+
   setPreferredLocale: protectedProcedure
     .input(preferredLocaleUpdateSchema)
     .mutation(async ({ ctx, input }) => {

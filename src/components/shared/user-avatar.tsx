@@ -26,14 +26,14 @@ export default function UserAvatar({
         width={size}
         height={size}
         unoptimized
-        className="shrink-0 rounded-full object-cover"
+        className="shrink-0 rounded-full border-2 border-primary/20 object-cover"
         style={{ width: size, height: size }}
       />
     );
   }
   return (
     <div
-      className="rounded-full text-white flex items-center justify-center font-bold shadow-sm"
+      className="flex items-center justify-center rounded-full border-2 border-primary/20 text-white font-bold shadow-sm"
       style={{
         width: size,
         height: size,

@@ -74,15 +74,16 @@ export function useLanguage() {
 
 export function usePageLanguage(initialLanguage?: Lang) {
   const context = useLanguage();
-  const routeLanguageApplied = useRef(false);
+  const initialApplied = useRef<Lang | undefined>(undefined);
 
   useEffect(() => {
-    if (!initialLanguage || routeLanguageApplied.current) return;
-    routeLanguageApplied.current = true;
-    if (context.lang !== initialLanguage) context.setLang(initialLanguage);
+    if (initialLanguage && initialApplied.current !== initialLanguage) {
+      initialApplied.current = initialLanguage;
+      if (context.lang !== initialLanguage) {
+        context.setLang(initialLanguage);
+      }
+    }
   }, [context, initialLanguage]);
 
-  return initialLanguage && !routeLanguageApplied.current
-    ? initialLanguage
-    : context.lang;
+  return context.lang;
 }

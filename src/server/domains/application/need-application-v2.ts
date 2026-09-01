@@ -14,43 +14,27 @@ export class ApplicationCommandError extends Error {
 
 async function claimOpenNeed(
   tx: Prisma.TransactionClient,
-  application: { needSource: "V2" | "LEGACY"; needId: string; ownerId: string },
+  application: { needSource: "V2"; needId: string; ownerId: string },
   now: Date,
 ) {
-  if (application.needSource === "V2") {
-    return tx.needV2.updateMany({
+  return tx.needV2.updateMany({
       where: { id: application.needId, ownerId: application.ownerId, state: "OPEN", archivedAt: null, endsAt: { gt: now } },
       data: { state: "MATCHED" },
-    });
-  }
-  return tx.need.updateMany({
-    where: { id: application.needId, ownerId: application.ownerId, status: "OPEN", archivedAt: null, endDate: { gt: now } },
-    data: { status: "MATCHED" },
   });
 }
 
 async function reopenNeedIfPossible(
   tx: Prisma.TransactionClient,
-  application: { needSource: "V2" | "LEGACY"; needId: string; ownerId: string },
+  application: { needSource: "V2"; needId: string; ownerId: string },
   now: Date,
 ) {
-  if (application.needSource === "V2") {
-    const reopened = await tx.needV2.updateMany({
+  const reopened = await tx.needV2.updateMany({
       where: { id: application.needId, ownerId: application.ownerId, state: "MATCHED", archivedAt: null, endsAt: { gt: now } },
       data: { state: "OPEN" },
     });
     if (!reopened.count) {
       await tx.needV2.updateMany({ where: { id: application.needId, ownerId: application.ownerId, state: "MATCHED", endsAt: { lte: now } }, data: { state: "CLOSED" } });
     }
-    return reopened.count > 0;
-  }
-  const reopened = await tx.need.updateMany({
-    where: { id: application.needId, ownerId: application.ownerId, status: "MATCHED", archivedAt: null, endDate: { gt: now } },
-    data: { status: "OPEN" },
-  });
-  if (!reopened.count) {
-    await tx.need.updateMany({ where: { id: application.needId, ownerId: application.ownerId, status: "MATCHED", endDate: { lte: now } }, data: { status: "CLOSED" } });
-  }
   return reopened.count > 0;
 }
 

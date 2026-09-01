@@ -13,7 +13,7 @@ export type NeedPricingCompleteness =
 
 export type NeedPricingInput = {
   mode: NeedPricingMode | string;
-  source?: "V2" | "LEGACY" | string;
+  source?: "V2";
   publicId?: string;
   startsAt: Date | string;
   endsAt: Date | string;
@@ -41,8 +41,7 @@ export type NeedPricingInput = {
     negotiable?: boolean;
   };
   additionalCosts?: Array<{
-    /** SUPPLIES is accepted only while legacy public DTOs are being retired. */
-    kind: NeedCostKind | "SUPPLIES" | string;
+    kind: NeedCostKind | string;
     mode: NeedCostMode | string;
     amountMinor: number | null;
   }>;
@@ -65,7 +64,6 @@ export type NeedPricingFormulaTerm =
 
 export type NeedPricingSummary = {
   mode: NeedPricingMode;
-  isLegacy: boolean;
   currency: string;
   budgetKind: NeedBudgetKind;
   isNegotiable: boolean;
@@ -191,7 +189,7 @@ function normalizeMode(value: string | undefined): NeedCostMode {
 function normalizedCosts(input: NeedPricingInput) {
   return (input.additionalCosts ?? []).map((cost) => ({
     ...cost,
-    kind: cost.kind === "SUPPLIES" ? ("SUPPLY" as const) : cost.kind,
+    kind: cost.kind,
     mode: normalizeMode(cost.mode),
   }));
 }
@@ -209,44 +207,6 @@ function unknownCompleteness(
   return "COMPLETE";
 }
 
-function legacySummary(
-  input: NeedPricingInput,
-  mode: NeedPricingMode,
-  units: number,
-  serviceDays: number,
-): NeedPricingSummary {
-  const total = input.budget.minAmountMinor ?? 0;
-  const unitRate = Math.round(total / Math.max(1, units));
-  return {
-    mode,
-    isLegacy: true,
-    currency: input.budget.currency || "JPY",
-    budgetKind: "EXACT",
-    isNegotiable: false,
-    unitType: mode === "HOME_VISIT" ? "visit" : mode === "BOARDING" ? "night" : "total",
-    totalUnitsCount: units,
-    serviceDaysCount: serviceDays,
-    unitRateMinor: unitRate,
-    unitMaxRateMinor: null,
-    careFeeSubtotalMinor: total,
-    careFeeMaxSubtotalMinor: null,
-    travelMode: "NONE",
-    supplyMode: "NONE",
-    fixedTravelPerVisitMinor: 0,
-    travelFeeSubtotalMinor: 0,
-    fixedSupplyMinor: 0,
-    fixedTravelTotalMinor: 0,
-    fixedBoardingAdditionsMinor: 0,
-    isEstimateReady: total > 0,
-    estimatedTotalMinMinor: total > 0 ? total : null,
-    estimatedTotalMaxMinor: null,
-    completeness: total > 0 ? "COMPLETE" : "INCOMPLETE",
-    unknownCosts: [],
-    formulaTerms: mode === "CUSTOM" ? ["SERVICE_TOTAL"] : [],
-    statusNote: null,
-  };
-}
-
 export function calculateNeedPricing(
   input: NeedPricingInput,
 ): NeedPricingSummary {
@@ -259,9 +219,6 @@ export function calculateNeedPricing(
       ? input.budget.kind
       : "EXACT";
   const currency = input.budget.currency || "JPY";
-  const isLegacy =
-    input.source === "LEGACY" ||
-    (typeof input.publicId === "string" && input.publicId.startsWith("legacy:"));
   const costs = normalizedCosts(input);
   const travel = costs.find((cost) => cost.kind === "TRAVEL");
   const supply = costs.find((cost) => cost.kind === "SUPPLY");
@@ -280,8 +237,6 @@ export function calculateNeedPricing(
   const boardingNights = calculateBoardingNights(input.startsAt, input.endsAt);
   const units = mode === "HOME_VISIT" ? homeUnits.totalVisits : mode === "BOARDING" ? boardingNights : 1;
   const serviceDays = mode === "HOME_VISIT" ? homeUnits.serviceDays : mode === "BOARDING" ? boardingNights : 1;
-
-  if (isLegacy) return legacySummary(input, mode, units, serviceDays);
 
   const careKnown = budgetKind !== "OPEN";
   const unitMin = careKnown ? Math.max(0, input.budget.minAmountMinor ?? 0) : null;
@@ -354,7 +309,6 @@ export function calculateNeedPricing(
 
   return {
     mode,
-    isLegacy: false,
     currency,
     budgetKind,
     isNegotiable,
@@ -384,19 +338,8 @@ export function calculateNeedPricing(
   };
 }
 
-export function formatMoneyAmount(
-  amount: number | null | undefined,
-  currency: string,
-  lang?: Lang,
-): string {
-  if (amount === null || amount === undefined || Number.isNaN(amount)) return "—";
-  const divisor = currency === "JPY" || currency === "KRW" ? 1 : 100;
-  return new Intl.NumberFormat(lang, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: divisor === 1 ? 0 : 2,
-  }).format(amount / divisor);
-}
+import { formatMoneyAmount } from "@/domain/money/presentation";
+export { formatMoneyAmount };
 
 export function formatNeedEstimatedBadge(
   pricing: NeedPricingSummary,

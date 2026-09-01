@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 
 import { publicDetailMetadata } from "@/domain/content/public-detail-metadata";
 import { resolvePublicDetailSubject } from "@/server/domains/marketplace/public-detail-metadata";
-import { publicMarketplaceV2Enabled } from "@/server/feature-flags/publishing-v2";
+import { createServerCaller } from "@/server/trpc/server-caller";
 
 import { PublicNeedDetail } from "../_components/public-need-detail";
 
+const getCachedNeedDetail = cache(async (publicId: string) => {
+  const trpc = await createServerCaller();
+  return trpc.marketplaceNeed.get({ publicId }).catch(() => null);
+});
+
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const publicId = decodeURIComponent(params.id);
-  return publicDetailMetadata("need", "en", `/needs/${encodeURIComponent(publicId)}`, await resolvePublicDetailSubject({ kind: "need", publicId }));
+  const detail = await getCachedNeedDetail(publicId);
+  const subject = detail?.title ?? (await resolvePublicDetailSubject({ kind: "need", publicId }));
+  return publicDetailMetadata("need", "en", `/needs/${encodeURIComponent(publicId)}`, subject);
 }
 
-export default function NeedDetailPage({ params }: { params: { id: string } }) {
-  if (!publicMarketplaceV2Enabled()) {
-    const legacyId = params.id.startsWith("legacy:") ? params.id.slice(7) : params.id;
-    redirect(`/public/needs/${encodeURIComponent(legacyId)}`);
-  }
-  return <PublicNeedDetail publicId={decodeURIComponent(params.id)} />;
+export default async function NeedDetailPage({ params }: { params: { id: string } }) {
+  const publicId = decodeURIComponent(params.id);
+  const initialData = await getCachedNeedDetail(publicId);
+  if (!initialData) notFound();
+  return <PublicNeedDetail publicId={publicId} initialData={initialData} />;
 }

@@ -10,11 +10,6 @@ import {
   declineNeedApplication,
 } from "@/server/domains/application/need-application-v2";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
-import { conversationsV2Enabled } from "@/server/feature-flags/publishing-v2";
-
-function requireConversationsV2() {
-  if (!conversationsV2Enabled()) throw new TRPCError({ code: "NOT_FOUND", message: "FEATURE_NOT_AVAILABLE" });
-}
 
 function commandError(error: unknown): never {
   if (error instanceof ApplicationCommandError) {
@@ -38,7 +33,6 @@ export const needApplicationRouter = router({
       idempotencyKey: clientMessageIdSchema,
     }).strict())
     .mutation(async ({ ctx, input }) => {
-      requireConversationsV2();
       try {
         return await createNeedApplication(ctx.prisma, {
           actorId: ctx.session.user.id,
@@ -52,7 +46,6 @@ export const needApplicationRouter = router({
     }),
 
   accept: protectedProcedure.input(applicationIdInput).mutation(async ({ ctx, input }) => {
-    requireConversationsV2();
     try {
       return await acceptNeedApplication(ctx.prisma, { ownerId: ctx.session.user.id, applicationId: input.applicationId });
     } catch (error) {
@@ -61,7 +54,6 @@ export const needApplicationRouter = router({
   }),
 
   decline: protectedProcedure.input(applicationIdInput).mutation(async ({ ctx, input }) => {
-    requireConversationsV2();
     try {
       return await declineNeedApplication(ctx.prisma, { ownerId: ctx.session.user.id, applicationId: input.applicationId });
     } catch (error) {
@@ -70,7 +62,6 @@ export const needApplicationRouter = router({
   }),
 
   cancel: protectedProcedure.input(applicationIdInput).mutation(async ({ ctx, input }) => {
-    requireConversationsV2();
     try {
       return await cancelNeedApplication(ctx.prisma, { actorId: ctx.session.user.id, applicationId: input.applicationId });
     } catch (error) {
@@ -121,23 +112,17 @@ export const needApplicationRouter = router({
         },
       },
     });
-    const supportsLegacyServices = "service" in ctx.prisma;
-    return Promise.all(applications.map(async (application) => {
+    return applications.map((application) => {
       const profile = application.applicant.serviceProfile;
-      const legacyServiceCount = profile && supportsLegacyServices
-        ? await ctx.prisma.service.count({
-            where: { serviceProfileId: profile.id, isActive: true, archivedAt: null },
-          })
-        : 0;
       return {
         ...application,
         applicant: {
           ...application.applicant,
           serviceProfile: profile
-            ? { ...profile, activeServiceCount: profile.servicesV2.length + legacyServiceCount }
+            ? { ...profile, activeServiceCount: profile.servicesV2.length }
             : null,
         },
       };
-    }));
+    });
   }),
 });

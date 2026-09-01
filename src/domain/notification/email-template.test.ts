@@ -7,8 +7,8 @@ describe("privacy-safe notification email templates", () => {
     for (const locale of ["zh", "en", "ja"] as const) {
       const email = buildNotificationEmail({ type: "MESSAGE_RECEIVED", locale, baseUrl: "https://petnido.example" });
       expect(email.subject).toBeTruthy();
-      expect(email.html).toContain("/dashboard/notifications");
-      expect(email.html).toContain("/dashboard/settings#preferences");
+      expect(email.html).toContain("/dashboard/messages");
+      expect(email.html).toContain("/dashboard/messages");
       for (const forbidden of ["private message", "35.681236", "139.767125", "floor 8", "medical diagnosis"]) {
         expect(JSON.stringify(email)).not.toContain(forbidden);
       }

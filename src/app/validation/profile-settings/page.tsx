@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import SettingsPage from "@/app/(app)/dashboard/settings/page";
+import SettingsPage from "@/app/(app)/dashboard/profile/page";
 import { validationProfileEnabled } from "@/server/validation/profile-session";
 
 export default function ValidationProfileSettingsPage() {

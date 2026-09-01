@@ -16,12 +16,11 @@ export default function EmptyState({
   href,
   onAction,
 }: EmptyStateProps) {
-  console.log("btnLabel", btnLabel);
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="mb-4 text-purple2">{icon}</div>
       <h2 className="text-lg font-semibold text-neutral-900 mb-2">{title}</h2>
-      <p className="text-sm text-neutral-600 max-w-md mb-6">{description}</p>
+      <p className={`max-w-md text-sm text-neutral-600 ${btnLabel && (href || onAction) ? "mb-6" : ""}`}>{description}</p>
       {btnLabel && href && (
         <Link
           href={href}

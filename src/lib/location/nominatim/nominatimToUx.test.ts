@@ -53,7 +53,23 @@ describe("localized Nominatim labels", () => {
     }], "", "zh")[0];
 
     expect(result?.label).toBe("Hanshin Expressway Route 2 Yodogawa-Sagan Line");
-    expect(result?.regionLabel).toBe("大阪市此花区");
+    expect(result?.regionLabel).toBe("大阪府大阪市此花区");
+  });
+
+  it("keeps Tokyo together with its ward in the public region label", () => {
+    const result = nominatimToUx([{
+      ...station,
+      name: "目黒区",
+      type: "administrative",
+      address: {
+        country_code: "jp",
+        country: "日本",
+        province: "東京都",
+        city_district: "目黒区",
+      },
+    }], "", "ja")[0];
+
+    expect(result?.regionLabel).toBe("東京都目黒区");
   });
 
   it("retains multiple distinct search results without collapsing to one", () => {

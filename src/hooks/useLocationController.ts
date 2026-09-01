@@ -18,6 +18,7 @@ export type Location = {
 export function useLocationController(initial: {
   location?: Location;
   currency?: Currency;
+  refreshFromCoordinates?: boolean;
 }) {
   const { lang } = useLanguage();
   const initializedRef = useRef(false);
@@ -67,11 +68,14 @@ export function useLocationController(initial: {
       ) {
         setLocation({
           label: initial.location.label,
+          regionLabel: initial.location.regionLabel,
           lat: initial.location.lat,
           lon: initial.location.lon,
         });
-        sourceRef.current = "database";
-        setSource("database");
+        sourceRef.current = initial.refreshFromCoordinates
+          ? "reverse"
+          : "database";
+        setSource(initial.refreshFromCoordinates ? "reverse" : "database");
         setQueryLabel(initial.location.label);
         return;
       }
@@ -90,7 +94,7 @@ export function useLocationController(initial: {
     }
 
     init();
-  }, [initial.location]);
+  }, [initial.location, initial.refreshFromCoordinates]);
 
   /* ---------------- reverse geocode ---------------- */
   useEffect(() => {

@@ -7,14 +7,14 @@ export const conversationContextTargetSchema = z.object({
   const separator = input.publicId.indexOf(":");
   const source = input.publicId.slice(0, separator);
   const contextId = input.publicId.slice(separator + 1);
-  if (!contextId || (source !== "v2" && source !== "legacy")) {
+  if (!contextId || source !== "v2") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "INVALID_PUBLIC_TARGET" });
     return z.NEVER;
   }
   return {
     kind: input.kind,
     publicId: input.publicId,
-    source: source === "v2" ? "V2" as const : "LEGACY" as const,
+    source: "V2" as const,
     contextId,
   };
 });

@@ -27,7 +27,7 @@ describe("ServiceBookingV2 commands", () => {
     expect(result).toMatchObject({ state: "PENDING", alreadyExists: false });
     expect(tx.serviceBookingV2.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ petCount: 1, pets: { create: [expect.objectContaining({ name: "Mochi", petType: "DOG" })] } }) }));
     expect(tx.messageV2.upsert).toHaveBeenCalledOnce();
-    expect(tx.notificationV2.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ type: "BOOKING_REQUESTED", recipientId: "provider" }) }));
+    expect(tx.notificationV2.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ type: "MESSAGE_RECEIVED", recipientId: "provider" }) }));
   });
   it("does not create another message when the idempotent booking already exists", async () => {
     const { tx, prisma } = fixture(); tx.serviceBookingV2.findUnique.mockResolvedValueOnce(baseBooking);
@@ -44,7 +44,7 @@ describe("ServiceBookingV2 commands", () => {
     expect(result.state).toBe("CONFIRMED");
     expect(tx.serviceV2.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "service-1", serviceProfile: { userId: "provider" } } }));
     expect(tx.serviceV2.findFirst.mock.calls[0][0].where).not.toHaveProperty("state");
-    expect(tx.notificationV2.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ type: "BOOKING_CONFIRMED", recipientId: "customer" }) }));
+    expect(tx.notificationV2.upsert).not.toHaveBeenCalled();
   });
   it("does not allow a provider to use cancellation as a substitute for declining PENDING", async () => {
     const { tx, prisma } = fixture(); tx.serviceBookingV2.findUnique.mockResolvedValueOnce(baseBooking);

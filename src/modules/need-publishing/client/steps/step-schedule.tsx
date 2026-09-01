@@ -164,7 +164,7 @@ export function BoardingDatesScreen({
   return (
     <div
       className={cn(
-        "grid items-start gap-5",
+        "grid min-h-full items-start gap-5",
         "lg:grid-cols-[minmax(0,1fr)_max-content]",
       )}
     >
@@ -191,7 +191,7 @@ export function BoardingDatesScreen({
       </div>
       <div
         className={cn(
-          "lg:self-end",
+          "flex flex-col justify-end lg:sticky lg:bottom-0 lg:self-end z-10",
           !hasDateRange && "hidden lg:block lg:invisible",
         )}
         aria-hidden={!hasDateRange}
@@ -287,7 +287,7 @@ export function VisitDatesScreen({
         </div>
         <div
           className={cn(
-            "lg:self-end",
+            "flex flex-col justify-end lg:sticky lg:bottom-0 lg:self-end z-10",
             !hasDateRange && "hidden lg:block lg:invisible",
           )}
           aria-hidden={!hasDateRange}
@@ -574,7 +574,7 @@ export function LegacyLinkedDateField({
           <PopoverContent
             align="start"
             collisionPadding={12}
-            className="z-[70] w-[var(--radix-popover-trigger-width)] max-h-[min(420px,calc(100dvh-128px))] max-w-[calc(100vw-24px)] overflow-y-auto border-[#ded9e0] p-2 [--rdp-accent-color:var(--primary)] [--rdp-accent-background-color:var(--primary-fixed)]"
+            className="z-[70] w-[calc(100vw-24px)] max-h-[min(420px,calc(100dvh-128px))] max-w-[calc(100vw-24px)] overflow-y-auto border-[#ded9e0] p-2 [--rdp-accent-color:var(--primary)] [--rdp-accent-background-color:var(--primary-fixed)] md:w-[var(--radix-popover-trigger-width)]"
           >
             <div className="mb-2 flex items-center gap-2">
               <button
