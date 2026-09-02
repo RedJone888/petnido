@@ -1,127 +1,231 @@
-# 🐰 PetNido - C2C Pet Care Matching Platform
+# PetNido
+
+> A C2C pet-care matching platform for pet owners and local caregivers.
+
+English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
+
+[Live site](https://www.petnido.net)
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-5.14-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
+![Languages](https://img.shields.io/badge/i18n-English%20%7C%20中文%20%7C%20日本語-6D4AFF?style=flat-square)
+[![Status](https://img.shields.io/badge/status-active%20development-F59E0B?style=flat-square)](#current-status)
 
-[Live Demo](https://www.petnido.net)
+## Project Overview
+
+PetNido is a pet-care request and service matching platform for individual users. It is designed for pet owners and people who want to provide pet-care services, with one account usable both to request care and to provide it.
+
+The platform breaks pet-care information into structured fields such as care type, pet, dates, tasks, location, and budget. Users can filter by area, care type, pet type, and care dates. Reusable pet profiles, autosaved drafts that can be resumed later, and approximate map locations reduce repeated data entry. When a request is published, snapshots of the pet, location, and currency unit preserve the historical record even if the user's profile changes later.
+
+The current version primarily covers four user paths:
+
+1. Sign-in and first-time onboarding
+2. Publishing a care request
+3. Browsing public care requests
+4. Managing the personal dashboard
+
+Some pages and menu entries are already in place, but service management, notifications, matching, and other related workflows are still being developed.
+
+## Why PetNido
+
+PetNido grew out of a practical difficulty: finding a suitable way to care for a pet when the owner cannot do it themselves.
+
+Depending on the pet's type, temperament, and health, as well as the length of the trip and the budget, a conventional pet hotel may not be a good fit. Some facilities focus mainly on dogs and cats, and their cost or environment can place additional stress on certain pets. Owners therefore often turn to general-purpose social platforms to look for individual caregivers.
+
+But social platforms are not designed for pet-care matching. A post looking for a caregiver may attract many replies that say little about a person's actual care skills, or that reflect unsafe assumptions. For example: “I kept rabbits when I was young, so I can look after yours. Just give it plenty of carrots and cabbage.” The owner must sort through a large number of messages to judge whether each person understands the animal's diet, behaviour, and health needs. This takes time and can expose the pet to the risk of inappropriate care.
+
+Public social-media posts also tend to include only the care dates, location, and type of pet. Detailed information about the pet, its temperament, routines, health considerations, and specific tasks is usually shared later in private messages. Every new conversation requires the owner to explain or forward the same information again, which is time-consuming and makes important details easier to miss.
+
+PetNido aims to be a dedicated pet-care matching platform. Caregivers can publish structured service information in advance, including their experience, available services, and suitable conditions. Owners can prepare reusable pet profiles and complete care requests in one place. Before starting a conversation, both sides can review information relevant to the pet, the care tasks, and the caregiver's offering, making it easier to compare options and reduce communication overhead.
+
+## Product Approach
+
+PetNido distils the scattered pet-care requests and service information found on social platforms into three common, structured care scenarios. When publishing a request or service, users select a scenario first. A step-by-step form then guides them through the pet, care dates and times, tasks, approximate location, and budget to produce a complete, clear record that can be reviewed before publishing.
+
+- **Home visits**: Feeding, changing water, walking, cleaning, companionship, medication, and other daily tasks are carried out at the owner's home. This is suitable when the owner will be away for a relatively short time, the pet can stay alone between visits, or the pet is more comfortable in familiar surroundings.
+
+- **Pet boarding**: The pet stays at the caregiver's home for one or more nights, in a household environment with a relatively small number of pets. This is suitable for longer trips, pets that should not be left alone for long periods, or pets that need close day-to-day observation.
+
+- **Custom care**: Transport, accompanied veterinary visits, grooming, nail trimming, enclosure cleaning, and other personalised tasks that do not fit the home-visit or boarding scenarios.
+
+The product follows five core principles:
+
+- One account can be used in both the pet-owner and caregiver roles.
+- Requests, pet profiles, and saved approximate locations can be reused in future requests or services to reduce repeated entry.
+- When publishing a request or service, profile defaults are loaded automatically when the user reaches the relevant step, and can still be edited.
+- At publication time, the pet, location, and currency unit are saved as snapshots, so later profile changes do not rewrite historical business records.
+- Publishing pages instruct users to search for or select only an approximate location on the map to support matching. Exact home addresses, such as building or unit numbers, are not supported.
+
+This structured guided flow is currently used mainly for care-request publishing; the service-publishing workflow is still being completed.
+
+## Current Status
+
+“Demo ready” means that the capability is available through the current official product pages as a connected user flow.
+
+| Area | Status | Current capability |
+| --- | --- | --- |
+| Account and sign-in | ✅ Demo ready | Email account flow, Google / LINE sign-in entry points, and first-time versus returning-user routing |
+| Care-request publishing | ✅ Demo ready | Home-visit, boarding, and custom modes; guided steps, drafts, preview, and publishing |
+| Public care-request marketplace | ✅ Demo ready | Public lists and details, filters, map display, visibility status, and expiry rules |
+| Personal dashboard | 🟡 Pages and partial flows | Request, service, draft, favorite, profile, and settings menus are available; some operations are still under development |
+| Service publishing and marketplace | 🚧 In development | Service profiles, service forms, and the marketplace are not fully connected |
+| Consultation, applications, bookings, and chat | 🚧 In development | Pages and business workflows are still being integrated |
+| Matching, in-app notifications, and email | 🚧 In development | Not yet available as complete user flows |
+| Social-media sharing | 🗓️ Next stage | Planned to broaden the reach of requests and services |
+
+## Product Walkthrough
+
+The sections below are organised around user tasks. Each section explains the role of the page and shows representative screens.
+
+### 1. Home
+
+The home page is PetNido's main entry point and an introduction to the product. It explains that one account can be used both to publish care requests and to provide care, and compares the three care scenarios and their typical use cases.
+
+Visitors can browse public requests, start publishing a care request, or enter the sign-in flow from the home page. After signing in, users can open the personal dashboard to view their profile, pet profiles, and related menus. Some dashboard functions are still under development; see [Current Status](#current-status) for the current scope.
+
+![PetNido home page](docs/screenshots/home/hero-en.png)
+![Home-page highlights](docs/screenshots/home/highight-en.png)
+![Home-page publishing entry](docs/screenshots/home/post-need-en.png)
+
+### 2. Sign-in and account linking
+
+PetNido supports three sign-in methods: email and password, Google, and LINE. A single PetNido account can have multiple sign-in methods linked to it.
+
+- **Email and password**: New users verify their email address and register an account. After setting a password, they can sign in with their email and password.
+- **Google**: PetNido uses the verified email address returned by Google. If the email is not associated with a PetNido account, a new account is created. If an account already exists, the user enters an email-code confirmation flow to link Google. Once confirmed, Google becomes another sign-in method for that account.
+- **LINE**: The first LINE sign-in does not merge accounts automatically. Users are first asked whether they already have a PetNido account.
+  - Existing account: enter the original account email and complete code verification to link LINE.
+  - No existing account: create a new PetNido account.
+
+After linking, LINE can be used to sign in to the same account. A newly created account continues to profile setup and a choice of next steps after its first sign-in; users who have already completed setup go directly to the intended page. Once an email and password have been set up and the email has been verified, the same account can be accessed with email and password, Google, or the linked LINE account.
+
+#### Email-and-password sign-in
+
+| Choose a sign-in method | Enter an email address | New email: registration | Enter the verification code |
+| --- | --- | --- | --- |
+| ![PetNido sign-in dialog](docs/screenshots/login/login-en.png) | ![Sign-in step 1](docs/screenshots/login/login-1-en.png) | ![Sign-in step 2](docs/screenshots/login/login-2-en.png) | ![Sign-in step 3](docs/screenshots/login/login-3-en.png) |
+
+#### First-time profile setup and intent selection
+
+| Set a display name and avatar | Choose what to do next |
+| --- | --- |
+| ![Sign-in step 4](docs/screenshots/login/login-4-en.png) | ![Sign-in step 5](docs/screenshots/login/login-5-en.png) |
+
+### 3. Publish a care request
+
+PetNido organises recurring pet-care requests seen on social platforms into three modes: home visits, pet boarding, and custom care.
+
+Users choose a care mode first. The form then presents the steps for that mode. Users can enter the information step by step, review the complete request on the preview page, return to any step to edit it, and publish only after confirming the final content.
+
+| Care mode | Main steps |
+| --- | --- |
+| Home visits | Pet, dates and visit schedule, care tasks, approximate location, budget |
+| Pet boarding | Pet, boarding dates, care tasks, supplies, household fit, approximate location, acceptable distance and handover arrangements, budget |
+| Custom care | Pet, dates, care tasks, requirements and notes, approximate location, budget |
+
+Form data is saved automatically after changes. For signed-out users, drafts are stored in the current browser. After sign-in, the local draft is also synced to the server so it can be recovered later. When users reach a relevant step, the form loads saved pets, common locations, and currency defaults while still allowing edits.
+
+The following screenshots show the home-visit flow:
+
+| Choose a care mode | Review and publish |
+| --- | --- |
+| ![Care-mode selection](docs/screenshots/publish/choose-type.png) | ![Request publishing preview](docs/screenshots/publish/preview.png) |
+
+### 4. Browse public care requests
+
+The public care-request marketplace is open to visitors and lists only requests that are public and not expired. Visitors can filter by area, care mode, pet type, and date range.
+
+After an area is selected, the system searches within a default radius of 25 km from that point. The map on the right shows the current search radius as a circle and displays the distribution of matching requests. Users can also adjust the search radius.
+
+Opening a request card shows structured public details, including the care mode, pet, dates, tasks, approximate location, and budget. Signed-in users can save requests to their favorites and view them again from the personal dashboard. If a signed-out visitor clicks the favorite button, the sign-in flow opens first.
+
+| Public request list | Request details |
+| --- | --- |
+| ![Public request list](docs/screenshots/needs/public-needs-en.png) | ![Request details](docs/screenshots/needs/detail-en.png) |
+
+### 5. Manage the personal dashboard
+
+The personal dashboard provides menu entries for the activity overview, my requests, my services, request and service drafts, request and service favorites, personal profile, pet profiles, and account settings.
+
+Some of these menu entries are still under development. A visible menu entry does not mean that every related workflow is complete.
+
+The dashboard overview changes with the account's current state:
+
+- When the account has no activity data yet, it shows guidance for completing the personal profile, adding pet profiles, and choosing how to use PetNido.
+- When the account has activity data, it shows relevant items that need attention, recent activity, and suggested next steps.
+
+Completed or demonstrable capabilities currently include:
+
+- Managing personal and pet profiles;
+- Viewing published requests and filtering them by status;
+- Editing, deleting (archiving), closing, and reopening published requests;
+- Reusing an existing request to create a new one;
+- Resuming or deleting request drafts;
+- Sorting request drafts by last updated time, completion, and care type;
+- Saving requests to favorites and viewing saved requests in the dashboard;
+- Configuring and managing account sign-in methods.
+
+Service management, service favorites, notifications, applications, bookings, chat, and other related business operations are still in development.
+
+| Personal profile | Pet profile | Published request | Account settings |
+| --- | --- | --- | --- |
+| ![Personal profile](docs/screenshots/dashboard/person-profile-en.png) | ![Pet profile](docs/screenshots/dashboard/pet-profile-en.png) | ![Published request](docs/screenshots/dashboard/published-request-en.png) | ![Account settings](docs/screenshots/dashboard/setting-en.png) |
+
+### 6. Care-type guide pages
+
+Users can open a guide for any of the three care types from the home page. Before publishing a request or service, the page explains each mode's scope, suitable use cases, and points to consider, helping users choose the option that fits their situation.
+
+Each care-type page includes:
+
+- Situations the mode is suitable for;
+- Typical use cases;
+- A structured example of a care request;
+- Three preparations to make before publishing this type of request;
+- Three guidelines for providing this type of service;
+- Suggestions to explore the other two care types when the current one is not a good fit;
+- Entry points for publishing a request or service.
+
+The guide connects the scenario explanation with the later form flow, helping users set the right expectations before they start entering information.
+
+The following screenshots show the home-visit care guide:
+
+![Care-type detail 1](docs/screenshots/caretypes/caretype-detail-1-en.png)
+![Care-type detail 2](docs/screenshots/caretypes/caretype-detail-2-en.png)
+![Care-type detail 3](docs/screenshots/caretypes/caretype-detail-3-en.png)
+![Care-type detail 4](docs/screenshots/caretypes/caretype-detail-4-en.png)
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Web | Next.js 14.2, React 18, App Router |
+| Language | TypeScript 5.4 |
+| API and server state | tRPC 10, TanStack Query |
+| Database | PostgreSQL, Prisma 5.14 |
+| Authentication | NextAuth 5 Beta, email accounts, Google / LINE OAuth |
+| Forms and validation | React Hook Form, Zod |
+| Client state | Zustand |
+| UI | Tailwind CSS 4, Radix UI, Lucide React |
+| Maps and geospatial interaction | MapLibre GL JS, MapTiler |
+| Geocoding and location search | Nominatim / OpenStreetMap |
+| Image storage | Cloudinary |
+| Testing | Vitest, Playwright, Storybook |
+
+## Live Site
+
+The production site is available at [https://www.petnido.net](https://www.petnido.net).
+
+## Author
+
+**Guo Hongqiong（郭红琼）**
+
+Digital product developer with experience in product analysis, interaction design, full-stack implementation, testing, and deployment.
+
+- [GitHub](https://github.com/RedJone888)
+- Email: redjoan.guo@gmail.com
+- [GuoHongqiong](https://guohongqiong.vercel.app/)
 
 ---
 
-## 📖 Part 1: 概要 & 開発の背景 / Overview & Motivation
-
-### 🌟 概要 / Overview
-
-**JP:**
-PetNidoは、ペットの「お世話を依頼したい飼い主」と「お世話を提供したいシッター」を直接つなぐ、CtoCのマッチングプラットフォームです。SNS上に散らばっている「家庭預かり」や「訪問給餌」といった主流のニーズから、「爪切り」「通院代行」「掃除」などのニッチな依頼までを構造化し、効率的にマッチングできるよう設計されています。
-
-- **ハイブリッド・ロール:** ユーザーが **「飼い主（依頼者）」** と **「シッター（提供者）」** の両方の役割をシームレスに使い分け可能。
-- **資産としてのデータ:** 一度作成した依頼（Need）やサービス（Service）の情報は、使い捨てではなくユーザーの資産として残ります。引っ越しや再依頼の際も、削除することなく場所・日時・通貨などを微調整するだけで、最小限の手間で再び公開できる「圧倒的な運用効率」を実現。
-
-**EN:**
-PetNido is a C2C matching platform designed to connect pet owners with sitters. We have standardized fragmented info from social media—ranging from common models like "Home Boarding" and "Home Visits" to highly flexible services like "Nail Trimming", "Vet Escort," and "Cage Cleaning"—into specific searchable types for efficient matching.
-
-- **Dual-Role Flexibility:** Users can easily switch between being an owner and a sitter within one account.
-- **Data Reusability:** Instead of creating one-off posts, your "Needs" and "Services" remain in your history. When moving or needing care again, you can simply update the existing record (location, date, currency, etc.) and republish it instantly, offering unmatched efficiency for long-term users.
-
----
-
-### 🌟 開発の背景 / Motivation
-
-**JP:**
-
-- **実体験と市場の気づき:** 私自身、うさぎの飼い主として外出時の預け先に苦労しました。既存のペットホテルは犬猫が中心で高価な上、環境変化に弱い小動物には負担が大きいと感じていました。そこで SNS を通じて直接シッターを探したり、逆に私自身がシッターとして依頼を受けたりする中で、**『住み慣れた家でケアを受けさせたい』『近所の信頼できる人に頼みたい』** という切実な個人間ニーズを肌で感じました。この実体験に基づいた需要と供給のミスマッチを解消したいという思いが、本プロジェクトの開発原動力です。
-
-- **SNSマッチングの限界:**
-  - **「検索性の低さ」:** 大量の投稿に埋もれ、近所のシッターや特定のニーズ（うさぎの世話など）を探すのが困難。
-  - **「再利用の不便さ」:** 過去の投稿を使い回す機能がなく、毎回ゼロから内容を考える必要がある。
-  - **「管理の難しさ」:** 「一時的な受付停止」や「引っ越し後の地域・通貨変更」など、状況に合わせた柔軟な切り替えができない。
-- **解決策としてのPetNido:** これらの不便を解消するため、入力の構造化（フォーム化）、下書き保存、ステータスの切り替え、そして多通貨・多地域対応を備えた、 **「使い続けられる」** マッチングプラットフォームを開発しました。
-
-**EN:**
-
-- **Personal Insights:** As a rabbit owner, I found it challenging to find suitable care during trips. Conventional pet hotels are often dog/cat-centric and expensive, which can be stressful for small animals. Having successfully matched on social media both as a pet owner and a sitter to enable "care in a familiar environment" and "local trust", I realized there is a strong market for peer-to-peer pet care.
-
-- **Limitations of Social Media:**
-  - **High Search Cost:** Specific needs (e.g., rabbit care) or services get lost in the noise of unrelated posts.
-  - **Lack of Reusability:** No easy way to reuse past requests, requiring users to re-type everything every time.
-  - **Rigid Management:** Hard to quickly toggle "Service Availability" or update info (like currency or location) after moving to a new city or country.
-
-- **The Solution:** I built PetNido to solve these issues through structured forms, auto-save, status toggles, and multi-currency/location support, creating a platform that evolves with the user's life..
-
----
-
-## 🛠 Part 2: 使用技術 & 技術的なこだわり / Tech Stack & Highlights
-
-### ■ 使用技術 / Tech Stack
-
-| 分類                 | 技術 / Tools                                    |
-| :------------------- | :---------------------------------------------- |
-| **Framework**        | Next.js 14 (App Router)                         |
-| **Language**         | TypeScript (完全型安全な開発)                   |
-| **API**              | tRPC (End-to-end Type Safety)                   |
-| **Database**         | Prisma (PostgreSQL)                             |
-| **Auth**             | Next-Auth (v5 Beta) (Email OTP, Google, LINE)   |
-| **State Management** | Zustand (Global), TanStack Query (Server State) |
-| **Forms/Validation** | React Hook Form + Zod                           |
-| **UI/Styling**       | Tailwind CSS, Radix UI, Lucide React            |
-| **Maps/Charts**      | Maplibre GL, ECharts                            |
-| **Media Storage**    | Cloudinary                                      |
-
-### ■ 技術的なこだわり / Technical Highlights
-
-1.  **エンドツーエンドの型安全 (Type Safety):** tRPC と Prisma を採用することで、DBからフロントエンドまで一貫した型安全性を確保しました。APIの変更が即座にフロントエンドのコンパイルエラーとして検知されるため、デバッグ時間を大幅に短縮し、堅牢なアプリケーションを実現しています。
-2.  **高度なフォーム体験:** 依頼(Need)とサービス(Service)の作成には4ステップの動的バリデーションフォームを実装しました。また、Zustand によるグローバルな状態管理と、LocalStorage を活用した「自動下書き保存」機能を統合し、ユーザー体験（UX）を損なわない設計を行いました。
-3.  **データ可視化:** ECharts を使用し、マイページで依頼状況やサービス統計を視覚化しました。また、`@dnd-kit`を用いたドラッグ＆ドロップによる画像順序の入れ替えなど、直感的なUI操作にこだわっています。
-4.  **高度な認証とセキュリティ:** Next-Auth v5 を活用し、安全なメール認証（OTP）に加え、GoogleやLINEによるソーシャルログインを実装。認証状態に応じたルーティング保護（Middleware）を行い、未ログインユーザーの不正アクセスを防止しています。
-
-**EN:**
-
-1. **End-to-End Type Safety:** By using tRPC and Prisma, I ensured full type safety from the database to the frontend. Any schema changes are immediately caught as compilation errors, significantly reducing debugging time and ensuring application stability.
-
-2. **Advanced Form Experience:** Combined React Hook Form with Zod to implement a dynamic 4-step validation form. Integrated Zustand for global state and LocalStorage for an auto-save feature, ensuring a seamless and reliable user experience during long form entries.
-
-3. **Data Visualization & Interactive UI:** Leveraged ECharts to visualize service statistics on the dashboard. Implemented intuitive UI features like drag-and-drop image reordering using `@dnd-kit`.
-
-4. **Advanced Auth & Security** Utilized Next-Auth v5 to implement secure Email OTP and Social Logins (Google/LINE). Applied middleware-based route protection to ensure secure access control based on authentication status.
-
----
-
-## 🚀 Part 3: 主な機能 & ロードマップ / Key Features & Roadmap
-
-### ■ 主な機能 / Key Features
-
-- **🔍 柔軟な検索 (Flexible Discovery)**
-  - サービス/依頼を、多角的なフィルタリング（タイプ、日付、エリア、ペット種別、価格帯）。
-  - キーワード検索と地図上のピンによる正確な実施場所の特定。
-
-- **📝 ダイナミックフォーム (Advanced 4-Step Forms)**
-  - インタラクティブな入力体験: プラン選択 → 詳細設定 → ペット情報 → 報酬計算の4工程。
-  - 多頭飼育対応：複数のペット情報を1つの依頼ににまとめ、種類ごとの特性（性格タグ、ワクチン等）や個別の注意事項、写真を設定可能。
-  - 報酬の自動見積もり: 依頼タイプ（訪問回数制 / 預かり日数制 / 一括料金制）に応じて、単価と期間から合計金額をリアルタイム算出。
-  - 下書き保存 (Auto-save): 入力中のデータはLocalstorageに自動保存され、不意なページ離脱でもデータを失いません。
-
-- **📊 ユーザー管理 (Dashboard)**
-  - データ可視化 (Data Visualization): マイページにて依頼やサービスの状況を統計グラフ（円グラフ）で表示し、活動状況を直感的に把握。
-  - セキュアな多要素ログイン（メールOTP/Google/LINE）。
-
-### ■ ロードマップ / Roadmap
-
-- [ ] **リアルタイムチャット:** マッチング前の詳細相談機能。
-- [ ] **レビューシステム:** シッターの信頼性を可視化する評価機能。
-- [ ] **多言語対応:** グローバル展開を見据えた i18n 対応。
-
----
-
-## 👨‍💻 Author / 開発者
-
-**Guo Hongqiong (郭 紅瓊)**
-
-- Front-end Developer based in Osaka, Japan.
-- Open to new opportunities! (現在、フロントエンドエンジニアとして就職活動中です。)
-- [LinkedIn](链接) | [GitHub](https://github.com/RedJone888) | [Email](redjoan.guo@gmail.com)
-
-**PetNido** - \*Designed with love for pets
-
-Next.js の Intercepting Routes を使って、モーダルと通常ページを両立しています」
+PetNido — Thoughtful care for every pet's everyday life, from the nearby community.
