@@ -55,7 +55,7 @@ The product follows five core principles:
 - Requests, pet profiles, and saved approximate locations can be reused in future requests or services to reduce repeated entry.
 - When publishing a request or service, profile defaults are loaded automatically when the user reaches the relevant step, and can still be edited.
 - At publication time, the pet, location, and currency unit are saved as snapshots, so later profile changes do not rewrite historical business records.
-- Publishing pages instruct users to search for or select only an approximate location on the map to support matching. Exact home addresses, such as building or unit numbers, are not supported.
+- Publishing pages guide users to search for or select an easily recognizable location on the map as a service reference point, making it easy for caregivers to intuitively assess the service area.
 
 This structured guided flow is currently used mainly for care-request publishing; the service-publishing workflow is still being completed.
 
