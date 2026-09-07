@@ -17,7 +17,7 @@ export function PublishingDraftDemo() {
   const searchParams = useSearchParams();
   const draftId = searchParams.get("draft");
   const [currentStep, setCurrentStep] = useState<(typeof stepOrder)[number]>("basics");
-  const [title, setTitle] = useState("Untitled care request");
+  const [description, setDescription] = useState("Untitled care request");
   const hydratedDraftId = useRef<string | null>(null);
   const draft = trpc.publishDraft.getMine.useQuery(
     { id: draftId ?? "00000000-0000-4000-8000-000000000000" },
@@ -32,8 +32,8 @@ export function PublishingDraftDemo() {
     if (stepOrder.includes(draft.data.currentStep as (typeof stepOrder)[number])) {
       setCurrentStep(draft.data.currentStep as (typeof stepOrder)[number]);
     }
-    const savedTitle = draft.data.payload.title;
-    if (typeof savedTitle === "string") setTitle(savedTitle);
+    const savedDescription = draft.data.payload.description;
+    if (typeof savedDescription === "string") setDescription(savedDescription);
   }, [draft.data, draftId, persistence]);
 
   const steps = useMemo<PublishingStep[]>(() => {
@@ -57,7 +57,7 @@ export function PublishingDraftDemo() {
       kind: "NEED",
       mode: "HOME_VISIT",
       currentStep,
-      payload: { title },
+      payload: { description },
     });
     hydratedDraftId.current = id;
     router.replace(`/validation/publishing-draft?draft=${encodeURIComponent(id)}`);
@@ -70,7 +70,7 @@ export function PublishingDraftDemo() {
       kind: "NEED",
       mode: "HOME_VISIT",
       currentStep,
-      payload: { title },
+      payload: { description },
     });
   }
 
@@ -96,10 +96,10 @@ export function PublishingDraftDemo() {
     >
       <div className="space-y-6">
         <label className="block">
-          <span className="mb-2 block text-sm font-bold text-slate-800">Request title</span>
+          <span className="mb-2 block text-sm font-bold text-slate-800">Request description</span>
           <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
             maxLength={160}
             className="h-12 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-purple-100"
           />

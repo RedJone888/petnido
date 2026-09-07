@@ -1,4 +1,4 @@
-import { expect as baseExpect, test } from "@playwright/test";
+import { expect as baseExpect, test } from "./fixtures";
 
 const expect = baseExpect.configure({ timeout: 30_000 });
 test.use({ actionTimeout: 30_000 });

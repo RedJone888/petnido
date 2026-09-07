@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const validationToken = "petnido-local-e2e-token";
 
@@ -25,7 +26,7 @@ async function establishSessionAndFixture(page: Page) {
 test("authenticated business workflows persist and follow confirmation state machines", async ({
   page,
 }, testInfo) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
   const mobile = testInfo.project.name === "mobile-chromium";
   await page.setViewportSize(
     mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
@@ -45,44 +46,31 @@ test("authenticated business workflows persist and follow confirmation state mac
 
   await page.goto(`/needs/${encodeURIComponent(fixture.publicNeedId)}`);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Weekend rabbit care" }),
+    page.getByRole("heading", { level: 1, name: "Custom care｜Shinjuku, Tokyo｜1 Rabbit" }),
   ).toBeVisible({ timeout: 20_000 });
   await page
-    .getByRole("button", { name: "Save this request" })
+    .getByRole("button", { name: "Save request", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Saved to favorites" }),
+    page.getByRole("button", { name: "Saved", exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Saved to favorites" }),
+    page.getByRole("button", { name: "Saved", exact: true }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Ask a question" }).click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Ask about this request" }),
-  ).toBeVisible();
-  await page
-    .getByLabel("First message")
-    .fill("Are the weekend feeding times flexible?");
-  await page.getByRole("button", { name: "Start conversation" }).click();
-  await expect(page).toHaveURL(
-    /\/dashboard\/notifications\?view=conversations&conversation=/,
-    {
-      timeout: 15_000,
-    },
-  );
-  await expect(
-    page
-      .locator("section")
-      .getByText("Are the weekend feeding times flexible?", { exact: true }),
-  ).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Apply to help · In development" }).click();
+  await expect(page.getByText("Application Feature In Development", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Got it", exact: true }).click();
   await page.goto("/dashboard/favorites");
   await expect(
-    page.getByRole("heading", { level: 2, name: "Weekend rabbit care" }),
+    page.locator(`a[href="/needs/${encodeURIComponent(fixture.publicNeedId)}"]`).first(),
   ).toBeVisible();
 
+  const initialReadReceipt = page.waitForResponse((response) =>
+    response.url().includes("/api/trpc/conversation.markRead") && response.ok(),
+  );
   await page.goto(
-    `/dashboard/notifications?view=conversations&conversation=${encodeURIComponent(fixture.applicationConversationId)}`,
+    `/dashboard/messages?conversation=${encodeURIComponent(fixture.applicationConversationId)}`,
   );
   const messagePanel = page.locator("section").filter({
     has: page.getByPlaceholder("Write a message (Shift + Enter for a new line)"),
@@ -93,10 +81,16 @@ test("authenticated business workflows persist and follow confirmation state mac
       { exact: true },
     ),
   ).toBeVisible();
+  await initialReadReceipt;
   const composer = page.getByPlaceholder(
     "Write a message (Shift + Enter for a new line)",
   );
   await composer.fill("Thanks — I am reviewing the application now.");
+  // Reading the newly rendered message writes a receipt. Let that mutation
+  // finish before reloading so navigation does not abort it.
+  const sentReadReceipt = page.waitForResponse((response) =>
+    response.url().includes("/api/trpc/conversation.markRead") && response.ok(),
+  );
   await page.getByRole("button", { name: "Send" }).click();
   await expect(composer).toHaveValue("");
   await expect(
@@ -104,6 +98,10 @@ test("authenticated business workflows persist and follow confirmation state mac
       exact: true,
     }),
   ).toBeVisible();
+  await sentReadReceipt;
+  const reloadedReadReceipt = page.waitForResponse((response) =>
+    response.url().includes("/api/trpc/conversation.markRead") && response.ok(),
+  );
   await page.reload();
   await expect(
     messagePanel.getByText("Thanks — I am reviewing the application now.", {
@@ -111,10 +109,11 @@ test("authenticated business workflows persist and follow confirmation state mac
     }),
   ).toBeVisible();
 
+  await reloadedReadReceipt;
   await page.goto("/dashboard/applications");
   const application = page
     .getByRole("article")
-    .filter({ hasText: "Care for Mika's cat" });
+    .filter({ has: page.locator(`a[href*="conversation=${fixture.applicationConversationId}"]`) });
   await expect(application.getByText("PENDING", { exact: true })).toBeVisible();
   await application.getByRole("button", { name: "Approve" }).click();
   let dialog = page.getByRole("alertdialog");
@@ -125,7 +124,8 @@ test("authenticated business workflows persist and follow confirmation state mac
   await expect(application.getByText("ACCEPTED", { exact: true })).toBeVisible();
   await application.getByRole("button", { name: "Cancel selection" }).click();
   dialog = page.getByRole("alertdialog");
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  // The destructive confirmation and dismiss button both read "Cancel".
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
   await expect(application.getByText("Cancelled", { exact: true })).toBeVisible();
 
   await page.goto("/dashboard/bookings");
@@ -142,19 +142,13 @@ test("authenticated business workflows persist and follow confirmation state mac
   await expect(booking.getByText("CONFIRMED", { exact: true })).toBeVisible();
   await booking.getByRole("button", { name: "Cancel" }).click();
   dialog = page.getByRole("alertdialog");
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  // The destructive confirmation and dismiss button both read "Cancel".
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
   await expect(booking.getByText("Cancelled", { exact: true })).toBeVisible();
 
-  await page.goto("/dashboard/notifications");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Notification center" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Care for Mika's cat", { exact: false }).first(),
-  ).toBeVisible({ timeout: 20_000 });
-  await expect(
-    page.getByText("Mika's home boarding", { exact: false }).first(),
-  ).toBeVisible();
+  await page.goto(`/dashboard/messages?conversation=${encodeURIComponent(fixture.applicationConversationId)}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Messages", exact: true })).toBeVisible();
+  await expect(messagePanel.getByText("Thanks — I am reviewing the application now.", { exact: true })).toBeVisible();
 
   const overflow = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

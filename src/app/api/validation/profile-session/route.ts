@@ -64,8 +64,7 @@ export async function POST(request: Request) {
         data: {
           name: "Mika",
           emailVerified: new Date("2026-08-04T00:00:00.000Z"),
-          image:
-            "https://res.cloudinary.com/petnido-validation/image/upload/avatar.jpg",
+          image: null,
         },
       }),
       prisma.profile.update({
@@ -95,32 +94,35 @@ export async function POST(request: Request) {
         create: { userId: validationProfileUserId, emailInstant: true },
       }),
     ]);
-    const baselineLocation = await prisma.userLocation.findFirst({
-      where: {
+    const baselineLocation = await prisma.userLocation.upsert({
+      where: { id: "cvalidationprofilelocation" },
+      create: {
+        id: "cvalidationprofilelocation",
         userId: validationProfileUserId,
+        label: "Tokyo area",
         regionLabel: "Chiyoda, Tokyo",
+        lat: 35.681236,
+        lon: 139.767125,
+        displayPrecision: "DISTRICT",
+        isDefault: true,
       },
-      orderBy: { createdAt: "asc" },
-      select: { id: true },
+      update: {
+        label: "Tokyo area",
+        regionLabel: "Chiyoda, Tokyo",
+        lat: 35.681236,
+        lon: 139.767125,
+        displayPrecision: "DISTRICT",
+        isDefault: true,
+        archivedAt: null,
+      },
     });
-    if (baselineLocation) {
-      await prisma.$transaction([
-        prisma.serviceProfile.update({
-          where: { userId: validationProfileUserId },
-          data: { defaultLocationId: baselineLocation.id },
-        }),
-        prisma.userLocation.deleteMany({
-          where: {
-            userId: validationProfileUserId,
-            id: { not: baselineLocation.id },
-          },
-        }),
-        prisma.userLocation.update({
-          where: { id: baselineLocation.id },
-          data: { isDefault: true, archivedAt: null },
-        }),
-      ]);
-    }
+    await prisma.serviceProfile.update({
+      where: { userId: validationProfileUserId },
+      data: { defaultLocationId: baselineLocation.id },
+    });
+    await prisma.userLocation.deleteMany({
+      where: { userId: validationProfileUserId, id: { not: baselineLocation.id } },
+    });
     return NextResponse.json({ ok: true });
   }
   if (body?.action !== "resetOnboarding") {

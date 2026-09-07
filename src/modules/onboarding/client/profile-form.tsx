@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +27,9 @@ export function OnboardingProfileForm({
   const { copy, lang } = useOnboardingMessages();
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
+  // Prevent a native form submission before React attaches its handlers.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const [nickname, setNickname] = useState(initialNickname);
   const [avatarUrl, setAvatarUrl] = useState(initialAvatar ?? "");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -81,6 +84,7 @@ export function OnboardingProfileForm({
         <span className="mb-2 block text-sm font-bold text-slate-700">{copy.nickname}</span>
         <input
           autoFocus
+          disabled={!hydrated}
           required
           maxLength={50}
           value={nickname}
@@ -105,7 +109,7 @@ export function OnboardingProfileForm({
             />
             <button
               type="button"
-              disabled={uploadingAvatar}
+              disabled={!hydrated || uploadingAvatar}
               onClick={() => fileInput.current?.click()}
               className="inline-flex min-h-10 items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-primary/40 hover:text-primary disabled:opacity-50"
             >
@@ -118,7 +122,7 @@ export function OnboardingProfileForm({
       </div>
       <Button
         type="submit"
-        disabled={mutation.isLoading || uploadingAvatar || !nickname.trim()}
+        disabled={!hydrated || mutation.isLoading || uploadingAvatar || !nickname.trim()}
         className="w-full"
       >
         {mutation.isLoading ? copy.saving : copy.next}

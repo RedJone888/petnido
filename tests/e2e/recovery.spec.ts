@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const validationToken = "petnido-local-e2e-token";
 const needDraftStorageKey = "petnido:need-draft:v3";
@@ -60,7 +60,7 @@ test("message list exposes a retry action after a network failure", async ({
     data: { action: "setConversationFailure" },
   });
   expect(enableFailure.ok()).toBeTruthy();
-  await page.goto("/dashboard/notifications?view=conversations");
+  await page.goto("/dashboard/messages");
   await expect(
     page.getByRole("heading", { name: "Network or service unavailable" }),
   ).toBeVisible({ timeout: 20_000 });
@@ -89,11 +89,11 @@ test("stale tabs show a draft revision conflict instead of overwriting newer wor
   await stalePage.goto(draftUrl);
   await expect(stalePage.getByRole("status")).toContainText("Draft saved");
 
-  await page.getByLabel("Request title").fill("Newer title");
+  await page.getByLabel("Request description").fill("Newer title");
   await page.getByRole("button", { name: "Save this step" }).click();
   await expect(page.getByText(/revision 1$/)).toBeVisible();
 
-  await stalePage.getByLabel("Request title").fill("Stale title");
+  await stalePage.getByLabel("Request description").fill("Stale title");
   await stalePage.getByRole("button", { name: "Save this step" }).click();
   await expect(stalePage.getByRole("status")).toContainText(
     "A newer draft exists. Reload before continuing.",

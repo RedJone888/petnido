@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const validationToken = "petnido-local-e2e-token";
 
@@ -55,13 +56,14 @@ test("first-time users can publish, offer care, or browse; returning users skip 
     page.getByRole("heading", { level: 1, name: "What kind of care do you need?" }),
   ).toBeVisible();
 
+  // Use a supported discovery filter; the marketplace removes unknown params.
   await resetOnboarding(page);
   await page.goto(
-    "/auth/continue?returnTo=%2Fneeds%3Fsource%3Donboarding",
+    "/auth/continue?returnTo=%2Fneeds%3Fmodes%3DHOME_VISIT",
   );
   await completeBasicProfile(page);
   await page.getByRole("button", { name: "Look around first" }).click();
-  await expect(page).toHaveURL(/\/needs\?source=onboarding$/, {
+  await expect(page).toHaveURL(/\/needs\?modes=HOME_VISIT$/, {
     timeout: 30_000,
   });
 

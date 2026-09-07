@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const validationToken = "petnido-local-e2e-token";
 
@@ -32,20 +33,18 @@ test("Chinese and Japanese public discovery routes render their own language", a
   page,
 }) => {
   await page.goto("/zh/needs");
-  await expect(page.getByText("宠物照护需求")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "面包屑导航" }).getByText("照护需求")).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "zh");
-  await expect(page.getByRole("region", { name: "需求筛选" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "选择大致地图位置" })).toBeVisible();
   await expect(page.getByText("无法加载需求，请检查筛选条件后重试。")).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await page.goto("/ja/services");
   await expect(
-    page.getByRole("heading", { name: "ペットケアサービスを探す" }),
+    page.getByRole("heading", { name: "現在開発中です" }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "ja");
-  await expect(
-    page.getByRole("region", { name: "依頼の絞り込み" }),
-  ).toBeVisible();
+  await expect(page.getByText("お世話サービスの閲覧機能は現在開発中です。公開まで今しばらくお待ちください。", { exact: true })).toBeVisible();
   await expect(page.getByText("サービスを読み込めませんでした。")).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 });

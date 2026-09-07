@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const validationToken = "petnido-local-e2e-token";
 
@@ -24,7 +24,7 @@ test("shared publishing shell persists a real versioned draft", async ({ page },
   await expect(page).toHaveURL(/\/validation\/publishing-draft\?draft=/);
   await expect(page.getByRole("status")).toContainText("Draft saved");
 
-  await page.getByLabel("Request title").fill("Mochi's evening care");
+  await page.getByLabel("Request description").fill("Mochi's evening care");
   await page.getByRole("button", { name: "Pets" }).focus();
   await page.getByRole("button", { name: "Pets" }).press("Enter");
   await expect(page.getByRole("button", { name: "Pets" })).toHaveAttribute(
@@ -35,7 +35,7 @@ test("shared publishing shell persists a real versioned draft", async ({ page },
   await expect(page.getByText(/revision 1$/)).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel("Request title")).toHaveValue("Mochi's evening care");
+  await expect(page.getByLabel("Request description")).toHaveValue("Mochi's evening care");
   await expect(page.getByRole("button", { name: "Pets" })).toHaveAttribute(
     "aria-current",
     "step",
