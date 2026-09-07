@@ -15,7 +15,7 @@ import {
  * SQLite schema instead of the configured application database.
  */
 export async function getServerUserContext() {
-  const validationToken = cookies().get(validationProfileCookie)?.value;
+  const validationToken = (await cookies()).get(validationProfileCookie)?.value;
   if (
     validationProfileEnabled() &&
     validationToken === process.env.VALIDATION_TEST_TOKEN

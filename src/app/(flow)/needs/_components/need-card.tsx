@@ -188,6 +188,7 @@ export function compactDate(value: Date | string, lang: Lang) {
   const date = parseDateValue(value);
   if (!date) return "";
   return date.toLocaleDateString(lang === "zh" ? "zh-CN" : lang === "ja" ? "ja-JP" : "en-US", {
+    year: "numeric",
     month: "short",
     day: "numeric",
   });

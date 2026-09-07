@@ -1,12 +1,12 @@
 # PetNido
 
-> A C2C pet-care matching platform for pet owners and local caregivers.
+> Development preview of a pet-care request platform. Request creation, browsing, request management, authentication, and settings are available; service publishing/browsing, applications, chat, and knowledge pages are not available yet.
 
 English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 [Live site](https://www.petnido.net)
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-5.14-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
 ![Languages](https://img.shields.io/badge/i18n-English%20%7C%20中文%20%7C%20日本語-6D4AFF?style=flat-square)
@@ -199,7 +199,7 @@ The following screenshots show the home-visit care guide:
 
 | Layer | Technology |
 | --- | --- |
-| Web | Next.js 14.2, React 18, App Router |
+| Web | Next.js 15.5.24, React 18, App Router |
 | Language | TypeScript 5.4 |
 | API and server state | tRPC 10, TanStack Query |
 | Database | PostgreSQL, Prisma 5.14 |
@@ -215,6 +215,8 @@ The following screenshots show the home-visit care guide:
 ## Live Site
 
 The production site is available at [https://www.petnido.net](https://www.petnido.net).
+
+The requests displayed on the site were created by the developer for demonstration. They are not real customer requests or transaction records.
 
 ## Author
 

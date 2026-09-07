@@ -14,7 +14,8 @@ const getCachedNeedDetail = cache(async (publicId: string) => {
   return trpc.marketplaceNeed.get({ publicId }).catch(() => null);
 });
 
-export async function generateMetadata({ params }: { params: { lang: string; id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ lang: string; id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   if (!isSupportedLanguage(params.lang)) return {};
   const decodedId = decodeURIComponent(params.id);
   const path = `/needs/${encodeURIComponent(decodedId)}`;
@@ -23,7 +24,8 @@ export async function generateMetadata({ params }: { params: { lang: string; id:
   return subject ? publicDetailMetadata("need", params.lang, path, subject) : localizedPageMetadata("needs", params.lang, path);
 }
 
-export default async function LocalizedNeedDetailPage({ params }: { params: { lang: string; id: string } }) {
+export default async function LocalizedNeedDetailPage(props: { params: Promise<{ lang: string; id: string }> }) {
+  const params = await props.params;
   if (!isSupportedLanguage(params.lang)) notFound();
   const decodedId = decodeURIComponent(params.id);
   const initialData = await getCachedNeedDetail(decodedId);

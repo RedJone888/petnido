@@ -544,7 +544,7 @@ export function NeedMarketplace({
           role="separator"
           aria-orientation="vertical"
           tabIndex={0}
-          title="按住拖动调整宽度 · 双击重置"
+          title={lang === "ja" ? "ドラッグで幅を調整・ダブルクリックでリセット" : lang === "zh" ? "按住拖动调整宽度 · 双击重置" : "Drag to resize · Double-click to reset"}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
           className={cn(

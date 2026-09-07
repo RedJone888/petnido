@@ -30,12 +30,13 @@ function MessageCard({ title, body, home }: { title: string; body: string; home:
   );
 }
 
-export default async function PendingActionPage({
-  searchParams,
-}: {
-  searchParams: { token?: string };
-}) {
-  const cookieLang = cookies().get("petnido_lang")?.value;
+export default async function PendingActionPage(
+  props: {
+    searchParams: Promise<{ token?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const cookieLang = (await cookies()).get("petnido_lang")?.value;
   const lang: Lang = cookieLang === "zh" || cookieLang === "ja" ? cookieLang : "en";
   const copy = messages[lang].core.pendingAction;
   const token = searchParams.token;

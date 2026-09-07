@@ -24,7 +24,7 @@ export const ja = {
       discussPrice: "料金を相談", providerFallback: "ペットシッター", reviewCount: "件のレビュー", dismiss: "戻る",
       cancel: "キャンセル",
     },
-    modes: { HOME_VISIT: "訪問ケア", BOARDING: "ホームステイ", CUSTOM: "カスタムケア" },
+    modes: { HOME_VISIT: "訪問ケア", BOARDING: "ペット預かり", CUSTOM: "カスタムケア" },
     states: { DRAFT: "下書き", OPEN: "募集中", MATCHED: "シッター決定", CLOSED: "終了", CANCELLED: "キャンセル済み", EXPIRED: "期限切れ", ACTIVE: "受付中", PAUSED: "一時停止", ARCHIVED: "アーカイブ済み" },
     pets: { DOG: "犬", CAT: "猫", RABBIT: "うさぎ", BIRD: "鳥", CHINCHILLA: "チンチラ", GUINEA_PIG: "モルモット", HAMSTER: "ハムスター", TURTLE: "カメ", FERRET: "フェレット", OTHER: "その他のペット" },
     tasks: { FEEDING: "食事", WATER: "水の交換", WALK: "散歩", CLEANING: "掃除", MEDICATION: "投薬", TRANSPORT: "送迎", OTHER: "その他の作業" },
@@ -109,7 +109,7 @@ export const ja = {
     servicePublishing: {
       weekdays: ["月", "火", "水", "木", "金", "土", "日"], serviceTitlePlaceholder: "例：標準訪問ケア", discountLabelPlaceholder: "例：長期滞在", removePolicyTitle: "条件を削除",
       steps: { mode: "サービスの種類", basics: "サービス詳細", care: "ペットとケア", availability: "時間と場所", pricing: "料金", review: "確認して公開" }, saveIdle: "未保存", saveSaving: "下書きを保存中…", saveSaved: "下書きを保存しました", saveConflict: "新しい下書きがあります。再読み込みしてから続けてください。", saveError: "下書きを保存できませんでした", keepTab: "このタブを保持", previous: "戻る", draftSchemaError: "この下書きは現在のサービス形式に対応していません。", draftRestoreError: "安全に復元できない下書きです。不足情報を推測せず、最初からやり直してください。", draftAbandonError: "以前の下書きを破棄できませんでした。もう一度お試しください。", uploadWait: "すべての写真のアップロードが終わってから公開してください。", profileRequired: "サービスを公開する前にサービスプロフィールを作成してください。", publishError: "サービスを公開できませんでした。サーバーの下書きは残っています。必須項目を確認して再試行してください。",
-      modes: { HOME_VISIT: "訪問ケア", BOARDING: "ホームステイ", CUSTOM: "カスタムサービス" },
+      modes: { HOME_VISIT: "訪問ケア", BOARDING: "ペット預かり", CUSTOM: "カスタムケア" },
       serviceTitle: "サービス名", description: "経験とサービス紹介", radius: "対応範囲（km）", optionalRadius: "対応範囲（km・任意）", maxPets: "同時に受け入れるペット数", capacityHelp: "容量は予約数ではなくペット数で数えます。", residentPets: "同居ペット", environment: "預かり環境", suppliedItems: "用意できる物（1行に1つ）", acceptedPolicies: "対応できるペット条件", petType: "ペットの種類", size: "大きさ", age: "年齢", addPolicy: "条件を追加", removePolicy: "削除", whatProvide: "提供するお世話", category: "カテゴリ", service: "サービス", details: "詳細", add: "追加", mapLocation: "サービスの地図上の位置", newMapPoint: "下に新しい地図上の位置を入力", savedMapPoint: "保存した地図上の位置", latitude: "緯度", longitude: "経度", broadArea: "おおよその地域（任意）", locationPrivacy: "保存するのは地図座標と任意のおおよその地域だけです。自宅の正確な住所文字列は収集しません。新しい位置は公開成功後にサービスプロフィールの既定値になります。", weeklyAvailability: "毎週の対応可能日", publicHolidays: "祝日も対応", dateRanges: "追加の日付範囲", from: "開始", to: "終了", addRange: "範囲を追加", dateExceptions: "例外日", date: "日付", status: "状態", unavailable: "対応不可", available: "対応可", note: "メモ", currency: "通貨", priceLabel: "料金名", amount: "金額", discountLabel: "割引名（任意）", percent: "割引率（1～100）", priceDefaultHelp: "選択した通貨は、公開に成功した後に今後のサービス作成の既定値になります。各サービスで変更もできます。", mode: "種類", notSelected: "未選択", title: "タイトル", notSet: "未設定", location: "場所", mapPoint: "地図上の位置", petPolicies: "ペット条件", offerings: "提供内容", availabilityRules: "受付条件", priceRules: "料金ルール", environmentPhotos: "環境写真", experiencePhotos: "経験写真", optionalFiles: "任意。サーバーが公開を確認するまでファイルは一時保存です。", completeSteps: "公開前に、強調表示された手順を完了してください。", publish: "サービスを公開", publishing: "公開中…", published: "公開済み", updated: "サービスを更新しました", publishedSuccess: "サービスを公開しました", serverConfirmed: "サーバーが公開を確認しました。場所と通貨の既定値は処理成功後にのみ保存されます。", continueDraft: "サービスの下書きを続けますか？", draftAvailable: "保存されたサービスの下書きがあります。続けるか、最初から始められます。", startFresh: "最初から", resumeDraft: "下書きを続ける", openMatching: "マッチングセンターを開く", serviceId: "サービス", emailNotifications: "新着メール通知を有効にする",
     },
     marketplace: {
@@ -118,7 +118,7 @@ export const ja = {
       minimumPrice: "最低料金", maximumPrice: "最高料金", availableFrom: "開始日", availableBefore: "終了日", availableOn: "対応可能日", dates: "日付", clear: "クリア", done: "完了", applyFilters: "適用", dateRangeError: "開始日は終了日より前にしてください。",
       radius: "範囲", searchRadius: "検索範囲", locationUnavailable: "このブラウザでは現在地を利用できません。", locationDenied: "現在地を取得できませんでした。他の条件はそのまま利用できます。",
       needEyebrow: "近くの依頼", needTitle: "ペットケアの依頼を探す", needIntro: "ログインせずに閲覧できます。自宅の正確な住所や非公開のお世話メモは表示されません。",
-      searchingNeeds: "依頼を検索中…", needsError: "依頼を読み込めませんでした。条件を確認してもう一度お試しください。", noNeeds: "該当する依頼はありません", requestImage: "お世話の依頼", open: "募集中", pet: "匹", petsCount: "匹", petTotal: "ペット{n}匹", careTime: "お世話の日时", careLocation: "エリア", careFor: "お世話する対象", careDetails: "お世話の詳細を見る", publisher: "投稿者", daysTotal: "{n}日間", dailyVisits: "1日{n}回", visitsTotal: "全{n}回の訪問", totalBudget: "総予算", viewRequestAndApply: "詳細を見て応募", saveRequest: "依頼を保存", locationSearchPlaceholder: "エリア・駅名で検索", currentLocation: "現在地", searchingAround: "25 km 以内の依頼を表示：", requestResults: "依頼の検索結果", mapTitle: "地図上の依頼", approximateLocation: "おおよそのエリア", selectedLocation: "選択した場所", needMapLocation: "依頼の場所", mapPrivacyHelp: "依頼マーカーは意図的にずらし、おおよそのエリアだけを表示します。", breadcrumbLabel: "パンくずリスト", breadcrumbHome: "ホーム", breadcrumbNeeds: "お世話の依頼",
+      searchingNeeds: "依頼を検索中…", needsError: "依頼を読み込めませんでした。条件を確認してもう一度お試しください。", noNeeds: "該当する依頼はありません", requestImage: "お世話の依頼", open: "募集中", pet: "匹", petsCount: "匹", petTotal: "ペット{n}匹", careTime: "お世話の日時", careLocation: "エリア", careFor: "お世話する対象", careDetails: "お世話の詳細を見る", publisher: "投稿者", daysTotal: "{n}日間", dailyVisits: "1日{n}回", visitsTotal: "全{n}回の訪問", totalBudget: "総予算", viewRequestAndApply: "詳細を見る", saveRequest: "依頼を保存", locationSearchPlaceholder: "エリア・駅名で検索", currentLocation: "現在地", searchingAround: "25 km 以内の依頼を表示：", requestResults: "依頼の検索結果", mapTitle: "地図上の依頼", approximateLocation: "おおよそのエリア", selectedLocation: "選択した場所", needMapLocation: "依頼の場所", mapPrivacyHelp: "依頼マーカーは意図的にずらし、おおよそのエリアだけを表示します。", breadcrumbLabel: "パンくずリスト", breadcrumbHome: "ホーム", breadcrumbNeeds: "お世話の依頼",
       areaUnavailable: "エリア確認中",
       showMap: "地図を表示", showList: "リストを表示", resultsCount: "全{n}件の依頼", clearAllFilters: "条件をクリア",
       nightsTotal: "全{n}泊", radiusWithin: "以内",
@@ -202,7 +202,7 @@ export const ja = {
           includes: "日程、訪問回数、ペット情報、生活習慣、場所、料金などを設定できます。",
         },
         {
-          title: "ホームステイ",
+          title: "ペット預かり",
           text: "シッターの自宅で預かるサービスです。滞在期間や必要な環境を事前に分かりやすく共有できます。",
           includes: "滞在日、送迎、住環境、ペット情報、1日あたりの料金などを設定できます。",
         },
@@ -344,7 +344,7 @@ export const ja = {
             },
             {
               title: "サービスを作成・更新",
-              desc: "訪問、ホームステイ、カスタムケアを登録し、場所が変わっても同じ内容を更新して使えます。",
+              desc: "訪問、ペット預かり、カスタムケアを登録し、場所が変わっても同じ内容を更新して使えます。",
             },
             {
               title: "いつでも停止・再開",

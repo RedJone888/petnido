@@ -8,11 +8,12 @@ import {
 } from "@/server/validation/profile-session";
 import { getServerUserContext } from "@/server/validation/server-user-context";
 
-export default async function EditNeedPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function EditNeedPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const { userId, prisma } = await getServerUserContext();
   if (!userId) {
     redirect(`/auth/sign-in?returnTo=${encodeURIComponent(`/needs/edit/${params.id}`)}`);
@@ -28,7 +29,7 @@ export default async function EditNeedPage({
   if (need.state !== "OPEN" && need.state !== "CLOSED") {
     redirect("/dashboard/needs");
   }
-  const validationCookie = cookies().get(validationProfileCookie)?.value;
+  const validationCookie = (await cookies()).get(validationProfileCookie)?.value;
   const validationProfileSession =
     validationProfileEnabled() &&
     validationCookie === process.env.VALIDATION_TEST_TOKEN;

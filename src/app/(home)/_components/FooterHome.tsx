@@ -117,8 +117,8 @@ export default function FooterHome() {
               title={text.explore}
               links={[
                 { label: text.need, href: `${publicPrefix}/needs` },
-                { label: text.sitter, href: `${publicPrefix}/services` },
-                { label: text.knowledge, href: `${publicPrefix}/knowledge` },
+                { label: `${text.sitter} · ${lang === "ja" ? "開発中" : lang === "zh" ? "开发中" : "In development"}`,  href: `${publicPrefix}/services` },
+                { label: `${text.knowledge} · ${lang === "ja" ? "開発中" : lang === "zh" ? "开发中" : "In development"}`,  href: `${publicPrefix}/knowledge` },
               ]}
             />
           </div>

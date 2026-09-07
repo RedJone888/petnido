@@ -6,7 +6,7 @@
 
 [公開サイト](https://www.petnido.net)
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-5.14-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
 ![Languages](https://img.shields.io/badge/i18n-English%20%7C%20中文%20%7C%20日本語-6D4AFF?style=flat-square)
@@ -199,7 +199,7 @@ PetNido は、SNSで繰り返し見られるペットケアの依頼を、訪問
 
 | レイヤー | 技術 |
 | --- | --- |
-| Web | Next.js 14.2、React 18、App Router |
+| Web | Next.js 15.5.24、React 18、App Router |
 | 開発言語 | TypeScript 5.4 |
 | API・サーバー状態 | tRPC 10、TanStack Query |
 | データベース | PostgreSQL、Prisma 5.14 |
@@ -215,6 +215,8 @@ PetNido は、SNSで繰り返し見られるペットケアの依頼を、訪問
 ## 公開サイト
 
 現在の本番サイトは [https://www.petnido.net](https://www.petnido.net) で公開しています。
+
+掲載中の依頼は開発者が作成したデモ用データです。実際の利用者による募集・取引実績ではありません。
 
 ## 開発者
 

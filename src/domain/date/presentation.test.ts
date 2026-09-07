@@ -37,3 +37,11 @@ describe("date presentation", () => {
     expect(en).toContain("Aug 27, 2026");
   });
 });
+
+it("shows both years in a cross-year request", () => {
+  for (const lang of ["en", "ja", "zh"] as const) {
+    const result = formatDateSpan("2026-12-30", "2027-01-03", lang);
+    expect(result).toContain("2026");
+    expect(result).toContain("2027");
+  }
+});

@@ -11,7 +11,7 @@ import { auth } from "@/modules/auth";
 import type { Session } from "next-auth";
 export const metadata: Metadata = {
   title: "PetNido",
-  description: "ペットシッターのマッチングサービス",
+  description: "ペットのお世話依頼を作成・閲覧できる開発プレビュー。サービス出品・応募・チャットは開発中です。",
   // icons: {
   //   icon: [
   //     { url: "/favicon.ico" },
@@ -27,7 +27,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const validationCookie = cookies().get(validationProfileCookie)?.value;
+  const validationCookie = (await cookies()).get(validationProfileCookie)?.value;
   const validationProfileSession = validationProfileEnabled() && validationCookie === process.env.VALIDATION_TEST_TOKEN;
   const initialSession: Session | null = validationProfileSession
     ? {

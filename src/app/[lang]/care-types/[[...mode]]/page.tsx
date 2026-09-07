@@ -16,7 +16,8 @@ function selectedMode(value?: string[]): CareMode | null | "INVALID" {
   return value[0] as CareMode;
 }
 
-export function generateMetadata({ params }: { params: { lang: string; mode?: string[] } }): Metadata {
+export async function generateMetadata(props: { params: Promise<{ lang: string; mode?: string[] }> }): Promise<Metadata> {
+  const params = await props.params;
   if (!isSupportedLanguage(params.lang)) return {};
   const mode = selectedMode(params.mode);
   if (mode === "INVALID") return {};
@@ -24,7 +25,8 @@ export function generateMetadata({ params }: { params: { lang: string; mode?: st
   return localizedPageMetadata(mode ? modePages[mode] : "care-types", params.lang, path);
 }
 
-export default function LocalizedCareTypesPage({ params }: { params: { lang: string; mode?: string[] } }) {
+export default async function LocalizedCareTypesPage(props: { params: Promise<{ lang: string; mode?: string[] }> }) {
+  const params = await props.params;
   if (!isSupportedLanguage(params.lang)) notFound();
   const mode = selectedMode(params.mode);
   if (mode === "INVALID") notFound();

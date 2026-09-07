@@ -16,10 +16,8 @@ function isConnectableProvider(value: string): value is ConnectableOAuthProvider
   return value === "google" || value === "line";
 }
 
-export async function POST(
-  _request: Request,
-  { params }: { params: { provider: string } },
-) {
+export async function POST(_request: Request, props: { params: Promise<{ provider: string }> }) {
+  const params = await props.params;
   if (!isConnectableProvider(params.provider)) {
     return NextResponse.json({ error: "PROVIDER_NOT_SUPPORTED" }, { status: 404 });
   }

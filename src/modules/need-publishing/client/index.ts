@@ -8,10 +8,6 @@ export { NeedMapPicker } from "./need-map-picker";
 export { useNeedDraftV2Persistence } from "./use-need-draft-v2-persistence";
 
 export {
-  RequestDetailPreview,
-  RequestDetailView,
-} from "./preview/request-detail-preview";
-export {
   NEED_DRAFT_STORAGE_KEY,
   NEED_ENTRY_STORAGE_KEY,
   NEED_PREVIEW_STORAGE_KEY,

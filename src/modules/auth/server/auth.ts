@@ -24,9 +24,9 @@ function oauthConnectError(provider: ConnectableOAuthProvider, code: string) {
   return `/auth/link-account?connectProvider=${provider}&connectError=${encodeURIComponent(code)}`;
 }
 
-function clearOAuthConnectCookie(provider: ConnectableOAuthProvider) {
+async function clearOAuthConnectCookie(provider: ConnectableOAuthProvider) {
   try {
-    cookies().set(oauthConnectCookie(provider), "", {
+    (await cookies()).set(oauthConnectCookie(provider), "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -124,9 +124,9 @@ const nextAuth = NextAuth({
 
       if (account.provider === "google" || account.provider === "line") {
         const provider = account.provider;
-        const connectToken = cookies().get(oauthConnectCookie(provider))?.value;
+        const connectToken = (await cookies()).get(oauthConnectCookie(provider))?.value;
         if (connectToken) {
-          clearOAuthConnectCookie(provider);
+          await clearOAuthConnectCookie(provider);
           if (provider === "line") {
             try {
               const result = await connectLineFromIntent({

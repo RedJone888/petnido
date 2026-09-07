@@ -47,6 +47,8 @@ export function useNeedDraftV2Persistence({
   const utils = trpc.useUtils();
   const abandonMutation = trpc.publishDraft.abandon.useMutation();
   const createEditDraftMutation = trpc.needV2.createEditDraft.useMutation();
+  const createEditDraftMutationRef = useRef(createEditDraftMutation);
+  createEditDraftMutationRef.current = createEditDraftMutation;
   const latestSnapshotRef = useRef(snapshot);
   const serverDraftIdRef = useRef<string | null>(
     validDraftId(snapshot?.serverDraftId),
@@ -120,7 +122,7 @@ export function useNeedDraftV2Persistence({
       if (!initializedRef.current) {
         const requestedId = id;
         const created = editingNeedId
-          ? await createEditDraftMutation.mutateAsync({
+          ? await createEditDraftMutationRef.current.mutateAsync({
               id,
               needId: editingNeedId,
               mode: command.mode!,
@@ -162,7 +164,7 @@ export function useNeedDraftV2Persistence({
       }
       return savedDraft;
     },
-    [commandFor, createEditDraftMutation, editingNeedId, onServerDraftId],
+    [commandFor, editingNeedId, onServerDraftId],
   );
 
   const enqueue = useCallback(

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { enUS, ja, zhCN } from "date-fns/locale";
+import { calendarLabels } from "@/components/ui/calendar-labels";
 import { DayPicker } from "react-day-picker";
 import { PiCaretLeft, PiCaretRight, PiClock } from "react-icons/pi";
 
@@ -76,7 +78,7 @@ export function NeedCalendarView({
       ) : (
         <button
           type="button"
-          aria-label="Previous month"
+          aria-label={lang === "ja" ? "前の月" : lang === "zh" ? "上个月" : "Previous month"}
           disabled={!canGoPrevious}
           onClick={() => changeMonth(-1)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[#514956] transition hover:bg-[var(--primary-subtle)] hover:text-[var(--primary)] disabled:pointer-events-none disabled:opacity-25"
@@ -90,7 +92,7 @@ export function NeedCalendarView({
       ) : (
         <button
           type="button"
-          aria-label="Next month"
+          aria-label={lang === "ja" ? "次の月" : lang === "zh" ? "下个月" : "Next month"}
           disabled={!canGoNext}
           onClick={() => changeMonth(1)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[#514956] transition hover:bg-[var(--primary-subtle)] hover:text-[var(--primary)] disabled:pointer-events-none disabled:opacity-25"
@@ -107,6 +109,8 @@ export function NeedCalendarView({
       <div className="w-full">
         {MonthNavHeader}
         <DayPicker
+          labels={calendarLabels(lang)}
+          locale={{ en: enUS, ja, zh: zhCN }[lang]}
           key={`boarding-${item.startsAt}:${item.endsAt}`}
           mode="range"
           month={calendarMonth}
@@ -185,6 +189,8 @@ export function NeedCalendarView({
       <div className="w-full">
         {MonthNavHeader}
         <DayPicker
+          labels={calendarLabels(lang)}
+          locale={{ en: enUS, ja, zh: zhCN }[lang]}
           key={`visit-${item.startsAt}:${item.endsAt}`}
           mode="single"
           month={calendarMonth}
@@ -252,6 +258,8 @@ export function NeedCalendarView({
     <div className="w-full">
       {MonthNavHeader}
       <DayPicker
+          labels={calendarLabels(lang)}
+          locale={{ en: enUS, ja, zh: zhCN }[lang]}
         key={`custom-${item.startsAt}:${item.endsAt}`}
         mode="range"
         month={calendarMonth}

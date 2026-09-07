@@ -1,8 +1,5 @@
 import { redirect } from "next/navigation";
-export default function ServiceEditPage({
-  params: _params,
-}: {
-  params: { id: string };
-}) {
+
+export default function ServiceEditPage() {
   redirect("/dashboard/serviceprofile");
 }

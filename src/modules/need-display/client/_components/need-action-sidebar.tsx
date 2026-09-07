@@ -373,7 +373,7 @@ export function NeedActionSidebar({
                 onClick={() => setDevModalType("apply")}
                 className="flex min-h-11 w-full items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#5d35be] active:scale-[0.99] transition text-center cursor-pointer"
               >
-                {displayCopy.apply}
+                {displayCopy.apply} · {lang === "ja" ? "開発中" : lang === "zh" ? "开发中" : "In development"}
               </button>
             ) : null}
 

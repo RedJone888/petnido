@@ -105,7 +105,7 @@ export function GuidedNeedFlowLayout({
 }) {
   const [mobileStepsOpen, setMobileStepsOpen] = useState(false);
   const mobileStepsRef = useRef<HTMLDivElement | null>(null);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const needMessages = useNeedPublishingMessages();
   const copy = needMessages.needPublishing;
   const illustration = stepIllustrations[currentId] ?? {

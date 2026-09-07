@@ -19,6 +19,7 @@ export function formatMoneyAmount(
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
+    currencyDisplay: "code",
     maximumFractionDigits: divisor === 1 ? 0 : 2,
   }).format(amount / divisor);
 }

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useLanguage } from "@/components/providers/language-provider";
+import { getNeedPublishingMessages } from "@/modules/need-publishing/i18n/messages";
 import { messages } from "@/i18n/messages";
 import cn from "@/lib/cn";
 import { trpc } from "@/utils/trpc";
@@ -33,9 +34,9 @@ const copy = {
     intro:
       "Whether you're traveling, working late, or just need a hand, post your custom pet care needs anytime. Love animals? Become a local sitter, share your care, and earn on your schedule.",
     post: "Post a care request",
-    postService: "Publish a care service",
+    postService: "Publish a care service · In development",
     heroPost: "Post your need",
-    earn: "Earn as a sitter",
+    earn: "Earn as a sitter · In development",
     trustProfile: "Clear sitter profiles",
     trustTalk: "Talk before deciding",
     communityTitle: "Two Roles, One Account · Fast Reposting",
@@ -43,7 +44,7 @@ const copy = {
     featureReuse: "One-click reuse: Start from a past post and edit only what changed.",
     browseRequestsTitle: "Browse Care Requests",
     browseRequestsDesc: "Check out pets around you that need care and see where you can lend a hand.",
-    browseServicesTitle: "Browse Care Services",
+    browseServicesTitle: "Browse Care Services · In development",
     browseServicesDesc: "Explore the care and sitting services offered by pet lovers in your area.",
     needTitle: "Post your first pet care request in minutes",
     needEyebrow: "Post a need",
@@ -58,19 +59,20 @@ const copy = {
     needsTitle: "See what pets nearby need",
     needsText:
       "Browse active care requests recently posted by pet owners in the community.",
+    needsDemoNote: "The requests shown here were created by the developer for demonstration. They are not real customer requests or transaction records.",
     needsError:
       "Care requests are temporarily unavailable. Please try again shortly.",
     compare: "Compare all care types",
     sitterTitle: "See what sitters nearby offer",
     sitterText:
       "Browse pet care services and sitting plans offered by neighbors in the community.",
-    browseServices: "Browse Care Services",
+    browseServices: "Browse Care Services · In development",
     howService: "How to publish a service",
     serviceDevBadge: "In Development",
     finalTitle: "Need help today—or ready to help a neighbor?",
     finalText: "Use the same PetNido account on either side of the community.",
     browseNeeds: "Browse Care Requests",
-    findSitter: "Find a sitter",
+    findSitter: "Find a sitter · In development",
   },
   zh: {
     eyebrow: "即使你不在，照护也不会中断",
@@ -78,9 +80,9 @@ const copy = {
     intro:
       "无论是外出旅行、忙碌加班还是日常需要帮手，随时发布专属的宠物照护需求；有空时也能成为宠物照护人，用爱心陪伴附近的毛孩子并赚取收益。",
     post: "发布照护需求",
-    postService: "发布照护服务",
+    postService: "发布照护服务 · 开发中",
     heroPost: "立即发布需求",
-    earn: "成为宠物照护人，开启接单",
+    earn: "成为宠物照护人，开启接单 · 开发中",
     trustProfile: "详尽的个人专长与照护档案",
     trustTalk: "需求先沟通，双方合意再确认",
     communityTitle: "一个账号，两种角色 · 历史发布一键复用",
@@ -90,7 +92,7 @@ const copy = {
       "一键复用：以过往的需求或服务为模板，只需修改有变化的内容，即可再次发布。",
     browseRequestsTitle: "浏览照护需求",
     browseRequestsDesc: "浏览附近宠物主人发布的照护需求，发现可以帮上忙的机会。",
-    browseServicesTitle: "浏览照护服务",
+    browseServicesTitle: "浏览照护服务 · 开发中",
     browseServicesDesc: "浏览附近爱宠人士提供的宠物照护服务，找到适合的选择。",
     needTitle: "几分钟内发布第一条宠物照护需求",
     needEyebrow: "发布需求",
@@ -103,18 +105,19 @@ const copy = {
       "查看响应，选择合适的照护人",
     ],
     needsTitle: "看看附近的宠物需要什么",
-    needsText: "浏览宠物主人最近在社区发布的真实照护需求。",
+    needsText: "浏览宠物主人最近在社区发布的照护需求。",
+    needsDemoNote: "当前展示的需求由开发者创建，用于功能演示，不代表真实用户募集或交易记录。",
     needsError: "暂时无法加载照护需求，请稍后再试。",
     compare: "比较三种照护方式",
     sitterTitle: "看看身边的照护人提供什么",
     sitterText: "浏览爱宠人士最近在社区提供的精选照护服务。",
-    browseServices: "浏览照护服务",
+    browseServices: "浏览照护服务 · 开发中",
     howService: "如何发布服务",
     serviceDevBadge: "功能开发中",
     finalTitle: "今天需要帮助，还是刚好有空帮助邻居？",
     finalText: "同一个 PetNido 账号，可以在社区的两端自由切换。",
     browseNeeds: "浏览照护需求",
-    findSitter: "寻找宠物照护人",
+    findSitter: "寻找宠物照护人 · 开发中",
   },
   ja: {
     eyebrow: "離れている間も、いつものお世話を",
@@ -122,9 +125,9 @@ const copy = {
     intro:
       "旅行や出張、急な予定や日常のお世話まで、いつでも気軽にケアを依頼。時間に余裕があるときはシッターとして、近所のペットを見守りながら収入を得られます。",
     post: "お世話の依頼を投稿",
-    postService: "お世話サービスを出品",
+    postService: "お世話サービスを出品 · 開発中",
     heroPost: "依頼を投稿",
-    earn: "シッターとして収入を得る",
+    earn: "シッターとして収入を得る · 開発中",
     trustProfile: "得意分野と経験がわかる詳細プロフィール",
     trustTalk: "相談から始まる、安心のお世話体験",
     communityTitle: "依頼もシッターも、ひとつのアカウントで。再投稿もかんたん",
@@ -133,7 +136,7 @@ const copy = {
     browseRequestsTitle: "お世話の依頼を見る",
     browseRequestsDesc:
       "近くで募集中のお世話依頼を見て、力になれそうなものを探してみましょう。",
-    browseServicesTitle: "お世話のサービスを探す",
+    browseServicesTitle: "お世話のサービスを探す · 開発中",
     browseServicesDesc:
       "近所のペット好きが提供するサービスから、ぴったりのお世話を見つけましょう。",
     needTitle: "数分で最初のお世話依頼を投稿",
@@ -149,19 +152,20 @@ const copy = {
     needsTitle: "近くのペットが必要としていること",
     needsText:
       "ペットオーナーがコミュニティに最近投稿した、公開中のお世話依頼です。",
+    needsDemoNote: "掲載中の依頼は開発者が作成したデモ用データです。実際の利用者による募集・取引実績ではありません。",
     needsError:
       "お世話依頼を一時的に読み込めません。しばらくしてからもう一度お試しください。",
     compare: "3つのお世話方法を比べる",
     sitterTitle: "近くのシッターができること",
     sitterText:
       "ペットシッターがコミュニティで提供している、安心のお世話サービスです。",
-    browseServices: "お世話サービスを見る",
+    browseServices: "お世話サービスを見る · 開発中",
     howService: "サービスの公開方法",
     serviceDevBadge: "機能開発中",
     finalTitle: "今日は助けが必要？それとも近所を助けたい？",
     finalText: "同じ PetNido アカウントで、どちらの役割も始められます。",
     browseNeeds: "お世話の依頼を見る",
-    findSitter: "シッターを探す",
+    findSitter: "シッターを探す · 開発中",
   },
 } as const;
 
@@ -201,7 +205,7 @@ const careTypes = [
   },
   {
     slug: "boarding",
-    title: { en: "Pet boarding", zh: "家庭寄养", ja: "ペット預かり" },
+    title: { en: "Pet boarding", zh: "宠物寄养", ja: "ペット預かり" },
     label: {
       en: "Your pet stays in a sitter's home and receives care throughout the day and night.",
       zh: "宠物住在服务者家中，获得全天候的照料与陪伴。",
@@ -483,7 +487,7 @@ export function MarketplaceHome() {
                     <div className="relative aspect-square overflow-hidden rounded-[13px]">
                       <Image
                         src={care.image}
-                        alt={care.title[lang]}
+                        alt={getNeedPublishingMessages(lang).needPublishing.careTypes[care.slug === "home-visits" ? "visit" : care.slug === "boarding" ? "boarding" : "custom"].title}
                         fill
                         sizes="118px"
                         className="object-cover"
@@ -491,7 +495,7 @@ export function MarketplaceHome() {
                     </div>
                     <div className="min-w-0 pr-2">
                       <h3 className="text-base font-bold leading-5 text-[#392847] md:text-lg">
-                        {care.title[lang]}
+                        {getNeedPublishingMessages(lang).needPublishing.careTypes[care.slug === "home-visits" ? "visit" : care.slug === "boarding" ? "boarding" : "custom"].title}
                       </h3>
                       <p className="mt-1.5 max-w-sm text-xs leading-5 text-[#706a78]">
                         {care.label[lang]}
@@ -534,6 +538,9 @@ export function MarketplaceHome() {
               </h2>
               <p className="mt-3 text-sm sm:text-base leading-relaxed text-[#706a78]">
                 {text.needsText}
+                <span className="mt-1 block text-xs leading-relaxed">
+                  {text.needsDemoNote}
+                </span>
               </p>
             </div>
             <Link

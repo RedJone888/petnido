@@ -10,12 +10,13 @@ import {
 import { messages } from "@/i18n/messages";
 import type { Lang } from "@/domain/lang/types";
 
-export default function PendingActionStartPage({
-  searchParams,
-}: {
-  searchParams: { action?: string; targetId?: string; returnTo?: string };
-}) {
-  const cookieLang = cookies().get("petnido_lang")?.value;
+export default async function PendingActionStartPage(
+  props: {
+    searchParams: Promise<{ action?: string; targetId?: string; returnTo?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const cookieLang = (await cookies()).get("petnido_lang")?.value;
   const lang: Lang = cookieLang === "zh" || cookieLang === "ja" ? cookieLang : "en";
   const copy = messages[lang].core.pendingAction;
   const parsed = pendingActionStartSchema.safeParse(searchParams);

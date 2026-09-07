@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { Lang } from "@/domain/lang/types";
 import { messages } from "@/i18n/messages";
@@ -13,12 +14,24 @@ const LanguageContext = createContext<{
 } | null>(null);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+  const pathname = usePathname();
+  const [lang, setLangState] = useState<Lang>(() => (/^\/(en|zh|ja)(?:\/|$)/.exec(pathname)?.[1] as Lang | undefined) ?? "en");
   const { status } = useSession();
   const { mutate: savePreferredLocale } =
     trpc.profile.setPreferredLocale.useMutation();
 
   useEffect(() => {
+    const routeLang = /^\/(en|zh|ja)(?:\/|$)/.exec(pathname)?.[1] as Lang | undefined;
+    if (routeLang) {
+      setLangState(routeLang);
+      try {
+        localStorage.setItem("lang", routeLang);
+      } catch {
+        // Persist with a cookie when browser storage is restricted.
+      }
+      document.cookie = `petnido_lang=${routeLang}; path=/; max-age=31536000; samesite=lax`;
+      return;
+    }
     let saved: Lang | null = null;
     try {
       saved = localStorage.getItem("lang") as Lang | null;
@@ -31,7 +44,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (saved === "en" || saved === "zh" || saved === "ja") {
       setLangState(saved);
     }
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     document.documentElement.lang = lang;

@@ -5,10 +5,12 @@ import { Sparkles } from "lucide-react";
 import { usePageLanguage } from "@/components/providers/language-provider";
 import type { Lang } from "@/domain/lang/types";
 
-type MarketplaceKind = "services" | "providers";
+type MarketplaceKind = "services" | "providers" | "knowledge";
 
 const copy = {
   en: {
+    knowledge: "Care knowledge",
+    knowledgeDescription: "The knowledge library is being prepared and is not available in this preview.",
     services: "Care services",
     providers: "Sitters",
     title: "Coming soon",
@@ -18,6 +20,8 @@ const copy = {
       "Sitter browsing is currently under development. Stay tuned!",
   },
   zh: {
+    knowledge: "照护知识",
+    knowledgeDescription: "知识库的内容与布局仍在整理，暂不开放展示。",
     services: "照护服务",
     providers: "Sitter",
     title: "正在开发中",
@@ -25,6 +29,8 @@ const copy = {
     providersDescription: "Sitter 浏览功能正在开发中，敬请期待！",
   },
   ja: {
+    knowledge: "お世話の知識",
+    knowledgeDescription: "知識ページの内容とレイアウトを準備中です。このプレビューでは公開していません。",
     services: "お世話サービス",
     providers: "シッター",
     title: "現在開発中です",
@@ -45,7 +51,7 @@ export function MarketplaceComingSoon({
   const lang = usePageLanguage(initialLanguage);
   const text = copy[lang];
   const description =
-    kind === "services" ? text.servicesDescription : text.providersDescription;
+    kind === "knowledge" ? text.knowledgeDescription : kind === "services" ? text.servicesDescription : text.providersDescription;
 
   return (
     <main className="flex min-h-[calc(100vh-5rem)] items-center justify-center bg-[#fffdf9] px-5 py-16">

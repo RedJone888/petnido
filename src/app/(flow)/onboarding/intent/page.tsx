@@ -5,7 +5,8 @@ import { IntentForm } from "@/modules/onboarding/client/intent-form";
 import { OnboardingShell } from "@/modules/onboarding/client/onboarding-shell";
 import { getServerUserContext } from "@/server/validation/server-user-context";
 
-export default async function OnboardingIntentPage({ searchParams }: { searchParams: { returnTo?: string } }) {
+export default async function OnboardingIntentPage(props: { searchParams: Promise<{ returnTo?: string }> }) {
+  const searchParams = await props.searchParams;
   const { userId, prisma } = await getServerUserContext();
   if (!userId) redirect("/");
   const profile = await prisma.profile.findUnique({ where: { userId }, select: { onboardingStep: true } });

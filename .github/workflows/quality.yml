@@ -11,13 +11,15 @@ jobs:
     timeout-minutes: 20
     env:
       DATABASE_URL: postgresql://user:pass@localhost:5432/petnido_validation
-      NEXTAUTH_SECRET: ci-only-not-a-real-secret-ci-only
-      NEXTAUTH_URL: http://127.0.0.1:3000
+      AUTH_SECRET: ci-only-auth-secret-not-for-deployment-0123456789
+      AUTH_RATE_LIMIT_SECRET: ci-only-rate-limit-secret-not-for-deployment-0123456789
+      PENDING_ACTION_SECRET: ci-only-pending-action-secret-not-for-deployment-0123456789
+      AUTH_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.19.1
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run quality

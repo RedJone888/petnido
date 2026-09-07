@@ -29,6 +29,7 @@ export function StepCareType({
           <button
             type="button"
             key={type}
+            aria-pressed={selected}
             onClick={() => onChange(type)}
             className={cn(
               "flex w-full items-center gap-4 rounded-[16px] border p-4 text-left transition md:p-5",

@@ -5,11 +5,12 @@ import { listPublicNeeds } from "@/validation/vertical-slice/service";
 
 export const dynamic = "force-dynamic";
 
-export default async function ValidationVerticalSlicePage({
-  searchParams,
-}: {
-  searchParams: { now?: string };
-}) {
+export default async function ValidationVerticalSlicePage(
+  props: {
+    searchParams: Promise<{ now?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   if (process.env.NODE_ENV === "production" || process.env.FEATURE_VERTICAL_SLICE !== "true") notFound();
   const now = searchParams.now ? new Date(searchParams.now) : new Date();
   const needs = await listPublicNeeds(validationPrisma, now);

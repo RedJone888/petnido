@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, use } from "react";
 
 import { trpc } from "@/utils/trpc";
 import { useLanguage } from "@/components/providers/language-provider";
 
 function currentMonth() { return new Date().toISOString().slice(0, 7); }
 
-export default function ServiceCalendarPage({ params }: { params: { id: string } }) {
+export default function ServiceCalendarPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { t } = useLanguage();
   const copy = t.core.serviceDashboard;
   const [month, setMonth] = useState(currentMonth);

@@ -33,7 +33,7 @@ describe("Need Pricing Domain Engine", () => {
     expect(pricing.isEstimateReady).toBe(true);
     expect(pricing.isNegotiable).toBe(true);
 
-    expect(formatNeedEstimatedBadge(pricing)).toBe("¥51,200");
+    expect(formatNeedEstimatedBadge(pricing)).toBe("JPY\u00a051,200");
   });
 
   it("calculates exact home visit with fixed travel fee allowance", () => {
@@ -65,7 +65,7 @@ describe("Need Pricing Domain Engine", () => {
     expect(pricing.careFeeSubtotalMinor).toBe(8000);
     expect(pricing.travelFeeSubtotalMinor).toBe(2000);
     expect(pricing.estimatedTotalMinMinor).toBe(10000);
-    expect(formatNeedEstimatedBadge(pricing)).toBe("¥10,000");
+    expect(formatNeedEstimatedBadge(pricing)).toBe("JPY\u00a010,000");
   });
 
   it("calculates range boarding pricing correctly", () => {
@@ -93,7 +93,7 @@ describe("Need Pricing Domain Engine", () => {
     expect(pricing.careFeeMaxSubtotalMinor).toBe(40000);
     expect(pricing.estimatedTotalMinMinor).toBe(31000);
     expect(pricing.estimatedTotalMaxMinor).toBe(41000);
-    expect(formatNeedEstimatedBadge(pricing)).toBe("¥31,000 – ¥41,000");
+    expect(formatNeedEstimatedBadge(pricing)).toBe("JPY\u00a031,000 – JPY\u00a041,000");
   });
 
   it("handles open to offers / discuss later", () => {

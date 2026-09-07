@@ -33,8 +33,8 @@ export default function Navbar() {
   const publicPrefix = `/${lang}`;
   const links = [
     { href: `${publicPrefix}/needs`, label: t.nav.needs, icon: MessageCircleQuestion },
-    { href: `${publicPrefix}/services`, label: t.nav.services, icon: HandHelping },
-    { href: `${publicPrefix}/knowledge`, label: t.nav.knowledge, icon: NotebookText },
+    { href: `${publicPrefix}/services`, label: `${t.nav.services} · ${lang === "ja" ? "開発中" : lang === "zh" ? "开发中" : "In development"}`,  icon: HandHelping },
+    { href: `${publicPrefix}/knowledge`, label: `${t.nav.knowledge} · ${lang === "ja" ? "開発中" : lang === "zh" ? "开发中" : "In development"}`,  icon: NotebookText },
   ];
   const handleUserMenuOpen: React.Dispatch<React.SetStateAction<boolean>> = (next) => {
     const open = typeof next === "function" ? next(userMenuOpen) : next;

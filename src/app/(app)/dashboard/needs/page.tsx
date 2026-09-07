@@ -2,11 +2,12 @@ import { auth } from "@/modules/auth";
 import { NeedV2List } from "./_components/NeedV2List";
 import { NeedDashboardSignIn, NeedDraftPanel } from "./_components/NeedDraftList";
 
-export default async function NeedsPage({
-  searchParams,
-}: {
-  searchParams?: { tab?: string };
-}) {
+export default async function NeedsPage(
+  props: {
+    searchParams?: Promise<{ tab?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await auth();
   if (!session?.user?.id) {
     return <NeedDashboardSignIn />;

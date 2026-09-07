@@ -1,4 +1,5 @@
-"use client";
+"use client";;
+import { use } from "react";
 
 import Link from "next/link";
 
@@ -6,7 +7,8 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { AppImage } from "@/components/ui/app-image";
 import { trpc } from "@/utils/trpc";
 
-export default function ServiceV2DetailPage({ params }: { params: { id: string } }) {
+export default function ServiceV2DetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const { t } = useLanguage();
   const copy = t.core.serviceDashboard;
   const service = trpc.serviceV2.getMine.useQuery({ id: params.id });

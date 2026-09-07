@@ -13,11 +13,13 @@ const now = new Date("2026-08-01T00:00:00.000Z");
 
 async function reset() {
   await prisma.serviceV2.deleteMany();
+  await prisma.needV2.deleteMany();
   await prisma.locationSnapshotV2.deleteMany();
   await prisma.publishDraftV2.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.userLocation.deleteMany();
   await prisma.serviceProfile.deleteMany();
+  await prisma.pet.deleteMany();
   await prisma.user.deleteMany();
 }
 

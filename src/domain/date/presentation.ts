@@ -31,7 +31,10 @@ export function formatDateSpan(
   if (!start || !end) return "";
 
   const locale = lang === "zh" ? "zh-CN" : lang === "ja" ? "ja-JP" : "en-US";
-  const startStr = start.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  const startStr = start.toLocaleDateString(locale, {
+    month: "short", day: "numeric",
+    ...(start.getFullYear() !== end.getFullYear() ? { year: "numeric" as const } : {}),
+  });
   const endStr = end.toLocaleDateString(locale, {
     month: "short",
     day: "numeric",

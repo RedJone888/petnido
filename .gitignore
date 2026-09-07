@@ -30,3 +30,9 @@ home-visits-prototype/dist/
 
 # Microsoft Office temporary lock files
 ~$*.docx
+
+# Local preview build directories
+.next-*/
+
+# Root-level SQLite files created by local validation adapters
+/validation.*.db*

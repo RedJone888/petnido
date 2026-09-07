@@ -6,11 +6,12 @@ import { OnboardingProfileForm } from "@/modules/onboarding/client/profile-form"
 import { OnboardingShell } from "@/modules/onboarding/client/onboarding-shell";
 import { getServerUserContext } from "@/server/validation/server-user-context";
 
-export default async function OnboardingProfilePage({
-  searchParams,
-}: {
-  searchParams: { returnTo?: string; variant?: string };
-}) {
+export default async function OnboardingProfilePage(
+  props: {
+    searchParams: Promise<{ returnTo?: string; variant?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const { userId, prisma } = await getServerUserContext();
   if (!userId) redirect("/");
   const user = await prisma.user.findUniqueOrThrow({

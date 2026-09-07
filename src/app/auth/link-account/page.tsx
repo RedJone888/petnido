@@ -1,10 +1,11 @@
 import LinkAccountPageClient from "@/modules/auth/client/pages/link-account-page";
 
-export default function LinkAccountPage({
-  searchParams,
-}: {
-  searchParams: { pending?: string; connectError?: string; connectProvider?: string };
-}) {
+export default async function LinkAccountPage(
+  props: {
+    searchParams: Promise<{ pending?: string; connectError?: string; connectProvider?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   return (
     <LinkAccountPageClient
       pendingId={searchParams.pending ?? ""}

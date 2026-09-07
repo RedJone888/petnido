@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { calendarLabels } from "@/components/ui/calendar-labels";
 import { DayPicker } from "react-day-picker";
 import { enUS, ja, zhCN } from "date-fns/locale";
 import { PiCalendarBlank, PiCaretLeft, PiCaretRight } from "react-icons/pi";
@@ -66,7 +67,7 @@ export function DatePicker({
   minDate,
   maxDate,
   defaultMonth,
-  placeholder = "Select date",
+  placeholder,
   triggerClassName,
   popoverClassName,
   invalid = false,
@@ -206,7 +207,7 @@ export function DatePicker({
         month: "short",
         day: "numeric",
       }).format(selected)
-    : placeholder;
+    : placeholder ?? (lang === "ja" ? "日付を選択" : lang === "zh" ? "选择日期" : "Select date");
 
   return (
     <Popover open={open} onOpenChange={changeOpen}>
@@ -358,6 +359,7 @@ export function DatePicker({
           </div>
         ) : (
           <DayPicker
+          labels={calendarLabels(lang)}
             mode="single"
             month={month}
             onMonthChange={setMonth}

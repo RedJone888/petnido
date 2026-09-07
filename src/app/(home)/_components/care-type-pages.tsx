@@ -639,13 +639,13 @@ const boardingIntroCopy = {
     scenesTitle: "Typical Boarding Care Scenarios",
   },
   zh: {
-    pageTitle: "家庭寄养与托管",
+    pageTitle: "宠物寄养与托管",
     pageSubtitle:
       "宠物入住寄宿家庭，由专人提供全天候生活陪伴、规律散步与起居照护，适合较长假期的深度托付。",
     sectionBadge: "适用场景与日常",
     sectionTitle: "适合哪些情况？典型的寄宿场景有哪些？",
     sectionSub:
-      "结合出行天数、宠物性格与环境适应力，判断家庭寄养是否最适合当下情况。",
+      "结合出行天数、宠物性格与环境适应力，判断宠物寄养是否最适合当下情况。",
     fitTitle: "特别适合以下情况",
     fitItems: [
       { label: "长期外出", desc: "出差或长假期间，单纯每日上门无法提供足够陪伴与连续看护。" },
@@ -3697,18 +3697,18 @@ function ServiceComingSoonButton({
 
   const copy = {
     en: {
-      title: "Service Application Opening Soon",
-      desc: "Provider onboarding and care service publishing are currently in internal rollout. You can still post care needs today.",
+      title: "Services · In development",
+      desc: "Service publishing, applications, and chat are not available in this development preview. You can try the request form.",
       close: "Understood",
     },
     zh: {
-      title: "服务申请即将开放",
-      desc: "服务者认证入驻与服务发布功能正在进行最后阶段的内部测试与优化，即将向所有爱宠人士开放。当前已支持发布各类照护需求。",
+      title: "服务功能开发中",
+      desc: "服务发布、应聘和聊天尚未开放。当前可以体验需求表单，无法安排实际照护。",
       close: "知道了",
     },
     ja: {
-      title: "サービス提供機能は近日公開予定",
-      desc: "シッター登録およびサービス出品機能は現在最終テスト中です。ペットのケア依頼の投稿は今すぐご利用いただけます。",
+      title: "サービス提供機能は開発中",
+      desc: "サービス出品・応募・チャットは未対応です。依頼フォームを体験できますが、実際のお世話の手配はできません。",
       close: "閉じる",
     },
   }[lang];
@@ -3720,7 +3720,7 @@ function ServiceComingSoonButton({
         onClick={() => setOpen(true)}
         className={className}
       >
-        {children}
+        {children} · {lang === "ja" ? "開発中" : lang === "zh" ? "开发中" : "In development"}
       </button>
 
       {open ? (

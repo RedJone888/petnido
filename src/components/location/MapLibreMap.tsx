@@ -49,8 +49,9 @@ export default function MapLibreMap({
   fitToMarkers = false,
   scrollZoom = true,
 }: Props) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const copy = t.location;
+  const initialLangRef = useRef(lang);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -70,6 +71,18 @@ export default function MapLibreMap({
   const [styleVersion, setStyleVersion] = useState(0);
   const [mapLoaded, setMapLoaded] = useState(false);
   const isInternalChange = useRef(false);
+  useEffect(() => {
+    const labels = lang === "ja" ? ["地図", "拡大", "縮小"] : lang === "zh" ? ["地图", "放大", "缩小"] : ["Map", "Zoom in", "Zoom out"];
+    const container = mapRef.current;
+    container?.setAttribute("aria-label", labels[0]);
+    container?.querySelectorAll('[role="region"]').forEach(element => element.setAttribute("aria-label", labels[0]));
+    ["canvas", ".maplibregl-ctrl-zoom-in", ".maplibregl-ctrl-zoom-out"].forEach((selector, index) => {
+      const element = container?.querySelector(selector);
+      element?.setAttribute("aria-label", labels[index]);
+      element?.setAttribute("title", labels[index]);
+    });
+  }, [lang, mapLoaded]);
+
   const [isAnimationActive, setIsAnimationActive] = useState(false);
   useEffect(() => {
     onLocationChangeRef.current = onLocationChange;
@@ -133,6 +146,11 @@ export default function MapLibreMap({
       trackResize: true,
       scrollZoom: Boolean(scrollZoom),
       attributionControl: false,
+      locale: {
+        "Map.Title": initialLangRef.current === "ja" ? "地図" : initialLangRef.current === "zh" ? "地图" : "Map",
+        "NavigationControl.ZoomIn": initialLangRef.current === "ja" ? "拡大" : initialLangRef.current === "zh" ? "放大" : "Zoom in",
+        "NavigationControl.ZoomOut": initialLangRef.current === "ja" ? "縮小" : initialLangRef.current === "zh" ? "缩小" : "Zoom out",
+      },
     });
     m.addControl(
       new maplibregl.NavigationControl({

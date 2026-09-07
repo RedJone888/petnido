@@ -5,11 +5,13 @@ import { MarketplaceComingSoon } from "@/components/marketplace/marketplace-comi
 import { isSupportedLanguage, localizedPageMetadata } from "@/domain/content/localized-page-metadata";
 import type { Lang } from "@/domain/lang/types";
 
-export function generateMetadata({ params }: { params: { lang: string } }): Metadata {
+export async function generateMetadata(props: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const params = await props.params;
   return isSupportedLanguage(params.lang) ? localizedPageMetadata("services", params.lang, "/services") : {};
 }
 
-export default function LocalizedServicesPage({ params }: { params: { lang: string } }) {
+export default async function LocalizedServicesPage(props: { params: Promise<{ lang: string }> }) {
+  const params = await props.params;
   if (!isSupportedLanguage(params.lang)) notFound();
   return (
     <MarketplaceComingSoon

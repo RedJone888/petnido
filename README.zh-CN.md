@@ -6,7 +6,7 @@
 
 [线上网站](https://www.petnido.net)
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-5.14-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
 [![Languages](https://img.shields.io/badge/i18n-English%20%7C%20中文%20%7C%20日本語-6D4AFF?style=flat-square)](#多语言与本地化)
@@ -198,7 +198,7 @@ PetNido 将社交平台上常见的宠物照护需求整理为上门照护、宠
 
 | 层级               | 技术                                           |
 | ------------------ | ---------------------------------------------- |
-| Web                | Next.js 14.2、React 18、App Router             |
+| Web                | Next.js 15.5.24、React 18、App Router             |
 | 开发语言           | TypeScript 5.4                                 |
 | API 与服务端状态   | tRPC 10、TanStack Query                        |
 | 数据库             | PostgreSQL、Prisma 5.14                        |
@@ -214,6 +214,8 @@ PetNido 将社交平台上常见的宠物照护需求整理为上门照护、宠
 ## 在线体验
 
 当前线上网站已部署在 [https://www.petnido.net](https://www.petnido.net)。
+
+当前展示的需求由开发者创建，用于功能演示，不代表真实用户募集或交易记录。
 
 ## 开发者
 

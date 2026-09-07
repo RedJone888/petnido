@@ -13,14 +13,16 @@ const getCachedNeedDetail = cache(async (publicId: string) => {
   return trpc.marketplaceNeed.get({ publicId }).catch(() => null);
 });
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const publicId = decodeURIComponent(params.id);
   const detail = await getCachedNeedDetail(publicId);
   const subject = detail?.title ?? (await resolvePublicDetailSubject({ kind: "need", publicId }));
   return publicDetailMetadata("need", "en", `/needs/${encodeURIComponent(publicId)}`, subject);
 }
 
-export default async function NeedDetailPage({ params }: { params: { id: string } }) {
+export default async function NeedDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const publicId = decodeURIComponent(params.id);
   const initialData = await getCachedNeedDetail(publicId);
   if (!initialData) notFound();

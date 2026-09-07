@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
@@ -127,16 +128,16 @@ export default function AuthModalContent() {
                 />
                 <p className="text-left text-xs text-neutral-500 mt-8">
                   {copy.termsAgreement}{" "}
-                  <a href="/terms" className="underline hover:text-neutral-700">
+                  <Link href="/terms" className="underline hover:text-neutral-700">
                     {copy.terms}
-                  </a>
+                  </Link>
                   {" "}{copy.and}{" "}
-                  <a
+                  <Link
                     href="/privacy"
                     className="underline hover:text-neutral-700"
                   >
                     {copy.privacy}
-                  </a>
+                  </Link>
                   。
                 </p>
               </>
@@ -181,12 +182,12 @@ export default function AuthModalContent() {
                 )}
                 {/* Terms 区域 */}
                 <div className="flex justify-end gap-4 text-xs text-gray-500">
-                  <a href="/terms" className="hover:underline">
+                  <Link href="/terms" className="hover:underline">
                     {copy.terms}
-                  </a>
-                  <a href="/privacy" className="hover:underline">
+                  </Link>
+                  <Link href="/privacy" className="hover:underline">
                     {copy.privacy}
-                  </a>
+                  </Link>
                 </div>
               </>
             )}

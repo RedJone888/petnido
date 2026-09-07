@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
-import { KnowledgeLibrary } from "./knowledge-library";
+import { MarketplaceComingSoon } from "@/components/marketplace/marketplace-coming-soon";
 
 export const metadata: Metadata = {
-  title: "Pet care knowledge library | PetNido",
-  description: "Browse sourced pet-care references by animal and care topic.",
+  title: "Knowledge · In development | PetNido",
+  robots: { index: false, follow: true },
+  description: "This section is under development.",
 };
 
 export default function KnowledgePage() {
-  return <KnowledgeLibrary />;
+  return <MarketplaceComingSoon kind="knowledge" />;
 }

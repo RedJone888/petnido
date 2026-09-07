@@ -4,11 +4,12 @@ import { sanitizeReturnTo } from "@/modules/auth/return-to";
 import { isNeedPublishingContinuation } from "@/modules/need-publishing/server/continuation";
 import { getServerUserContext } from "@/server/validation/server-user-context";
 
-export default async function AuthContinuePage({
-  searchParams,
-}: {
-  searchParams: { returnTo?: string };
-}) {
+export default async function AuthContinuePage(
+  props: {
+    searchParams: Promise<{ returnTo?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const { userId, prisma, isValidationSession } = await getServerUserContext();
   if (!userId) redirect("/");
 

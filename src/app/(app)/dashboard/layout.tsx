@@ -17,7 +17,7 @@ export default async function DashboardLayout({
 }) {
   const validationRequest = new Request("http://localhost", {
     headers: {
-      cookie: `${validationProfileCookie}=${cookies().get(validationProfileCookie)?.value ?? ""}`,
+      cookie: `${validationProfileCookie}=${(await cookies()).get(validationProfileCookie)?.value ?? ""}`,
     },
   });
   const validationSession = hasValidProfileValidationToken(validationRequest);
