@@ -5,6 +5,7 @@ import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import { randomUUID } from "crypto";
 import {
   hasValidProfileValidationToken,
+  validationDatabaseEnabled,
   validationFailureCookie,
   validationProfileUserId,
 } from "@/server/validation/profile-session";
@@ -25,8 +26,8 @@ function getRequestIp(req?: Request): string {
 }
 
 export async function createContext(options?: FetchCreateContextFnOptions) {
-  const validationSession = hasValidProfileValidationToken(options?.req);
-  if (process.env.VALIDATION_DATABASE_URL) {
+  if (validationDatabaseEnabled()) {
+    const validationSession = hasValidProfileValidationToken(options?.req);
     const { getValidationPrisma } = await import("@/lib/validation-prisma");
     return {
       session: validationSession
