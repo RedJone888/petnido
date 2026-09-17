@@ -28,6 +28,10 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       ...process.env,
+      // Test-only signing keys keep E2E independent of local or deployment secrets.
+      AUTH_SECRET: "petnido-e2e-only-auth-secret-0000000000000000",
+      PENDING_ACTION_SECRET: "petnido-e2e-only-pending-secret-0000000000000",
+      NEED_PUBLISHING_CONTINUATION_SECRET: "petnido-e2e-only-continuation-secret-0000000",
       FEATURE_VERTICAL_SLICE: "true",
       FEATURE_PROFILE_E2E: "true",
       FEATURE_PUBLISHING_V2: "true",

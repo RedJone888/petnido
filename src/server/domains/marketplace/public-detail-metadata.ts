@@ -4,6 +4,7 @@ import type { PublicDetailKind } from "@/domain/content/public-detail-metadata";
 import type { Lang } from "@/domain/lang/types";
 import { buildNeedDisplayTitle } from "@/modules/need-publishing/domain/display-title";
 import prisma from "@/lib/prisma";
+import { validationDatabaseEnabled } from "@/server/validation/profile-session";
 
 type Lookup = { kind: PublicDetailKind; publicId: string };
 
@@ -60,7 +61,7 @@ export async function findPublicDetailSubject(
 }
 
 async function publicMetadataDatabase() {
-  if (process.env.NODE_ENV !== "production" && process.env.VALIDATION_DATABASE_URL) {
+  if (validationDatabaseEnabled()) {
     const { getValidationPrisma } = await import("@/lib/validation-prisma");
     return getValidationPrisma() as unknown as PrismaClient;
   }

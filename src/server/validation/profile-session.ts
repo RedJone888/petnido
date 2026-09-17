@@ -10,6 +10,12 @@ export function validationProfileEnabled() {
   );
 }
 
+// A leftover SQLite URL must never switch normal application requests away
+// from PostgreSQL and real authentication. Only the explicit E2E mode opts in.
+export function validationDatabaseEnabled() {
+  return validationProfileEnabled() && Boolean(process.env.VALIDATION_DATABASE_URL);
+}
+
 export function hasValidProfileValidationToken(req?: Request) {
   if (!req || !validationProfileEnabled()) return false;
   const expected = process.env.VALIDATION_TEST_TOKEN;
