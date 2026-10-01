@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/next";
 import SiteChrome from "./_components/SiteChrome";
 import { GlobalConfirm } from "@/components/GlobalConfirm";
 import { Metadata } from "next";
@@ -62,6 +63,7 @@ export default async function RootLayout({
             // }}
           />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
