@@ -45,6 +45,7 @@
     "@trpc/client": "10.45.4",
     "@trpc/react-query": "10.45.4",
     "@trpc/server": "10.45.4",
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.8.0",
